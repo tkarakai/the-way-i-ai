@@ -4,8 +4,10 @@
 # Usage: source this script via a shell function:
 #   wwt() { source /path/to/worktree-new.sh "$@"; }
 #
-# wwt          — create worktree, cd into it, launch claude, then wwtd on exit
-# wwt -code    — create worktree, cd into it, open VSCode (no auto-cleanup)
+# wwt                    — create worktree, cd into it, launch claude, then wwtd on exit
+# wwt fix the login bug  — same, but use "fix-the-login-bug" as the name
+# wwt -code              — create worktree, cd into it, open VSCode (no auto-cleanup)
+# wwt -code fix login    — combine both
 
 # --- Word lists (100 each) ---------------------------------------------------
 
@@ -55,6 +57,55 @@ SURNAMES=(
   visvesvaraya volta watt wiles wozniak
 )
 
+# --- Help ---------------------------------------------------------------------
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  cat <<'HELP'
+wwt — create a git worktree for a Claude Code (or VSCode) session
+
+Usage:
+  wwt                       Create worktree with a random name, launch Claude
+  wwt fix the login bug     Create worktree named "012-fix-the-login-bug"
+  wwt -code                 Create worktree with a random name, open VSCode
+  wwt -code fix login       Create worktree named "012-fix-login", open VSCode
+
+Options:
+  -code       Open VSCode instead of Claude Code (no auto-cleanup on exit)
+  -h, --help  Show this help
+
+The worktree is created under ~/.worktrees/<project>/ with a unique 3-digit
+prefix. Custom names are lowercased, special characters become hyphens, and
+the name is truncated to 50 characters.
+
+When launched without -code, the done script (wwtd) runs automatically after
+Claude exits to offer cleanup.
+HELP
+  return 0 2>/dev/null || exit 0
+fi
+
+# --- Parse arguments ----------------------------------------------------------
+
+_WWT_MODE="claude"
+_WWT_CUSTOM_NAME=""
+
+_WWT_ARGS=()
+for _wwt_arg in "$@"; do
+  if [ "$_wwt_arg" = "-code" ]; then
+    _WWT_MODE="code"
+  else
+    _WWT_ARGS+=("$_wwt_arg")
+  fi
+done
+
+if [ ${#_WWT_ARGS[@]} -gt 0 ]; then
+  # Join all non-flag args, lowercase, replace non-alphanumeric runs with "-",
+  # strip leading/trailing "-", truncate to 50 chars
+  _WWT_CUSTOM_NAME="$(printf '%s ' "${_WWT_ARGS[@]}" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[^a-z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//' \
+    | cut -c1-50)"
+fi
+
 # --- Main logic ---------------------------------------------------------------
 
 # Must be in a git repo
@@ -86,27 +137,32 @@ COUNTER=$(( (COUNTER % 999) + 1 ))
 echo "$COUNTER" > "$COUNTER_FILE"
 NUM=$(printf "%03d" "$COUNTER")
 
-# Generate a unique name (up to 10 attempts)
-NAME=""
-for attempt in $(seq 1 10); do
-  ADJ="${ADJECTIVES[$((RANDOM % ${#ADJECTIVES[@]}))]}"
-  SUR="${SURNAMES[$((RANDOM % ${#SURNAMES[@]}))]}"
-  CANDIDATE="$NUM-$ADJ-$SUR"
+# Generate the worktree name
+if [ -n "$_WWT_CUSTOM_NAME" ]; then
+  # Custom name: prefix with counter
+  NAME="$NUM-$_WWT_CUSTOM_NAME"
+else
+  # Random Docker-style name (up to 10 attempts to avoid collision)
+  NAME=""
+  for attempt in $(seq 1 10); do
+    ADJ="${ADJECTIVES[$((RANDOM % ${#ADJECTIVES[@]}))]}"
+    SUR="${SURNAMES[$((RANDOM % ${#SURNAMES[@]}))]}"
+    CANDIDATE="$NUM-$ADJ-$SUR"
 
-  # Check for collision
-  COLLISION=false
-  for existing in "${EXISTING[@]}"; do
-    if [ "$existing" = "$CANDIDATE" ]; then
-      COLLISION=true
+    COLLISION=false
+    for existing in "${EXISTING[@]}"; do
+      if [ "$existing" = "$CANDIDATE" ]; then
+        COLLISION=true
+        break
+      fi
+    done
+
+    if [ "$COLLISION" = false ]; then
+      NAME="$CANDIDATE"
       break
     fi
   done
-
-  if [ "$COLLISION" = false ]; then
-    NAME="$CANDIDATE"
-    break
-  fi
-done
+fi
 
 if [ -z "$NAME" ]; then
   echo "Error: could not generate a unique name after 10 attempts" >&2
@@ -114,7 +170,7 @@ if [ -z "$NAME" ]; then
 fi
 
 WORKTREE_PATH="$WORKTREE_BASE/$NAME"
-BRANCH="claude/$NAME"
+BRANCH="$NAME"
 
 echo ""
 echo -e "\033[1;36m✦ $NAME\033[0m"
@@ -132,7 +188,7 @@ echo "Now in: $(pwd)"
 # Resolve the done script relative to this script's location
 _TWIAI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-if [ "$1" = "-code" ]; then
+if [ "$_WWT_MODE" = "code" ]; then
   echo "Opening VSCode..."
   code .
   echo "Run 'wwtd' when you're done to clean up this worktree."

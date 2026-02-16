@@ -17,7 +17,7 @@ $ wwt
 
 ✦ 038-upbeat-rosalind
   Worktree: ~/.worktrees/my-project/038-upbeat-rosalind
-  Branch:   claude/038-upbeat-rosalind
+  Branch:   038-upbeat-rosalind
   Now in: ~/.worktrees/my-project/038-upbeat-rosalind
   Launching claude...
 
@@ -63,14 +63,44 @@ The scripts must be **sourced** (not executed) so they can `cd` your shell into 
 | Command | What it does |
 |---------|-------------|
 | `wwt` | Create worktree, cd into it, launch Claude Code. Runs `wwtd` on exit. |
+| `wwt fix the login bug` | Same, but names the worktree `012-fix-the-login-bug` instead of a random name. |
 | `wwt -code` | Create worktree, cd into it, open VSCode. Run `wwtd` manually later. |
+| `wwt -code fix login` | Combine both — custom name + VSCode. |
 | `wwtd` | Summarize and clean up the current worktree. |
 
 Run `wwt` from any git repo. The worktree is created under `~/.worktrees/<project-name>/`.
 
+Custom names are sanitized automatically: lowercased, spaces and special characters become hyphens, truncated to 50 characters.
+
+### Managing worktrees with `gwt`
+
+If you use oh-my-zsh, `gwt` is a built-in alias for `git worktree`. Useful commands:
+
+```bash
+gwtls                    # list all worktrees
+gwt list                 # same thing
+
+cd $(gwt list | grep 012 | awk '{print $1}')
+                         # jump into worktree 012
+
+gwtrm ~/.worktrees/my-project/012-fix-login-bug
+                         # remove a worktree (fails if dirty)
+
+gwtrm --force ~/.worktrees/my-project/012-fix-login-bug
+                         # force-remove even with uncommitted changes
+```
+
+If you don't use oh-my-zsh, you can add the aliases yourself:
+
+```bash
+alias gwt='git worktree'
+alias gwtls='git worktree list'
+alias gwtrm='git worktree remove'
+```
+
 ### Details
 
 - **Naming**: each worktree gets a sequential 3-digit prefix and a random `adjective-surname` combo (e.g. `012-serene-dijkstra`). A per-project counter at `~/.worktrees/<project-name>/.counter` ensures uniqueness.
-- **Branches**: created as `claude/<worktree-name>` so they're easy to spot and filter.
+- **Branches**: the branch name matches the worktree name (e.g. `012-serene-dijkstra`). The 3-digit prefix makes them easy to spot and filter.
 - **Cleanup checks**: before deleting, `wwtd` reports uncommitted changes, unpushed commits, gitignored file counts, and any processes still running from that directory. Processes get their own kill confirmation before the delete confirmation.
 - **Shell compatibility**: works in both bash and zsh. Avoids bash 4+ features (no associative arrays) so it runs correctly when sourced in macOS's default zsh.

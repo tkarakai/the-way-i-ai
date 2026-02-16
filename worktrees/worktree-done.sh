@@ -6,6 +6,27 @@
 #
 # Summarizes the worktree state, then asks for confirmation before deleting.
 
+# --- Help ---------------------------------------------------------------------
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  cat <<'HELP'
+wwtd — clean up the current git worktree
+
+Usage:
+  wwtd          Summarize worktree state and offer to delete it
+
+Run this from inside a worktree (not the main worktree). It will:
+  1. Show uncommitted changes and unpushed commit status
+  2. List gitignored files
+  3. Detect running processes from this worktree directory
+  4. Offer to kill lingering processes (separate confirmation)
+  5. Offer to delete the worktree and its local branch
+
+No options — just run it and follow the prompts.
+HELP
+  return 0 2>/dev/null || exit 0
+fi
+
 # Must be in a git repo
 if ! git rev-parse --is-inside-work-tree &>/dev/null; then
   echo "Error: not inside a git repository" >&2

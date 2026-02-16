@@ -16,9 +16,10 @@ README.md           — user-facing docs (installation, usage)
 - Scripts use `source` (not subshell) so `cd` affects the caller's shell
 - `return 1 2>/dev/null || exit 1` pattern handles both sourced and direct execution
 - Worktrees go under `~/.worktrees/<project-name>/`
-- Branch naming: `claude/<worktree-name>`
+- Branch name matches the worktree name (e.g. `012-serene-dijkstra`)
 - A per-project counter file at `~/.worktrees/<project-name>/.counter` ensures unique prefixes (001–999)
 - Process detection uses `pgrep -f` matching the worktree path
 - Gitignored file summary uses portable `sed | sort | uniq -c` (no bash 4+ associative arrays — must work when sourced in zsh)
 - The done script has a separate kill confirmation before the delete confirmation
 - `worktree-new.sh` resolves `worktree-done.sh` relative to its own location via `BASH_SOURCE`, so both scripts just need to be in the same directory
+- Custom names are sanitized via `tr | sed | cut` pipeline: lowercase, non-alphanumeric → hyphens, collapse runs, strip edges, truncate to 50 chars

@@ -8,17 +8,17 @@ A worktree-per-task workflow that gives each Claude Code session its own isolate
 
 ### How it works
 
-1. **`cwt`** creates a fresh git worktree with a Docker-style random name (e.g. `038-upbeat-rosalind`), branches off your current HEAD, cd's into it, and launches Claude Code. When Claude exits, it automatically runs `cwtd` to offer cleanup.
+1. **`gwt`** creates a fresh git worktree with a Docker-style random name (e.g. `038-upbeat-rosalind`), branches off your current HEAD, cd's into it, and launches Claude Code. When Claude exits, it automatically runs `gwtd` to offer cleanup.
 
-2. **`cwtd`** (done) summarizes the worktree state — uncommitted changes, unpushed commits, gitignored files, running processes — then offers to kill lingering processes and delete the worktree.
+2. **`gwtd`** (done) summarizes the worktree state — uncommitted changes, unpushed commits, gitignored files, running processes — then offers to kill lingering processes and delete the worktree.
 
 ```
-$ cwt
+$ gwt
 
 ✦ 038-upbeat-rosalind
-  Worktree: ~/.claude-worktrees/my-project/038-upbeat-rosalind
+  Worktree: ~/.worktrees/my-project/038-upbeat-rosalind
   Branch:   claude/038-upbeat-rosalind
-  Now in: ~/.claude-worktrees/my-project/038-upbeat-rosalind
+  Now in: ~/.worktrees/my-project/038-upbeat-rosalind
   Launching claude...
 
   # ... Claude does its thing ...
@@ -46,8 +46,8 @@ Clone this repo and add two shell functions to your `~/.zshrc`:
 
 ```bash
 # Point these at wherever you cloned the repo
-cwt()  { source ~/path/to/the-way-i-ai/worktrees/worktree-new.sh "$@"; }
-cwtd() { source ~/path/to/the-way-i-ai/worktrees/worktree-done.sh; }
+gwt()  { source ~/path/to/the-way-i-ai/worktrees/worktree-new.sh "$@"; }
+gwtd() { source ~/path/to/the-way-i-ai/worktrees/worktree-done.sh; }
 ```
 
 Then reload your shell:
@@ -62,15 +62,15 @@ The scripts must be **sourced** (not executed) so they can `cd` your shell into 
 
 | Command | What it does |
 |---------|-------------|
-| `cwt` | Create worktree, cd into it, launch Claude Code. Runs `cwtd` on exit. |
-| `cwt -code` | Create worktree, cd into it, open VSCode. Run `cwtd` manually later. |
-| `cwtd` | Summarize and clean up the current worktree. |
+| `gwt` | Create worktree, cd into it, launch Claude Code. Runs `gwtd` on exit. |
+| `gwt -code` | Create worktree, cd into it, open VSCode. Run `gwtd` manually later. |
+| `gwtd` | Summarize and clean up the current worktree. |
 
-Run `cwt` from any git repo. The worktree is created under `~/.claude-worktrees/<project-name>/`.
+Run `gwt` from any git repo. The worktree is created under `~/.worktrees/<project-name>/`.
 
 ### Details
 
-- **Naming**: each worktree gets a sequential 3-digit prefix and a random `adjective-surname` combo (e.g. `012-serene-dijkstra`). A counter at `~/.claude-worktrees/.counter` ensures uniqueness.
+- **Naming**: each worktree gets a sequential 3-digit prefix and a random `adjective-surname` combo (e.g. `012-serene-dijkstra`). A per-project counter at `~/.worktrees/<project-name>/.counter` ensures uniqueness.
 - **Branches**: created as `claude/<worktree-name>` so they're easy to spot and filter.
-- **Cleanup checks**: before deleting, `cwtd` reports uncommitted changes, unpushed commits, gitignored file counts, and any processes still running from that directory. Processes get their own kill confirmation before the delete confirmation.
+- **Cleanup checks**: before deleting, `gwtd` reports uncommitted changes, unpushed commits, gitignored file counts, and any processes still running from that directory. Processes get their own kill confirmation before the delete confirmation.
 - **Shell compatibility**: works in both bash and zsh. Avoids bash 4+ features (no associative arrays) so it runs correctly when sourced in macOS's default zsh.

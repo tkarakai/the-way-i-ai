@@ -2,10 +2,10 @@
 # worktree-new.sh — Create a git worktree with a random Docker-style name
 #
 # Usage: source this script via a shell function:
-#   cwt() { source /path/to/worktree-new.sh "$@"; }
+#   gwt() { source /path/to/worktree-new.sh "$@"; }
 #
-# cwt          — create worktree, cd into it, launch claude, then cwtd on exit
-# cwt -code    — create worktree, cd into it, open VSCode (no auto-cleanup)
+# gwt          — create worktree, cd into it, launch claude, then gwtd on exit
+# gwt -code    — create worktree, cd into it, open VSCode (no auto-cleanup)
 
 # --- Word lists (100 each) ---------------------------------------------------
 
@@ -64,7 +64,7 @@ if ! git rev-parse --is-inside-work-tree &>/dev/null; then
 fi
 
 PROJECT="$(basename "$(git rev-parse --show-toplevel)")"
-WORKTREE_BASE="$HOME/.claude-worktrees/$PROJECT"
+WORKTREE_BASE="$HOME/.worktrees/$PROJECT"
 
 # Collect existing worktree directory names for collision detection
 EXISTING=()
@@ -74,9 +74,9 @@ if [ -d "$WORKTREE_BASE" ]; then
   done
 fi
 
-# Read and increment the persistent counter (1–999, resets after 999)
-COUNTER_FILE="$HOME/.claude-worktrees/.counter"
-mkdir -p "$HOME/.claude-worktrees"
+# Read and increment the per-project counter (1–999, resets after 999)
+mkdir -p "$WORKTREE_BASE"
+COUNTER_FILE="$WORKTREE_BASE/.counter"
 if [ -f "$COUNTER_FILE" ]; then
   COUNTER="$(cat "$COUNTER_FILE")"
 else
@@ -135,7 +135,7 @@ _TWIAI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 if [ "$1" = "-code" ]; then
   echo "Opening VSCode..."
   code .
-  echo "Run 'cwtd' when you're done to clean up this worktree."
+  echo "Run 'gwtd' when you're done to clean up this worktree."
 else
   echo "Launching claude..."
   claude

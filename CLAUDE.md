@@ -15,9 +15,9 @@ README.md           — user-facing docs (installation, usage)
 
 - Scripts use `source` (not subshell) so `cd` affects the caller's shell
 - `return 1 2>/dev/null || exit 1` pattern handles both sourced and direct execution
-- Worktrees go under `~/.claude-worktrees/<project-name>/`
+- Worktrees go under `~/.worktrees/<project-name>/`
 - Branch naming: `claude/<worktree-name>`
-- A persistent counter file at `~/.claude-worktrees/.counter` ensures unique prefixes (001–999)
+- A per-project counter file at `~/.worktrees/<project-name>/.counter` ensures unique prefixes (001–999)
 - Process detection uses `pgrep -f` matching the worktree path
 - Gitignored file summary uses portable `sed | sort | uniq -c` (no bash 4+ associative arrays — must work when sourced in zsh)
 - The done script has a separate kill confirmation before the delete confirmation

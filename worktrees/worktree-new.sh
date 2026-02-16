@@ -2,10 +2,10 @@
 # worktree-new.sh — Create a git worktree with a random Docker-style name
 #
 # Usage: source this script via a shell function:
-#   gwt() { source /path/to/worktree-new.sh "$@"; }
+#   wwt() { source /path/to/worktree-new.sh "$@"; }
 #
-# gwt          — create worktree, cd into it, launch claude, then gwtd on exit
-# gwt -code    — create worktree, cd into it, open VSCode (no auto-cleanup)
+# wwt          — create worktree, cd into it, launch claude, then wwtd on exit
+# wwt -code    — create worktree, cd into it, open VSCode (no auto-cleanup)
 
 # --- Word lists (100 each) ---------------------------------------------------
 
@@ -135,7 +135,7 @@ _TWIAI_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 if [ "$1" = "-code" ]; then
   echo "Opening VSCode..."
   code .
-  echo "Run 'gwtd' when you're done to clean up this worktree."
+  echo "Run 'wwtd' when you're done to clean up this worktree."
 else
   echo "Launching claude..."
   claude

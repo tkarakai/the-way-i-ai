@@ -2,7 +2,7 @@
 # worktree-done.sh — Clean up current worktree and return to main
 #
 # Usage: source this script via a shell function:
-#   gwtd() { source /path/to/worktree-done.sh; }
+#   wwtd() { source /path/to/worktree-done.sh; }
 #
 # Summarizes the worktree state, then asks for confirmation before deleting.
 
@@ -150,7 +150,7 @@ echo ""
 printf "\033[1;33m>>> Delete worktree and local branch? (y/N) \033[0m"
 read -r REPLY
 if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
-  echo "Aborted. You can run 'gwtd' later to delete this worktree."
+  echo "Aborted. You can run 'wwtd' later to delete this worktree."
   return 0 2>/dev/null || exit 0
 fi
 

@@ -1,6 +1,6 @@
 # the-way-i-ai
 
-Tools and workflows for AI-aided software development.
+Tools and workflows for AI-aided software development on macOS.
 
 ## Git Worktrees for Claude Code
 
@@ -35,9 +35,14 @@ $ cwt
 - **Safe cleanup** — the done script warns you about uncommitted changes and unpushed commits before deleting anything.
 - **Clean main** — your main worktree stays untouched.
 
+### Requirements
+
+- macOS (tested on Apple Silicon and Intel Macs)
+- Git
+
 ### Installation
 
-Clone this repo and add two shell functions to your `~/.zshrc` (or `~/.bashrc`):
+Clone this repo and add two shell functions to your `~/.zshrc`:
 
 ```bash
 # Point these at wherever you cloned the repo
@@ -68,4 +73,4 @@ Run `cwt` from any git repo. The worktree is created under `~/.claude-worktrees/
 - **Naming**: each worktree gets a sequential 3-digit prefix and a random `adjective-surname` combo (e.g. `012-serene-dijkstra`). A counter at `~/.claude-worktrees/.counter` ensures uniqueness.
 - **Branches**: created as `claude/<worktree-name>` so they're easy to spot and filter.
 - **Cleanup checks**: before deleting, `cwtd` reports uncommitted changes, unpushed commits, gitignored file counts, and any processes still running from that directory. Processes get their own kill confirmation before the delete confirmation.
-- **Shell compatibility**: works in both bash and zsh. Avoids bash 4+ features (no associative arrays) so it runs correctly when sourced in zsh.
+- **Shell compatibility**: works in both bash and zsh. Avoids bash 4+ features (no associative arrays) so it runs correctly when sourced in macOS's default zsh.

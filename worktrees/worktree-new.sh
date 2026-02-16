@@ -120,9 +120,9 @@ WORKTREE_BASE="$HOME/.worktrees/$PROJECT"
 # Collect existing worktree directory names for collision detection
 EXISTING=()
 if [ -d "$WORKTREE_BASE" ]; then
-  for d in "$WORKTREE_BASE"/*/; do
-    [ -d "$d" ] && EXISTING+=("$(basename "$d")")
-  done
+  while IFS= read -r d; do
+    [ -n "$d" ] && EXISTING+=("$(basename "$d")")
+  done <<< "$(find "$WORKTREE_BASE" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)"
 fi
 
 # Read and increment the per-project counter (1–999, resets after 999)

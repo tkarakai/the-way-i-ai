@@ -1,0 +1,118 @@
+{
+  "title": "Worktree-based development",
+  "category": "Software development",
+  "description": "One task. One branch. One working directory. A practical workflow for building with Claude Code, reviewing changes, and working in parallel.",
+  "thesis": "Give every task its own space.",
+  "documents": [
+    {
+      "file": "README.md",
+      "label": "The tools",
+      "headingOffset": 0
+    },
+    {
+      "file": "WORKFLOW.md",
+      "label": "The workflow",
+      "headingOffset": 0
+    }
+  ],
+  "cover": "assets/cover.svg",
+  "explorer": {
+    "title": "From a fresh task to a clean main.",
+    "instruction": "Nine steps. Select a step to follow the workflow.",
+    "diagram": "assets/diagram.svg",
+    "caption": "Each task gets an isolated branch and directory.",
+    "controls": "numbered",
+    "panels": [
+      {
+        "id": "create",
+        "source": {
+          "document": "WORKFLOW.md",
+          "heading": "1. Create a worktree"
+        },
+        "highlight": [
+          "workflow-create"
+        ]
+      },
+      {
+        "id": "work",
+        "source": {
+          "document": "WORKFLOW.md",
+          "heading": "2. Do the work"
+        },
+        "highlight": [
+          "workflow-work"
+        ]
+      },
+      {
+        "id": "ship",
+        "source": {
+          "document": "WORKFLOW.md",
+          "heading": "3. Ship it"
+        },
+        "highlight": [
+          "workflow-work"
+        ]
+      },
+      {
+        "id": "review",
+        "source": {
+          "document": "WORKFLOW.md",
+          "heading": "4. Review the PR"
+        },
+        "highlight": [
+          "workflow-review"
+        ]
+      },
+      {
+        "id": "revise",
+        "source": {
+          "document": "WORKFLOW.md",
+          "heading": "5. Address review feedback"
+        },
+        "highlight": [
+          "workflow-review"
+        ]
+      },
+      {
+        "id": "rereview",
+        "source": {
+          "document": "WORKFLOW.md",
+          "heading": "6. Re-review"
+        },
+        "highlight": [
+          "workflow-review"
+        ]
+      },
+      {
+        "id": "merge",
+        "source": {
+          "document": "WORKFLOW.md",
+          "heading": "7. Merge"
+        },
+        "highlight": [
+          "workflow-merge"
+        ]
+      },
+      {
+        "id": "cleanup",
+        "source": {
+          "document": "WORKFLOW.md",
+          "heading": "8. Clean up the worktree"
+        },
+        "highlight": [
+          "workflow-clean"
+        ]
+      },
+      {
+        "id": "pull",
+        "source": {
+          "document": "WORKFLOW.md",
+          "heading": "9. Update main"
+        },
+        "highlight": [
+          "workflow-pull"
+        ]
+      }
+    ]
+  }
+}

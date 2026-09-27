@@ -31,6 +31,12 @@ const plain = (text: string) => text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '
 const safeJSON = (value: unknown) => JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
 const codeCache = new Map<string, Promise<string>>();
 const renderedCode = new WeakMap<Tokens.Code, string>();
+async function embedImage(imagePath: string) {
+  const extension = imagePath.split('.').at(-1)!.toLowerCase();
+  const mime = ({ svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' } as Record<string, string>)[extension];
+  if (!mime) throw new Error(`Unsupported image format: ${imagePath}`);
+  return `data:${mime};base64,${(await readFile(imagePath)).toString('base64')}`;
+}
 async function renderCode(text: string, lang: string) {
   const key = `${lang}\n${text}`;
   if (!codeCache.has(key)) codeCache.set(key, preloadFile({
@@ -54,10 +60,7 @@ async function renderDocument(topic: RenderedTopic, document: SourceDocument, in
       if (token.type === 'image' && !token.href.startsWith('data:')) {
         if (/^(?:[a-z]+:|\/\/)/i.test(token.href)) throw new Error(`Download remote images into ${topic.id}/ before building: ${token.href}`);
         const imagePath = resolve(root, 'topics', topic.id, dirname(document.file), decodeURIComponent(token.href));
-        const extension = imagePath.split('.').at(-1)!.toLowerCase();
-        const mime = ({ svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' } as Record<string, string>)[extension];
-        if (!mime) throw new Error(`Unsupported image format: ${imagePath}`);
-        token.href = `data:${mime};base64,${(await readFile(imagePath)).toString('base64')}`;
+        token.href = await embedImage(imagePath);
       }
     },
     renderer: {
@@ -135,7 +138,10 @@ for (const topic of topics) {
 }
 
 const outputs = new Map();
-outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry), css, js, fonts, collection: registry }));
+const titleBackgroundPath = registry.titleBackground ? resolve(root, 'topics', registry.titleBackground) : undefined;
+if (titleBackgroundPath && !titleBackgroundPath.startsWith(`${resolve(root, 'topics')}/`)) throw new Error('The title background must be a local image inside topics/.');
+const titleBackground = titleBackgroundPath ? await embedImage(titleBackgroundPath) : '';
+outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, titleBackground), css, js, fonts, collection: registry }));
 for (const topic of topics) {
   const fingerprints = `<!-- Markdown sources: ${topic.rendered.map(doc => `${doc.file} sha256:${doc.sha256}`).join('; ')} -->\n`;
   outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered)), css, js, fonts, collection: registry, prefix: '../../', page: topic.id }));
@@ -174,6 +180,11 @@ if (site) {
   await mkdir(outputRoot, { recursive: true });
   for (const file of ['README.md', 'AGENTS.md', 'CLAUDE.md', 'design-system/README.md', 'design-system/licenses', 'topics/topics.json']) {
     await cp(resolve(root, file), resolve(outputRoot, file), { recursive: true });
+  }
+  if (titleBackgroundPath) {
+    const target = resolve(outputRoot, relative(root, titleBackgroundPath));
+    await mkdir(dirname(target), { recursive: true });
+    await cp(titleBackgroundPath, target);
   }
   for (const topic of topics) {
     const source = resolve(root, 'topics', topic.id);

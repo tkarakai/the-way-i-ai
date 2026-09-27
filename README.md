@@ -82,7 +82,9 @@ Worktree installation paths changed when the topic moved. Existing shell functio
 npm run preview
 ```
 
-This builds the current checkout into `_site/` and serves it at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`). If another worktree is using that port, the server chooses an available one. After editing, run `npm run build:site` in another terminal and refresh the browser. There is no separate preview content or theme.
+This builds the current checkout into `_site/` and serves it at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`). If another worktree is using that port, the server chooses an available one. After editing, run `npm run build:site` in another terminal and refresh the browser. This full-site preview uses the publication content and theme.
+
+For the standalone title color study, open `previews/title-colors.html` locally. Its color controls affect only the study, not the site's theme. Regenerate it with `node previews/build-title-colors.ts` after `npm run build`. The study stays in the repository and is excluded from the publication bundle.
 
 Every pull request also produces a **site-preview-pr-N** artifact in its **Publish collection** workflow run. Follow the download link in the run summary, unzip the artifact, and open `index.html`. The artifact includes the complete offline site and supporting source files, expires after 14 days, and does not change the public Pages site.
 

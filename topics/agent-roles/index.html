@@ -391,6 +391,7 @@ specific language governing permissions and limitations under the License.
   --paper: #f6f4ed; --surface: #fffef9; --ink: #252e29; --muted: #656e66;
   --line: #d6d9cf; --accent: #275b43; --tint: #e6ede3; --accent-ink: #fffef9;
   --ochre: #9a6336; --code: #f0f1eb;
+  --title-ink: #4b2e4a; --title-accent: #147c86;
   --serif: 'Newsreader', Georgia, serif;
   --sans: 'DM Sans', sans-serif;
   --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
@@ -401,6 +402,7 @@ specific language governing permissions and limitations under the License.
   --paper: #17231e; --surface: #1d2c25; --ink: #eeefe4; --muted: #b0bcae;
   --line: #3d5144; --accent: #b4d3ac; --tint: #2c4033; --accent-ink: #17231e;
   --ochre: #dfb485; --code: #23332b;
+  --title-ink: #edd7e8; --title-accent: #64cfd3;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 100px; }
@@ -439,10 +441,17 @@ svg .diagram-dot { fill: var(--accent); }
 .edition-line .rule { height: 1px; width: 36px; background: var(--line); }
 h1, h2, h3, p { margin-top: 0; }
 .collection-hero { padding: 30px 0 64px; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: end; gap: 72px; }
-.collection-hero h1 { margin: 0; width: max-content; max-width: 100%; font: 450 clamp(64px, 7.8vw, 112px)/.91 var(--serif); letter-spacing: -5px; }
+.collection-hero h1 { position: relative; isolation: isolate; margin: 0; width: max-content; max-width: 100%; font: 450 clamp(64px, 7.8vw, 112px)/.645 var(--serif); letter-spacing: -.045em; color: var(--title-ink); }
+/* Keep every offset relative to the lettering. Squeeze the wave from the left without reducing its height. */
+.title-art { position: absolute; z-index: -1; left: -.45em; top: -.42em; width: calc(100% + 1em); background: var(--paper); transform: translateX(17.5%) scaleX(.65) rotate(-6deg); pointer-events: none; user-select: none; }
+.title-background { display: block; width: 100%; height: auto; mix-blend-mode: multiply; }
+:root[data-theme='dark'] .title-background { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; }
 .brand-name, .title-line { white-space: nowrap; }
 .title-line { display: block; }
-.collection-hero h1 .title-line:last-child { color: var(--accent); text-align: right; }
+.title-prefix { font-size: .5em; letter-spacing: -.04em; }
+/* Optical alignment of both Newsreader diagonals, using the glyph's baseline as the origin. */
+.title-initial { display: inline-block; transform-origin: left .554em; transform: translateX(-.017em) skewX(1.66deg) scaleX(1.048); }
+.collection-hero h1 .title-line:last-child { color: var(--title-accent); text-align: right; }
 .collection-intro { padding-bottom: 5px; max-width: 450px; }
 .collection-intro p { font-size: 20px; line-height: 1.6; margin-bottom: 24px; }
 .collection-intro .eyebrow { display: block; padding-top: 22px; border-top: 1px solid var(--line); }
@@ -575,7 +584,7 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
   .brand { font-size: 16px; gap: 8px; }
   .brand svg { width: 22px; }
   .collection-hero { grid-template-columns: minmax(0, 1fr); gap: 35px; padding: 20px 0 44px; }
-  .collection-hero h1 { font-size: clamp(56px, 13vw, 88px); letter-spacing: -3px; }
+  .collection-hero h1 { font-size: clamp(56px, 13vw, 88px); }
   .collection-intro p { font-size: 18px; }
   .collection-intro { max-width: 100%; }
   .topic-grid { grid-template-columns: minmax(0, 1fr); }
@@ -609,7 +618,8 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
   .back-top { right: 14px; bottom: 14px; }
 }
 @media print {
-  :root, :root[data-theme='dark'] { --paper: #fff; --surface: #fff; --ink: #111; --muted: #444; --line: #ccc; --accent: #214a35; --tint: #f2f4ef; --code: #f5f5f5; color-scheme: light; }
+  .title-art { display: none; }
+  :root, :root[data-theme='dark'] { --paper: #fff; --surface: #fff; --ink: #111; --muted: #444; --line: #ccc; --accent: #214a35; --tint: #f2f4ef; --code: #f5f5f5; --title-ink: #4b2e4a; --title-accent: #147c86; color-scheme: light; }
   @page { margin: 18mm; }
   body { font-size: 11pt; }
   .page-width { width: 100%; }

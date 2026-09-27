@@ -2,6 +2,7 @@
 export interface Collection {
   title: string;
   displayTitle: string;
+  titleBackground?: string;
   description: string;
   eyebrow: string;
   category: string;

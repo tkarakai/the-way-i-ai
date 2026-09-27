@@ -17,10 +17,20 @@ ${body}
 <script>${js.replaceAll('</script', '<\\/script')}</script></body></html>\n`;
 }
 
-export function collectionBody(topics: RenderedTopic[], collection: Collection) {
-  const displayTitle = collection.displayTitle.split('\n').map(line => `<span class="title-line">${escape(line)}</span>`).join('');
+export function collectionBody(topics: RenderedTopic[], collection: Collection, titleBackground = '') {
+  const titleLines = collection.displayTitle.split('\n');
+  const displayTitle = titleLines.map((line, index) => {
+    const text = escape(line);
+    const [initial = '', ...rest] = [...line];
+    const content = index === 0
+      ? text.replace(/^(\S+)(\s+)/, '<span class="title-prefix">$1</span>$2')
+      : index === titleLines.length - 1
+        ? `<span class="title-initial">${escape(initial)}</span>${escape(rest.join(''))}`
+        : text;
+    return `<span class="title-line">${content}</span>`;
+  }).join('');
   return `<main id="main"><div class="edition-line eyebrow"><span>${escape(collection.eyebrow)}</span><span class="rule"></span><span>${escape(collection.category)}</span></div>
-  <section class="collection-hero"><h1>${displayTitle}</h1><div class="collection-intro">${collection.introduction.map(paragraph => `<p>${escape(paragraph).replaceAll('\n', '<br>')}</p>`).join('')}<span class="eyebrow">${escape(collection.tagline)}</span></div></section>
+  <section class="collection-hero"><h1 aria-label="${escape(titleLines.join(' '))}">${titleBackground ? `<span class="title-art" aria-hidden="true"><img class="title-background" src="${escape(titleBackground)}" alt=""></span>` : ''}${displayTitle}</h1><div class="collection-intro">${collection.introduction.map(paragraph => `<p>${escape(paragraph).replaceAll('\n', '<br>')}</p>`).join('')}<span class="eyebrow">${escape(collection.tagline)}</span></div></section>
   <section aria-labelledby="topics-heading"><div class="section-label"><h2 id="topics-heading">Explore the collection</h2><span>${String(topics.length).padStart(2, '0')} topics · one connected practice</span></div>
   <div class="topic-grid">${topics.map(topic => `<a class="topic-card" href="topics/${topic.id}/index.html" aria-labelledby="topic-${topic.id}-title"><div class="topic-visual${topic.coverSVG ? '' : ' no-cover'}"><span class="card-number">${escape(topic.number)}</span>${topic.coverSVG || ''}</div><div class="topic-copy"><span class="eyebrow">${escape(topic.category)}</span><h3 id="topic-${topic.id}-title">${escape(topic.title)}</h3><p>${escape(topic.description)}</p><div class="card-links"><span class="text-link">Explore the idea <span aria-hidden="true">↗</span></span><span>${topic.minutes} min read · ${topic.documents.length === 1 ? 'Essay' : 'Guide + tools'}</span></div></div></a>`).join('')}</div></section>
   <section class="collection-note"><h2>${escape(collection.note.title)}</h2><div><p>${escape(collection.note.body)}</p></div></section></main>`;

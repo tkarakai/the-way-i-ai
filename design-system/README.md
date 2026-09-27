@@ -1,6 +1,6 @@
 # The Way I AI · Design system
 
-The shared presentation layer for a collection of source-owned topics. Warm paper, dark ink, forest green, Newsreader headings, and DM Sans text define the editorial style. Font and code-renderer licenses are in `licenses/` and are embedded in the generated files.
+The shared presentation layer for a collection of source-owned topics. Warm paper, dark ink, forest green, Newsreader headings, and DM Sans text define the editorial style. The collection's display title pairs plum with teal through `--title-ink` and `--title-accent`, with lighter variants for dark mode. Font and code-renderer licenses are in `licenses/` and are embedded in the generated files.
 
 ## Responsibilities
 
@@ -18,6 +18,8 @@ Topic-specific copy, diagram labels, SVG geometry, and explorer configuration be
 Local Markdown images become data URLs. SVG sources used inline must be standalone, script-free, and free of external render dependencies. Assets can use the shared CSS variables, with fallback values for opening the SVG on its own.
 
 `npm run build` updates the checked-in HTML. `npm run check` rejects stale output, invalid source references, broken links, duplicate IDs, and external render dependencies. `npm test` checks the generator's source/output contract. `npm run build:site` creates an ignored `_site/` bundle for publication using the same generator.
+
+The optional collection `titleBackground` image is resolved relative to `topics/` and embedded in the collection header. Its placement and light/dark blending live in `theme.css`; the title remains accessible, selectable text. The wave is squeezed horizontally from the left to follow the title's diagonal stems. Its dimensions and offsets scale with the lettering, without separate mobile positioning, so the composition stays fixed as the viewport changes.
 
 ## Reuse
 

@@ -48,6 +48,38 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   passed(f.build('--check'));
 });
 
+test('the optional collection background is embedded only in the index, and a missing asset preserves output', async t => {
+  const f = await fixture(t);
+  passed(f.build());
+  const index = await f.read('index.html');
+  const image = index.match(/<img class="title-background" src="data:image\/png;base64,([^"]+)" alt="">/);
+  assert.ok(image, 'The title background must be embedded for standalone reading');
+  assert.deepEqual(Buffer.from(image[1], 'base64'), await readFile(resolve(f.path, 'topics/assets/logo-bg.png')));
+  assert.match(index, /<span class="title-art" aria-hidden="true">/);
+  assert.ok(!(await f.read('topics/worktrees/index.html')).includes('<img class="title-background"'));
+  passed(f.build('--check'));
+
+  const registry = JSON.parse(await f.read('topics/topics.json'));
+  delete registry.titleBackground;
+  await f.write('topics/topics.json', JSON.stringify(registry));
+  passed(f.build());
+  const withoutBackground = await f.read('index.html');
+  assert.ok(!withoutBackground.includes('<span class="title-art"'));
+
+  registry.titleBackground = 'assets/missing.png';
+  await f.write('topics/topics.json', JSON.stringify(registry));
+  const missing = f.build();
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /missing\.png/);
+  assert.equal(await f.read('index.html'), withoutBackground);
+
+  registry.titleBackground = '../outside.png';
+  await f.write('topics/topics.json', JSON.stringify(registry));
+  const outside = f.build('--site');
+  assert.notEqual(outside.status, 0);
+  assert.match(outside.stderr, /local image inside topics/);
+});
+
 test('a named Markdown excerpt is shared by the full reader and visual explorer; stale output is rejected', async t => {
   const f = await fixture(t);
   passed(f.build());
@@ -99,6 +131,7 @@ test('the publication bundle is clean and contains the same standalone pages and
   }
   assert.equal(await f.read('_site/topics/worktrees/README.md'), await f.read('topics/worktrees/README.md'));
   assert.equal(await f.read('_site/topics/agent-roles/assets/diagram.svg'), await f.read('topics/agent-roles/assets/diagram.svg'));
+  assert.deepEqual(await readFile(resolve(f.path, '_site/topics/assets/logo-bg.png')), await readFile(resolve(f.path, 'topics/assets/logo-bg.png')));
   await access(resolve(f.path, '_site/.nojekyll'));
   await assert.rejects(access(resolve(f.path, '_site/stale.html')));
   await assert.rejects(access(resolve(f.path, '_site/node_modules')));

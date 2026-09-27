@@ -13,6 +13,7 @@ The same generated HTML works as downloaded standalone files and as a GitHub Pag
 | Source | Owns |
 | --- | --- |
 | `topics/topics.json` | Collection copy and topic order; IDs correspond to folders. |
+| `topics/assets/` | Authored collection visuals, including the optional title background. |
 | `topics/<id>/README.md` and other Markdown | The full argument, explanations, examples, and named excerpts. |
 | `topics/<id>/topic.json` | Topic metadata, document order, and optional visual explorer bindings. |
 | `topics/<id>/assets/` | Authored diagrams, images, data, and other topic-specific visual content. |
@@ -138,6 +139,8 @@ The Pages workflow checks the source/output contract, builds the publication bun
 
 Author site tooling, tests, and browser behavior in TypeScript only; never use Python for maintenance commands or helpers. The topic’s existing Bash worktree tools remain Bash. Node.js 24 runs the tooling directly; `npm run typecheck` checks all authored TypeScript strictly. The build compiles `reader.ts` to embedded plain JavaScript, so readers need no compiler or network. Shared metadata and rendered-document types live in `design-system/types.ts`.
 
-The collection name, when shown on two lines, must be “The Way I” / “AI”, without a trailing period. Never separate “I” from “The Way”. Align the second line's right edge with the first line's right edge. The newline in `topics/topics.json`’s `displayTitle` is authoritative; the generic layout renders each line as an unbreakable span and sizes it responsively. Other visible brand occurrences stay on one line. Check desktop and 320/390px layouts for alignment, extra lines, and horizontal overflow after title or typography edits.
+The collection name, when shown on two lines, must be “the way I” / “AI”, without a trailing period. Never separate “I” from “the way”. Render “the” at half the main title's font size. Align the second line's right edge with the first line's right edge. Both diagonal stems must continue across the lines: the “A”'s left stem aligns with the “y”'s right stem, and its right stem aligns with the “y”'s left stem. A small optical width/angle adjustment to the “A” achieves this; keep both “I”s vertical and allow them to join. Scale letter spacing and optical offsets with the font size to preserve this alignment. The newline in `topics/topics.json`’s `displayTitle` is authoritative; the generic layout renders each line as an unbreakable span, styles the first word of the first line as a smaller prefix, wraps the last line's initial for optical alignment, and sizes it responsively. Other visible brand occurrences stay on one line. Check desktop and 320/390px layouts for alignment, extra lines, and horizontal overflow after title or typography edits.
+
+The optional `titleBackground` in `topics/topics.json` references a local image relative to `topics/`. Keep its source in `topics/assets/`; the generator embeds it only in the collection page. It is decorative and sits behind the live title text. Keep its position and scale tied to the lettering across all viewport sizes; do not introduce separate mobile offsets. Preserve offline rendering and check its blending in both themes.
 
 Each collection topic card is one native link covering the entire card, with its heading as the accessible name. Preserve keyboard activation, visible focus, and open-in-new-tab behavior; do not nest links or simulate a link with click handlers.

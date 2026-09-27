@@ -1,6 +1,7 @@
 {
   "title": "The Way I AI",
-  "displayTitle": "The way I\nAI",
+  "displayTitle": "the way I\nAI",
+  "titleBackground": "assets/logo-bg.png",
   "description": "Related ideas about working with AI: software development, agent roles, and the practice behind them.",
   "eyebrow": "A collection of ideas",
   "category": "AI in practice",

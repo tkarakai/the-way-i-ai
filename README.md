@@ -100,6 +100,6 @@ This recreates `_site/` from the same sources, including supporting topic files.
 
 Pull requests run the same checks and build, without deployment. Pushes to `main` and manual runs of **Publish collection** from `main` deploy after checks pass. Local builds and branch previews do not publish the current branch.
 
-Keep topic links relative, including the explicit `index.html` filenames, so the same files work under the repository's URL subpath, a custom domain, or `file://`.
+See [Reading locally](#reading-locally) for navigation behavior and [AGENTS.md](AGENTS.md#building-and-publishing) for the link-authoring contract.
 
 Reference: [GitHub's custom Pages workflow guide](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).

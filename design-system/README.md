@@ -29,6 +29,4 @@ Keep semantic headings, visible focus, native links/buttons, bounded reading wid
 
 ## Language and collection title rules
 
-Author site tooling, tests, and browser behavior in TypeScript only; never use Python for maintenance commands or helpers. The topic’s existing Bash worktree tools remain Bash. Node.js 24 runs the tooling directly; `npm run typecheck` checks all authored TypeScript strictly. The build compiles `reader.ts` to embedded plain JavaScript, so readers need no compiler or network. Shared metadata and rendered-document types live in `design-system/types.ts`.
-
-The collection name, when shown on two lines, must be “The Way I” / “AI” (visual casing and punctuation may remain). Never separate “I” from “The Way”. The newline in `topics/topics.json`’s `displayTitle` is authoritative; the generic layout renders each line as an unbreakable span and sizes it responsively. Other visible brand occurrences stay on one line. Check desktop and 320/390px layouts for extra lines and horizontal overflow after title or typography edits.
+Follow [AGENTS.md’s language, collection title, and card rules](../AGENTS.md#language-and-collection-title-rules) and [publishing and link-authoring contract](../AGENTS.md#building-and-publishing). The root README explains [hosted and local reading](../README.md#reading-locally).

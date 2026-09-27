@@ -1,13 +1,15 @@
+**[Read the interactive site →](https://tkarakai.github.io/the-way-i-ai/)**
+
 # The Way I AI
 
 A collection of related ideas about working with AI: practical workflows, useful mental models, and ways to organize AI systems in real life.
 
-Each topic has authoritative source documents and assets, plus a complete, interactive HTML edition. Start with the [HTML contents page](index.html), or choose a topic below.
+Each topic has authoritative source documents and assets, plus a complete, interactive HTML edition. Start with the [live collection](https://tkarakai.github.io/the-way-i-ai/), or choose a topic below.
 
 | Topic | Idea | Markdown | Interactive edition |
 | --- | --- | --- | --- |
-| **01 · Worktree-based development** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Open HTML](topics/worktrees/index.html) |
-| **02 · Defining AI agent roles** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Open HTML](topics/agent-roles/index.html) |
+| **01 · Worktree-based development** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Read online](https://tkarakai.github.io/the-way-i-ai/topics/worktrees/index.html) |
+| **02 · Defining AI agent roles** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Read online](https://tkarakai.github.io/the-way-i-ai/topics/agent-roles/index.html) |
 
 ## Sources and presentation
 
@@ -45,9 +47,9 @@ Diagrams are content: their SVG sources live with their topic, where their label
 
 ## Reading locally
 
-Download or clone the repository and open `index.html` in a modern browser. Every HTML file embeds its styles, scripts, fonts, diagrams, and complete text. An individual topic HTML file works offline when copied on its own. Navigating to other topics or opening source links requires the matching repository files.
+Download or clone the repository and open `index.html` in a modern browser. Every HTML file embeds its styles, scripts, fonts, diagrams, and complete text. Cards, contents links, and next-topic links use relative paths with explicit `index.html` filenames, so navigation works through `file://` when the folder structure is kept intact. An individual topic HTML file also works offline when copied on its own, but links to other pages need those files alongside it in their original locations.
 
-GitHub's repository file viewer shows HTML source; GitHub Pages serves the interactive site. Both use the same generated pages and relative links.
+GitHub's repository file viewer shows HTML source; the [GitHub Pages site](https://tkarakai.github.io/the-way-i-ai/) serves the interactive edition. Documentation links lead to that live site, while navigation inside the generated HTML stays relative for both hosted and local reading. The rendered pages contain no links to raw Markdown; source documents remain available in the repository.
 
 ## Editing and adding topics
 
@@ -82,11 +84,11 @@ npm run preview
 
 This builds the current checkout into `_site/` and serves it at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`). If another worktree is using that port, the server chooses an available one. After editing, run `npm run build:site` in another terminal and refresh the browser. There is no separate preview content or theme.
 
-Every pull request also produces a **site-preview-pr-N** artifact in its **Publish collection** workflow run. Follow the download link in the run summary, unzip the artifact, and open `index.html`. The artifact includes the complete offline site and source links, expires after 14 days, and does not change the public Pages site.
+Every pull request also produces a **site-preview-pr-N** artifact in its **Publish collection** workflow run. Follow the download link in the run summary, unzip the artifact, and open `index.html`. The artifact includes the complete offline site and supporting source files, expires after 14 days, and does not change the public Pages site.
 
 ## GitHub Pages
 
-GitHub Pages is the hosted edition of this same collection. The included workflow validates the checked-in HTML, runs generator tests, creates a clean `_site/` bundle, and deploys that bundle. It does not publish the repository root or build dependencies.
+The collection is published at **[tkarakai.github.io/the-way-i-ai](https://tkarakai.github.io/the-way-i-ai/)**. GitHub Pages is configured to deploy through GitHub Actions. The included workflow validates the checked-in HTML, runs generator tests, creates a clean `_site/` bundle, and deploys that bundle. It does not publish the repository root or build dependencies.
 
 To prepare the publication bundle locally:
 
@@ -94,16 +96,10 @@ To prepare the publication bundle locally:
 npm run build:site
 ```
 
-This recreates `_site/` from the same sources and includes the topic files needed by source links. Open `_site/index.html` locally to inspect it.
+This recreates `_site/` from the same sources, including supporting topic files. Open `_site/index.html` locally to inspect it.
 
-To enable hosting after the changes reach GitHub:
+Pull requests run the same checks and build, without deployment. Pushes to `main` and manual runs of **Publish collection** from `main` deploy after checks pass. Local builds and branch previews do not publish the current branch.
 
-1. In the repository's **Settings → Pages**, select **GitHub Actions** as the build/deployment source.
-2. Merge the workflow and sources into `main`, or run the **Publish collection** workflow manually from `main`.
-3. Use the deployment URL shown by the workflow. With GitHub's standard repository-site URL, this repository would be at `https://tkarakai.github.io/the-way-i-ai/`.
-
-Pull requests run the same checks and build, without deployment. Pushes to `main` and manual runs from `main` deploy after checks pass. Preparing this repository does not itself enable hosting or publish the current branch.
-
-Keep topic links relative, including the explicit `index.html` filenames, so the same files work under the repository's URL subpath, a custom domain, or `file://`.
+See [Reading locally](#reading-locally) for navigation behavior and [AGENTS.md](AGENTS.md#building-and-publishing) for the link-authoring contract.
 
 Reference: [GitHub's custom Pages workflow guide](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).

@@ -51,16 +51,17 @@ GitHub's repository file viewer shows HTML source; GitHub Pages serves the inter
 
 ## Editing and adding topics
 
-Use Node.js 22 or newer for building. Node.js and npm are not needed for reading.
+Use Node.js 24 or newer for building. Node.js and npm are not needed for reading.
 
 ```sh
 npm ci
+npm run typecheck
 npm run build
 npm run check
 npm test
 ```
 
-`package.json` defines these commands and the build-only dependencies: Markdown parsing, code rendering, and fonts. `package-lock.json` makes installation reproducible.
+`package.json` defines these commands and the build-only dependencies: TypeScript checking/compilation, Markdown parsing, code rendering, and fonts. `package-lock.json` makes installation reproducible.
 
 To add a topic:
 

@@ -439,8 +439,10 @@ svg .diagram-dot { fill: var(--accent); }
 .edition-line .rule { height: 1px; width: 36px; background: var(--line); }
 h1, h2, h3, p { margin-top: 0; }
 .collection-hero { padding: 30px 0 64px; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: end; gap: 72px; }
-.collection-hero h1 { margin: 0; font: 450 clamp(74px, 8.6vw, 124px)/.91 var(--serif); letter-spacing: -5px; }
-.collection-hero h1 em { font-style: normal; color: var(--accent); }
+.collection-hero h1 { margin: 0; font: 450 clamp(64px, 7.8vw, 112px)/.91 var(--serif); letter-spacing: -5px; }
+.brand-name, .title-line { white-space: nowrap; }
+.title-line { display: block; }
+.collection-hero h1 .title-line:last-child { color: var(--accent); }
 .collection-intro { padding-bottom: 5px; max-width: 450px; }
 .collection-intro p { font-size: 20px; line-height: 1.6; margin-bottom: 24px; }
 .collection-intro .eyebrow { display: block; padding-top: 22px; border-top: 1px solid var(--line); }
@@ -568,13 +570,13 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 }
 @media (max-width: 760px) {
   .page-width { width: calc(100% - 40px); }
-  .masthead { min-height: 76px; gap: 12px; }
+  .masthead { min-height: 76px; gap: 12px; flex-wrap: wrap; padding-block: 12px; }
   .masthead nav { gap: 12px; }
   .masthead .print-button { display: none; }
   .brand { font-size: 16px; gap: 8px; }
   .brand svg { width: 22px; }
   .collection-hero { grid-template-columns: minmax(0, 1fr); gap: 35px; padding: 20px 0 44px; }
-  .collection-hero h1 { font-size: 88px; letter-spacing: -3px; }
+  .collection-hero h1 { font-size: clamp(56px, 13vw, 88px); letter-spacing: -3px; }
   .collection-intro p { font-size: 18px; }
   .collection-intro { max-width: 100%; }
   .topic-grid { grid-template-columns: minmax(0, 1fr); }
@@ -631,7 +633,7 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 </head><body data-page="collection"><a class="skip-link" href="#main">Skip to content</a>
 <div class="page-width"><header class="masthead"><a class="brand" href="index.html"><svg viewBox="0 0 28 28" aria-hidden="true"><path fill="currentColor" d="M12 0h4v10l7-7 3 3-8 8 8 8-3 3-7-7v10h-4V18l-7 7-3-3 8-8L2 6l3-3 7 7z"/></svg>The Way I AI</a><nav aria-label="Collection"><a href="index.html">Contents</a><button class="small-button js-only" data-theme-toggle aria-label="Switch color theme">Dark mode</button><button class="small-button print-button js-only" data-print>Print</button></nav></header>
 <main id="main"><div class="edition-line eyebrow"><span>A collection of ideas</span><span class="rule"></span><span>AI in practice</span></div>
-  <section class="collection-hero"><h1>The way<br>I <em>AI.</em></h1><div class="collection-intro"><p>Working with AI is a practice.<br>These are the ideas behind mine.</p><p>From the way I develop software to the way I define agents in an organization.</p><span class="eyebrow">Practical workflows. Useful mental models.</span></div></section>
+  <section class="collection-hero"><h1><span class="title-line">The way I</span><span class="title-line">AI.</span></h1><div class="collection-intro"><p>Working with AI is a practice.<br>These are the ideas behind mine.</p><p>From the way I develop software to the way I define agents in an organization.</p><span class="eyebrow">Practical workflows. Useful mental models.</span></div></section>
   <section aria-labelledby="topics-heading"><div class="section-label"><h2 id="topics-heading">Explore the collection</h2><span>02 topics · one connected practice</span></div>
   <div class="topic-grid"><article class="topic-card"><div class="topic-visual"><span class="card-number">01</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 210" role="img" aria-labelledby="cover-worktrees-cover-worktrees-title"><style>svg{color:var(--ink,#252e29)}text{font-family:var(--sans,sans-serif);fill:currentColor}.diagram-line{fill:none;stroke:var(--accent,#275b43);stroke-width:2}.diagram-muted{fill:none;stroke:var(--line,#b5beb1);stroke-width:1.5}.diagram-node{fill:var(--surface,#fffef9);stroke:var(--accent,#275b43);stroke-width:1.5}.diagram-fill{fill:var(--tint,#e6ede3)}.diagram-dot{fill:var(--accent,#275b43)}</style><title id="cover-worktrees-cover-worktrees-title">Separate task branches rejoin the main branch</title>
     <path class="diagram-muted" d="M45 154H399"/><path class="diagram-line" d="M55 150H390"/>
@@ -642,159 +644,189 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
     <g id="cover-agent-roles-cover-agent-roles-environment"><title>Local environment</title><circle class="diagram-line" cx="260" cy="91" r="61"/><text x="286" y="182" text-anchor="middle" font-size="11">ENVIRONMENT</text></g>
     <g id="cover-agent-roles-cover-agent-roles-profile"><title>Discoverable profile</title><rect class="diagram-node" x="177" y="100" width="90" height="65" rx="4"/><path class="diagram-muted" d="M194 119h53M194 131h36M194 143h45"/><text x="136" y="182" text-anchor="middle" font-size="11">PROFILE</text></g></svg></div><div class="topic-copy"><span class="eyebrow">Agentic organizations</span><h3><a href="topics/agent-roles/index.html">Defining AI agent roles</a></h3><p>A professional lens, a concrete operational environment, and a discoverable profile. A framework for making AI roles useful in real organizations.</p><div class="card-links"><a class="text-link" href="topics/agent-roles/index.html">Explore the idea <span aria-hidden="true">↗</span></a><span>22 min read · Essay</span></div></div></article></div></section>
   <section class="collection-note"><h2>One idea, two ways in.</h2><div><p>Read each topic as an interactive edition, or explore the Markdown behind it. Both carry the complete ideas. The collection will grow as the practice evolves.</p><a class="text-link" href="README.md">Browse the Markdown collection →</a></div></section></main>
-<footer class="footer"><span>The Way I AI <span aria-hidden="true">/</span> Ideas &amp; practice</span><span><a href="index.html">Contents</a> &nbsp;·&nbsp; <a href="README.md">Markdown collection</a></span></footer></div>
+<footer class="footer"><span><span class="brand-name">The Way I AI</span> <span aria-hidden="true">/</span> Ideas &amp; practice</span><span><a href="index.html">Contents</a> &nbsp;·&nbsp; <a href="README.md">Markdown collection</a></span></footer></div>
 <a class="small-button back-top js-only" href="#main" aria-label="Back to top">↑ Top</a><div class="toast" role="status" hidden></div>
 <script>(() => {
-  'use strict';
-  const root = document.documentElement;
-  const themeButton = document.querySelector('[data-theme-toggle]');
-  const syncTheme = () => {
-    const dark = root.dataset.theme === 'dark';
-    themeButton.textContent = dark ? 'Light mode' : 'Dark mode';
-    themeButton.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} mode`);
-  };
-  syncTheme();
-  themeButton.addEventListener('click', () => {
-    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('the-way-i-ai-theme', root.dataset.theme); } catch { /* File/locked-down contexts may disallow storage. */ }
-    syncTheme();
-  });
-  document.querySelector('[data-print]').addEventListener('click', () => window.print());
-
-  // Declarative shadow DOM is static and requires no library at runtime.
-  // This fallback supports browsers that do not parse it natively.
-  document.querySelectorAll('template[shadowrootmode]').forEach(template => {
-    if (!template.parentElement.shadowRoot) template.parentElement.attachShadow({ mode: 'open' }).append(template.content.cloneNode(true));
-    template.remove();
-  });
-
-  let toastTimer;
-  const announce = message => {
-    const toast = document.querySelector('.toast');
-    toast.textContent = message;
-    toast.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toast.hidden = true; }, 2600);
-  };
-  document.querySelectorAll('[data-copy]').forEach(button => {
-    button.addEventListener('click', async () => {
-      const text = JSON.parse(document.getElementById(button.dataset.copy).textContent);
-      const fallback = () => {
-        const field = document.createElement('textarea');
-        field.value = text;
-        field.style.cssText = 'position:fixed;left:-9999px;top:0';
-        document.body.append(field);
-        field.select();
-        const copied = document.execCommand('copy');
-        field.remove();
-        button.focus({ preventScroll: true });
-        if (!copied) throw new Error('Copy unavailable');
-      };
-      try {
-        if (navigator.clipboard?.writeText) {
-          try { await navigator.clipboard.writeText(text); } catch { fallback(); }
-        } else fallback();
-        announce('Copied to clipboard');
-      } catch { announce('Copy unavailable. Select and copy the example directly.'); }
-    });
-  });
-
-  document.querySelectorAll('[data-explorer]').forEach(explorer => {
-    const buttons = [...explorer.querySelectorAll('[data-select]')];
-    const select = value => {
-      buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.select === value)));
-      explorer.querySelectorAll('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== value; });
-      explorer.querySelectorAll('[data-node]').forEach(node => node.classList.toggle('is-active', node.dataset.node.split(' ').includes(value)));
+    'use strict';
+    const root = document.documentElement;
+    const themeButton = document.querySelector('[data-theme-toggle]');
+    const syncTheme = () => {
+        const dark = root.dataset.theme === 'dark';
+        themeButton.textContent = dark ? 'Light mode' : 'Dark mode';
+        themeButton.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} mode`);
     };
-    buttons.forEach((button, index) => {
-      button.addEventListener('click', () => select(button.dataset.select));
-      button.addEventListener('keydown', event => {
-        let next;
-        if (event.key === 'ArrowRight') next = (index + 1) % buttons.length;
-        if (event.key === 'ArrowLeft') next = (index - 1 + buttons.length) % buttons.length;
-        if (event.key === 'Home') next = 0;
-        if (event.key === 'End') next = buttons.length - 1;
-        if (next === undefined) return;
-        event.preventDefault();
-        buttons[next].focus();
-        select(buttons[next].dataset.select);
-      });
+    syncTheme();
+    themeButton.addEventListener('click', () => {
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        try {
+            localStorage.setItem('the-way-i-ai-theme', root.dataset.theme);
+        }
+        catch { /* File/locked-down contexts may disallow storage. */ }
+        syncTheme();
     });
-    select(buttons[0].dataset.select);
-  });
-
-  const article = document.querySelector('.article');
-  if (!article) return;
-  const contents = document.querySelector('.contents');
-  const mobile = matchMedia('(max-width: 760px)');
-  const setContents = () => { contents.open = !mobile.matches; };
-  setContents();
-  mobile.addEventListener('change', setContents);
-  const links = [...document.querySelectorAll('.toc-link')];
-  const headings = links.map(link => document.getElementById(decodeURIComponent(link.hash.slice(1))));
-  const search = document.getElementById('section-search');
-  const searchStatus = document.querySelector('[data-search-status]');
-  // Read the actual rendered prose, including pre-rendered code in shadow roots.
-  const textOf = element => {
-    const clone = element.cloneNode(true);
-    clone.querySelectorAll('script,style,.code-toolbar').forEach(node => node.remove());
-    let text = clone.textContent;
-    element.querySelectorAll('script[type="application/json"]').forEach(script => { text += ' ' + JSON.parse(script.textContent); });
-    return text;
-  };
-  const searchable = headings.map(heading => {
-    let text = heading.textContent;
-    let sibling = heading.nextElementSibling;
-    while (sibling && !(sibling.matches('h2,h3,h4,h5,h6') && Number(sibling.tagName.slice(1)) <= Number(heading.tagName.slice(1)))) {
-      text += ' ' + textOf(sibling);
-      sibling = sibling.nextElementSibling;
-    }
-    return text.toLocaleLowerCase();
-  });
-  search.addEventListener('input', () => {
-    const words = search.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-    let count = 0;
-    links.forEach((link, index) => {
-      const match = words.every(word => searchable[index].includes(word));
-      const item = link.parentElement;
-      item.hidden = !match;
-      item.classList.toggle('search-match', Boolean(words.length && match));
-      if (match) count++;
+    document.querySelector('[data-print]').addEventListener('click', () => window.print());
+    // Declarative shadow DOM is static and requires no library at runtime.
+    // This fallback supports browsers that do not parse it natively.
+    document.querySelectorAll('template[shadowrootmode]').forEach(template => {
+        if (!template.parentElement.shadowRoot)
+            template.parentElement.attachShadow({ mode: 'open' }).append(template.content.cloneNode(true));
+        template.remove();
     });
-    document.querySelectorAll('.toc-document').forEach(group => { group.hidden = ![...group.querySelectorAll('li')].some(item => !item.hidden); });
-    searchStatus.textContent = words.length ? `${count} matching section${count === 1 ? '' : 's'}` : 'Search headings and full text';
-  });
-  document.addEventListener('keydown', event => {
-    if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.target.closest('input,textarea,[contenteditable]')) {
-      event.preventDefault(); contents.open = true; search.focus();
-    }
-    if (event.key === 'Escape' && document.activeElement === search) {
-      search.value = ''; search.dispatchEvent(new Event('input')); search.blur();
-    }
-  });
-  links.forEach(link => link.addEventListener('click', () => {
-    if (mobile.matches) contents.open = false;
-  }));
-  let queued = false;
-  const track = () => {
-    queued = false;
-    const rect = article.getBoundingClientRect();
-    const distance = Math.max(1, rect.height - innerHeight);
-    const progress = Math.min(100, Math.max(0, Math.round(-rect.top / distance * 100)));
-    document.querySelector('[data-progress]').style.width = `${progress}%`;
-    document.querySelector('[data-progress-text]').textContent = `${progress}%`;
-    let active = -1;
-    headings.forEach((heading, index) => { if (heading.getBoundingClientRect().top < innerHeight * .35) active = index; });
-    // Keep the parent chapter active when its subsection is not shown in the index.
-    while (active > 0 && links[active].parentElement.dataset.subsection === 'true') active--;
-    links.forEach((link, index) => {
-      if (index === active) link.setAttribute('aria-current', 'location');
-      else link.removeAttribute('aria-current');
+    let toastTimer;
+    const announce = (message) => {
+        const toast = document.querySelector('.toast');
+        toast.textContent = message;
+        toast.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.hidden = true; }, 2600);
+    };
+    document.querySelectorAll('[data-copy]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const text = JSON.parse(document.getElementById(button.dataset.copy).textContent);
+            const fallback = () => {
+                const field = document.createElement('textarea');
+                field.value = text;
+                field.style.cssText = 'position:fixed;left:-9999px;top:0';
+                document.body.append(field);
+                field.select();
+                const copied = document.execCommand('copy');
+                field.remove();
+                button.focus({ preventScroll: true });
+                if (!copied)
+                    throw new Error('Copy unavailable');
+            };
+            try {
+                if (navigator.clipboard?.writeText) {
+                    try {
+                        await navigator.clipboard.writeText(text);
+                    }
+                    catch {
+                        fallback();
+                    }
+                }
+                else
+                    fallback();
+                announce('Copied to clipboard');
+            }
+            catch {
+                announce('Copy unavailable. Select and copy the example directly.');
+            }
+        });
     });
-  };
-  addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(track); } }, { passive: true });
-  addEventListener('resize', track);
-  document.fonts.ready.then(track);
-  track();
+    document.querySelectorAll('[data-explorer]').forEach(explorer => {
+        const buttons = [...explorer.querySelectorAll('[data-select]')];
+        const select = (value) => {
+            buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.select === value)));
+            explorer.querySelectorAll('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== value; });
+            explorer.querySelectorAll('[data-node]').forEach(node => node.classList.toggle('is-active', node.dataset.node.split(' ').includes(value)));
+        };
+        buttons.forEach((button, index) => {
+            button.addEventListener('click', () => select(button.dataset.select));
+            button.addEventListener('keydown', event => {
+                let next;
+                if (event.key === 'ArrowRight')
+                    next = (index + 1) % buttons.length;
+                if (event.key === 'ArrowLeft')
+                    next = (index - 1 + buttons.length) % buttons.length;
+                if (event.key === 'Home')
+                    next = 0;
+                if (event.key === 'End')
+                    next = buttons.length - 1;
+                if (next === undefined)
+                    return;
+                event.preventDefault();
+                buttons[next].focus();
+                select(buttons[next].dataset.select);
+            });
+        });
+        select(buttons[0].dataset.select);
+    });
+    const article = document.querySelector('.article');
+    if (!article)
+        return;
+    const contents = document.querySelector('.contents');
+    const mobile = matchMedia('(max-width: 760px)');
+    const setContents = () => { contents.open = !mobile.matches; };
+    setContents();
+    mobile.addEventListener('change', setContents);
+    const links = [...document.querySelectorAll('.toc-link')];
+    const headings = links.map(link => document.getElementById(decodeURIComponent(link.hash.slice(1))));
+    const search = document.querySelector('#section-search');
+    const searchStatus = document.querySelector('[data-search-status]');
+    // Read the actual rendered prose, including pre-rendered code in shadow roots.
+    const textOf = (element) => {
+        const clone = element.cloneNode(true);
+        clone.querySelectorAll('script,style,.code-toolbar').forEach(node => node.remove());
+        let text = clone.textContent ?? '';
+        element.querySelectorAll('script[type="application/json"]').forEach(script => { text += ' ' + JSON.parse(script.textContent); });
+        return text;
+    };
+    const searchable = headings.map(heading => {
+        let text = heading.textContent ?? '';
+        let sibling = heading.nextElementSibling;
+        while (sibling && !(sibling.matches('h2,h3,h4,h5,h6') && Number(sibling.tagName.slice(1)) <= Number(heading.tagName.slice(1)))) {
+            text += ' ' + textOf(sibling);
+            sibling = sibling.nextElementSibling;
+        }
+        return text.toLocaleLowerCase();
+    });
+    search.addEventListener('input', () => {
+        const words = search.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+        let count = 0;
+        links.forEach((link, index) => {
+            const match = words.every(word => searchable[index].includes(word));
+            const item = link.parentElement;
+            item.hidden = !match;
+            item.classList.toggle('search-match', Boolean(words.length && match));
+            if (match)
+                count++;
+        });
+        document.querySelectorAll('.toc-document').forEach(group => { group.hidden = ![...group.querySelectorAll('li')].some(item => !item.hidden); });
+        searchStatus.textContent = words.length ? `${count} matching section${count === 1 ? '' : 's'}` : 'Search headings and full text';
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey && !(event.target instanceof Element && event.target.closest('input,textarea,[contenteditable]'))) {
+            event.preventDefault();
+            contents.open = true;
+            search.focus();
+        }
+        if (event.key === 'Escape' && document.activeElement === search) {
+            search.value = '';
+            search.dispatchEvent(new Event('input'));
+            search.blur();
+        }
+    });
+    links.forEach(link => link.addEventListener('click', () => {
+        if (mobile.matches)
+            contents.open = false;
+    }));
+    let queued = false;
+    const track = () => {
+        queued = false;
+        const rect = article.getBoundingClientRect();
+        const distance = Math.max(1, rect.height - innerHeight);
+        const progress = Math.min(100, Math.max(0, Math.round(-rect.top / distance * 100)));
+        document.querySelector('[data-progress]').style.width = `${progress}%`;
+        document.querySelector('[data-progress-text]').textContent = `${progress}%`;
+        let active = -1;
+        headings.forEach((heading, index) => { if (heading.getBoundingClientRect().top < innerHeight * .35)
+            active = index; });
+        // Keep the parent chapter active when its subsection is not shown in the index.
+        while (active > 0 && links[active].parentElement.dataset.subsection === 'true')
+            active--;
+        links.forEach((link, index) => {
+            if (index === active)
+                link.setAttribute('aria-current', 'location');
+            else
+                link.removeAttribute('aria-current');
+        });
+    };
+    addEventListener('scroll', () => { if (!queued) {
+        queued = true;
+        requestAnimationFrame(track);
+    } }, { passive: true });
+    addEventListener('resize', track);
+    document.fonts.ready.then(track);
+    track();
 })();
 </script></body></html>

@@ -61,6 +61,7 @@ Then run:
 
 ```sh
 npm ci              # First checkout, or after the lockfile changes
+npm run typecheck   # Strict TypeScript checking
 npm run build       # Regenerate root and topic HTML files
 npm run check       # Detect stale output, broken links and invalid references
 npm test            # Generator contract checks
@@ -132,3 +133,9 @@ The Pages workflow checks the source/output contract, builds the publication bun
 - The new script resolves the done script relative to itself. Keep the pair together.
 - Cleanup summarizes uncommitted/unpushed work, ignored files, and matching processes. Process termination and deletion have separate confirmations.
 - Avoid bash 4+ features; these scripts are used from macOS shells.
+
+## Language and collection title rules
+
+Author site tooling, tests, and browser behavior in TypeScript only; never use Python for maintenance commands or helpers. The topic’s existing Bash worktree tools remain Bash. Node.js 24 runs the tooling directly; `npm run typecheck` checks all authored TypeScript strictly. The build compiles `reader.ts` to embedded plain JavaScript, so readers need no compiler or network. Shared metadata and rendered-document types live in `design-system/types.ts`.
+
+The collection name, when shown on two lines, must be “The Way I” / “AI” (visual casing and punctuation may remain). Never separate “I” from “The Way”. The newline in `topics/topics.json`’s `displayTitle` is authoritative; the generic layout renders each line as an unbreakable span and sizes it responsively. Other visible brand occurrences stay on one line. Check desktop and 320/390px layouts for extra lines and horizontal overflow after title or typography edits.

@@ -1,26 +1,27 @@
-import { escape } from './layout.mjs';
+import type { RenderedTopic, RenderedDocument, SourceReference, HeadingReference } from './types.ts';
+import { escape } from './layout.ts';
 
 // Topic-specific content belongs to topic.json, Markdown, and SVG sources.
 // This renderer only binds those sources to shared presentation components.
-export function explorerFor(topic, documents) {
+export function explorerFor(topic: RenderedTopic, documents: RenderedDocument[]) {
   const config = topic.explorer;
   if (!config) return '';
   const seen = new Set();
   const panels = config.panels.map((panel, index) => {
     if (!/^[a-z][a-z0-9-]*$/.test(panel.id) || seen.has(panel.id)) throw new Error(`${topic.id}: invalid or duplicate panel id ${panel.id}`);
     seen.add(panel.id);
-    const findDocument = reference => {
+    const findDocument = (reference: SourceReference) => {
       const doc = documents.find(doc => doc.file === reference.document);
       if (!doc) throw new Error(`${topic.id}: explorer references missing document ${reference.document}`);
       return doc;
     };
-    const findHeading = reference => {
+    const findHeading = (reference: HeadingReference) => {
       const matches = findDocument(reference).headings.filter(heading => heading.text === reference.heading);
       if (matches.length !== 1) throw new Error(`${topic.id}: explorer heading must match exactly once: ${reference.heading}`);
       return matches[0];
     };
     let html, title, target;
-    if (panel.source.excerpt) {
+    if ('excerpt' in panel.source) {
       html = findDocument(panel.source).excerpts.get(panel.source.excerpt);
       if (!html) throw new Error(`${topic.id}: missing Markdown excerpt ${panel.source.excerpt}`);
       if (!panel.label || !panel.context) throw new Error(`${topic.id}: named excerpts need a label and context heading`);
@@ -39,7 +40,7 @@ export function explorerFor(topic, documents) {
   if (!panels.length) throw new Error(`${topic.id}: an explorer must have at least one panel`);
   if (!['labels', 'numbered'].includes(config.controls)) throw new Error(`${topic.id}: explorer controls must be labels or numbered`);
   let diagram = topic.diagramSVG;
-  const highlights = new Map();
+  const highlights = new Map<string, string[]>();
   for (const panel of panels) for (const nodeId of panel.highlight || []) {
     if (!diagram.includes(`id="${nodeId}"`)) throw new Error(`${topic.id}: missing SVG node ${nodeId}`);
     highlights.set(nodeId, [...(highlights.get(nodeId) || []), panel.id]);

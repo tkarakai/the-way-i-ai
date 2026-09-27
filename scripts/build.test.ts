@@ -1,3 +1,5 @@
+import type { TestContext } from 'node:test';
+import type { SpawnSyncReturns } from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, cp, symlink, readFile, writeFile, mkdir, rm, access } from 'node:fs/promises';
@@ -7,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn, spawnSync } from 'node:child_process';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-async function fixture(t) {
+async function fixture(t: TestContext) {
   const path = await mkdtemp(resolve(tmpdir(), 'the-way-i-ai-'));
   t.after(() => rm(path, { recursive: true, force: true }));
   for (const item of ['scripts', 'design-system', 'topics', 'package.json', 'README.md', 'AGENTS.md', 'CLAUDE.md']) {
@@ -16,12 +18,12 @@ async function fixture(t) {
   await symlink(resolve(root, 'node_modules'), resolve(path, 'node_modules'), 'dir');
   return {
     path,
-    read: file => readFile(resolve(path, file), 'utf8'),
-    write: (file, text) => writeFile(resolve(path, file), text),
-    build: (...args) => spawnSync(process.execPath, [resolve(path, 'scripts/build.mjs'), ...args], { cwd: path, encoding: 'utf8' })
+    read: (file: string) => readFile(resolve(path, file), 'utf8'),
+    write: (file: string, text: string) => writeFile(resolve(path, file), text),
+    build: (...args: string[]) => spawnSync(process.execPath, [resolve(path, 'scripts/build.ts'), ...args], { cwd: path, encoding: 'utf8' })
   };
 }
-function passed(result) { assert.equal(result.status, 0, result.stderr || result.stdout); }
+function passed(result: SpawnSyncReturns<string>) { assert.equal(result.status, 0, result.stderr || result.stdout); }
 
 test('an ordinary new topic builds without renderer changes; its image is embedded and navigation is relative', async t => {
   const f = await fixture(t);
@@ -107,9 +109,9 @@ test('the publication bundle is clean and contains the same standalone pages and
 test('the local preview serves the generated site, links and images without serving paths outside the bundle', async t => {
   const f = await fixture(t);
   passed(f.build('--site'));
-  const child = spawn(process.execPath, [resolve(f.path, 'scripts/preview.mjs')], { cwd: f.path, env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, [resolve(f.path, 'scripts/preview.ts')], { cwd: f.path, env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
   try {
-    const base = await new Promise((resolveURL, reject) => {
+    const base = await new Promise<string>((resolveURL, reject) => {
       const timer = setTimeout(() => reject(new Error('Preview did not start')), 10000);
       let output = '';
       child.stdout.on('data', chunk => {
@@ -122,7 +124,7 @@ test('the local preview serves the generated site, links and images without serv
     });
     const response = await fetch(base);
     assert.equal(response.status, 200);
-    assert.match(response.headers.get('content-type'), /text\/html/);
+    assert.match(response.headers.get('content-type') ?? '', /text\/html/);
     assert.equal(await response.text(), await f.read('_site/index.html'));
     for (const file of ['topics/worktrees/index.html', 'topics/agent-roles/README.md', 'topics/agent-roles/assets/diagram.svg']) {
       const linked = await fetch(new URL(file, base));
@@ -137,6 +139,6 @@ test('the local preview serves the generated site, links and images without serv
     assert.equal((await fetch(base, { method: 'POST' })).status, 405);
   } finally {
     child.kill('SIGTERM');
-    await new Promise(resolveExit => { if (child.exitCode !== null || child.signalCode) resolveExit(); else child.once('exit', resolveExit); });
+    await new Promise<void>(resolveExit => { if (child.exitCode !== null || child.signalCode) resolveExit(); else child.once('exit', () => resolveExit()); });
   }
 });

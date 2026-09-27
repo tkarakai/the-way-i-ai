@@ -40,8 +40,8 @@ const html = `<!doctype html>
 .card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; }
 .card-index { font-size:12px; color:var(--muted); letter-spacing:.1em; }
 input[type=radio] { width:18px; height:18px; accent-color:var(--ink); margin:0; }
-.wordmark { display:block; width:max-content; max-width:100%; font:450 88px/.645 var(--serif); letter-spacing:-.045em; color:var(--title-top); margin-bottom:25px; }
-.wordmark .title-line:last-child { color:var(--title-ai); text-align:right; }
+.palette-card .wordmark { display:block; width:max-content; max-width:100%; font:450 88px/.645 var(--serif); letter-spacing:-.045em; color:var(--title-top); margin-bottom:25px; }
+.palette-card .wordmark .title-line:last-child { color:var(--title-ai); text-align:right; }
 .palette-name { font-size:16px; font-weight:600; margin-bottom:4px; }
 .palette-note { font-size:13px; color:var(--muted); line-height:1.5; }
 .selection { padding:25px 28px; border:1px solid var(--line); background:var(--surface); }
@@ -62,7 +62,7 @@ input[type=radio] { width:18px; height:18px; accent-color:var(--ink); margin:0; 
 .site-preview .collection-hero h1 .title-line:last-child { color:var(--title-ai); }
 .review-footer { margin-top:20px; color:var(--muted); font-size:12px; }
 @media(max-width:1100px) { .palette-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .site-preview .collection-hero { grid-template-columns:minmax(0,1fr); } }
-@media(max-width:640px) { .review { width:calc(100% - 32px); padding-top:28px; } .review-head { display:block; } .theme-switch { margin-top:20px; width:max-content; } .palette-grid { grid-template-columns:minmax(0,1fr); } .palette-card { padding:20px 24px; } .wordmark { font-size:80px; } .selection { padding:22px; } .site-preview { padding:0 20px; } .preview-masthead { flex-wrap:wrap; padding:16px 0; gap:8px; } .site-preview .collection-hero h1 { font-size:56px; } }
+@media(max-width:640px) { .review { width:calc(100% - 32px); padding-top:28px; } .review-head { display:block; } .theme-switch { margin-top:20px; width:max-content; } .palette-grid { grid-template-columns:minmax(0,1fr); } .palette-card { padding:20px 24px; } .palette-card .wordmark { font-size:80px; } .selection { padding:22px; } .site-preview { padding:0 20px; } .preview-masthead { flex-wrap:wrap; padding:16px 0; gap:8px; } .site-preview .collection-hero h1 { font-size:56px; } }
 </style></head><body>
 <main class="review">
   <header class="review-head"><div><span class="eyebrow">The Way I AI · Color studies</span><h1>Give AI its own color.</h1><p>Compare six palettes on the site's own backgrounds. Select a direction, switch themes, and fine-tune either title color.</p></div><div class="theme-switch" role="group" aria-label="Preview theme"><button type="button" data-theme-choice="light" aria-pressed="true">Light</button><button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button></div></header>

@@ -7,6 +7,7 @@ The shared presentation layer for a collection of source-owned topics. Warm pape
 - `theme.css`: shared tokens, typography, layouts, responsive behavior, dark mode, and print styles.
 - `reader.ts`: generic section search, navigation, progress, code copying, theme switching, and explorer selection.
 - `layout.ts`: collection and reader layouts; receives all collection and topic copy from source metadata.
+- `wordmark.ts`: validates the saved wave geometry and generates its scalable, static CSS projection.
 - `explorers.ts`: a generic SVG-and-panels renderer. It resolves Markdown section/excerpt references and highlights named SVG nodes.
 
 Topic-specific copy, diagram labels, SVG geometry, and explorer configuration belong in `topics/<id>/`, not here. Collection copy and topic order live in `topics/topics.json`. A new topic needs no changes to this directory unless it introduces a genuinely new reusable presentation component.
@@ -19,7 +20,9 @@ Local Markdown images become data URLs. SVG sources used inline must be standalo
 
 `npm run build` updates the checked-in HTML. `npm run check` rejects stale output, invalid source references, broken links, duplicate IDs, and external render dependencies. `npm test` checks the generator's source/output contract. `npm run build:site` creates an ignored `_site/` bundle for publication using the same generator.
 
-The optional collection `titleBackground` image is resolved relative to `topics/` and embedded in the collection header. Its placement and light/dark blending live in `theme.css`; the title remains accessible, selectable text. The wave is squeezed horizontally from the left to follow the title's diagonal stems. Its dimensions and offsets scale with the lettering, without separate mobile positioning, so the composition stays fixed as the viewport changes.
+The shared `.wordmark` renders the same live lettering and decorative wave in the collection title and every page's home link. Set `--wordmark-size` to resize it; all spacing, optical letter adjustments, and background coordinates follow that size. The home link has an accessible name and the decorative duplicate text is hidden from assistive technology.
+
+The optional `titleBackground` and `titleBackgroundPosition` paths resolve relative to `topics/`. The latter is the version 1 JSON exported by the standalone wave editor, currently `topics/assets/title-wave-position.json`. Its four corners use the main title's font size as one `em`, measured from the title layout box's top-left. The generator converts that geometry to a CSS perspective transform, so both large and miniature versions match exactly without JavaScript or resize handlers. The original image is embedded once per HTML file and shared by all wordmark instances through CSS. Light/dark blending remains in `theme.css`, and both source assets are included in the publication bundle.
 
 ## Reuse
 

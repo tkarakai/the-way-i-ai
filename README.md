@@ -1,15 +1,15 @@
-**[Read the interactive site →](https://tkarakai.github.io/the-way-i-ai/)**
+**[Read the interactive site →](https://thewayiai.com/)**
 
 # The Way I AI
 
 A collection of related ideas about working with AI: practical workflows, useful mental models, and ways to organize AI systems in real life.
 
-Each topic has authoritative source documents and assets, plus a complete, interactive HTML edition. Start with the [live collection](https://tkarakai.github.io/the-way-i-ai/), or choose a topic below.
+Each topic has authoritative source documents and assets, plus a complete, interactive HTML edition. Start with the [live collection](https://thewayiai.com/), or choose a topic below.
 
 | Topic | Idea | Markdown | Interactive edition |
 | --- | --- | --- | --- |
-| **01 · Worktree-based development** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Read online](https://tkarakai.github.io/the-way-i-ai/topics/worktrees/index.html) |
-| **02 · Defining AI agent roles** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Read online](https://tkarakai.github.io/the-way-i-ai/topics/agent-roles/index.html) |
+| **01 · Worktree-based development** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Read online](https://thewayiai.com/topics/worktrees/index.html) |
+| **02 · Defining AI agent roles** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Read online](https://thewayiai.com/topics/agent-roles/index.html) |
 
 ## Sources and presentation
 
@@ -49,7 +49,7 @@ Diagrams are content: their SVG sources live with their topic, where their label
 
 Download or clone the repository and open `index.html` in a modern browser. Every HTML file embeds its styles, scripts, fonts, diagrams, and complete text. Cards, contents links, and next-topic links use relative paths with explicit `index.html` filenames, so navigation works through `file://` when the folder structure is kept intact. An individual topic HTML file also works offline when copied on its own, but links to other pages need those files alongside it in their original locations.
 
-GitHub's repository file viewer shows HTML source; the [GitHub Pages site](https://tkarakai.github.io/the-way-i-ai/) serves the interactive edition. Documentation links lead to that live site, while navigation inside the generated HTML stays relative for both hosted and local reading. The rendered pages contain no links to raw Markdown; source documents remain available in the repository.
+GitHub's repository file viewer shows HTML source; the [live site](https://thewayiai.com/) serves the interactive edition. Documentation links lead to that live site, while navigation inside the generated HTML stays relative for both hosted and local reading. The rendered pages contain no links to raw Markdown; source documents remain available in the repository.
 
 ## Editing and adding topics
 
@@ -86,11 +86,13 @@ This builds the current checkout into `_site/` and serves it at the local URL pr
 
 For the standalone title color study, open `previews/title-colors.html` locally. Its color controls affect only the study, not the site's theme. Regenerate it with `node previews/build-title-colors.ts` after `npm run build`. The study stays in the repository and is excluded from the publication bundle.
 
+For the draggable wave editor, open `previews/title-wave-editor.html`; regenerate it with `node previews/build-title-wave-editor.ts`. Its four corners are measured in title-relative em units. Save an approved export to `topics/assets/title-wave-position.json` and rebuild to apply it to the collection title and every miniature header wordmark. The static comparison pages can be rebuilt with `node previews/build-title-wave-edges.ts` and its `--refine` option.
+
 Every pull request also produces a **site-preview-pr-N** artifact in its **Publish collection** workflow run. Follow the download link in the run summary, unzip the artifact, and open `index.html`. The artifact includes the complete offline site and supporting source files, expires after 14 days, and does not change the public Pages site.
 
 ## GitHub Pages
 
-The collection is published at **[tkarakai.github.io/the-way-i-ai](https://tkarakai.github.io/the-way-i-ai/)**. GitHub Pages is configured to deploy through GitHub Actions. The included workflow validates the checked-in HTML, runs generator tests, creates a clean `_site/` bundle, and deploys that bundle. It does not publish the repository root or build dependencies.
+The collection is published at **[thewayiai.com](https://thewayiai.com/)**. GitHub Pages is configured to deploy through GitHub Actions. The included workflow validates the checked-in HTML, runs generator tests, creates a clean `_site/` bundle, and deploys that bundle. It does not publish the repository root or build dependencies.
 
 To prepare the publication bundle locally:
 

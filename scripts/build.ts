@@ -9,6 +9,7 @@ import { Marked, Renderer } from 'marked';
 import { preloadFile } from '@pierre/diffs/ssr';
 import { shell, collectionBody, readerBody, escape } from '../design-system/layout.ts';
 import { explorerFor } from '../design-system/explorers.ts';
+import { parseWavePosition, wordmarkStyles } from '../design-system/wordmark.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
@@ -18,8 +19,8 @@ const read = (path: string) => readFile(resolve(root, path), 'utf8');
 const [registry, css, js] = await Promise.all([
   read('topics/topics.json').then(text => JSON.parse(text) as Collection), read('design-system/theme.css'), read('design-system/reader.ts').then(source => ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.None } }).outputText)
 ]);
-const fontLicenses = await Promise.all(['newsreader-OFL.txt', 'dm-sans-OFL.txt', 'pierre-diffs-Apache-2.0.txt'].map(file => read(`design-system/licenses/${file}`)));
-const fonts = `/* Embedded font and code-renderer licenses:\n${fontLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/\n` + (await Promise.all([
+const fontLicenses = await Promise.all(['newsreader-OFL.txt', 'dm-sans-OFL.txt', 'pierre-diffs-Apache-2.0.txt', 'octicons-MIT.txt'].map(file => read(`design-system/licenses/${file}`)));
+const fonts = `/* Embedded font, icon, and code-renderer licenses:\n${fontLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/\n` + (await Promise.all([
   ['Newsreader', 'newsreader'], ['DM Sans', 'dm-sans']
 ].map(async ([name, file]) => {
   const data = await readFile(resolve(root, `node_modules/@fontsource-variable/${file}/files/${file}-latin-wght-normal.woff2`));
@@ -141,10 +142,16 @@ const outputs = new Map();
 const titleBackgroundPath = registry.titleBackground ? resolve(root, 'topics', registry.titleBackground) : undefined;
 if (titleBackgroundPath && !titleBackgroundPath.startsWith(`${resolve(root, 'topics')}/`)) throw new Error('The title background must be a local image inside topics/.');
 const titleBackground = titleBackgroundPath ? await embedImage(titleBackgroundPath) : '';
-outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, titleBackground), css, js, fonts, collection: registry }));
+const positionPath = titleBackground && registry.titleBackgroundPosition ? resolve(root, 'topics', registry.titleBackgroundPosition) : undefined;
+if (positionPath && !positionPath.startsWith(`${resolve(root, 'topics')}/`)) throw new Error('The wave positioning must be a local JSON file inside topics/.');
+const wavePosition = positionPath ? parseWavePosition(JSON.parse(await readFile(positionPath, 'utf8'))) : undefined;
+if (wavePosition && resolve(root, wavePosition.source) !== titleBackgroundPath) throw new Error('The wave positioning source must match titleBackground.');
+const pageCSS = `${css}\n${wordmarkStyles(titleBackground, wavePosition)}`;
+const wordmarkBackground = Boolean(titleBackground);
+outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js, fonts, collection: registry, wordmarkBackground }));
 for (const topic of topics) {
   const fingerprints = `<!-- Markdown sources: ${topic.rendered.map(doc => `${doc.file} sha256:${doc.sha256}`).join('; ')} -->\n`;
-  outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered)), css, js, fonts, collection: registry, prefix: '../../', page: topic.id }));
+  outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered)), css: pageCSS, js, fonts, collection: registry, prefix: '../../', page: topic.id, wordmarkBackground }));
 }
 
 // Validate output before writing: navigation, ids, and offline render dependencies.
@@ -154,7 +161,7 @@ for (const [path, html] of outputs) {
   if (new Set(elementIds).size !== elementIds.length) throw new Error(`Duplicate element ids in ${path}`);
   if ((html.match(/<h1\b/g) || []).length !== 1) throw new Error(`Expected one page title in ${path}`);
   const renderDependencies = [...html.matchAll(/<(?:script|img|iframe|link|video|audio|source)\b[^>]*\b(?:src|href)=["']([^"']+)/gi)];
-  if (renderDependencies.some(([, url]) => !url.startsWith('data:')) || /@import\b/i.test(css) || /url\((?!data:|['"]?data:)/i.test(css)) throw new Error(`Non-embedded render dependency in ${path}`);
+  if (renderDependencies.some(([, url]) => !url.startsWith('data:')) || /@import\b/i.test(pageCSS) || /url\((?!data:|['"]?data:)/i.test(pageCSS)) throw new Error(`Non-embedded render dependency in ${path}`);
   for (const [, href] of lightDOM.matchAll(/\bhref="([^"]+)"/g)) {
     if (/^(?:[a-z]+:|\/\/)/i.test(href)) continue;
     const [file, fragment] = href.split('#');
@@ -181,10 +188,10 @@ if (site) {
   for (const file of ['README.md', 'AGENTS.md', 'CLAUDE.md', 'design-system/README.md', 'design-system/licenses', 'topics/topics.json']) {
     await cp(resolve(root, file), resolve(outputRoot, file), { recursive: true });
   }
-  if (titleBackgroundPath) {
-    const target = resolve(outputRoot, relative(root, titleBackgroundPath));
+  for (const asset of [titleBackgroundPath, positionPath].filter((path): path is string => Boolean(path))) {
+    const target = resolve(outputRoot, relative(root, asset));
     await mkdir(dirname(target), { recursive: true });
-    await cp(titleBackgroundPath, target);
+    await cp(asset, target);
   }
   for (const topic of topics) {
     const source = resolve(root, 'topics', topic.id);

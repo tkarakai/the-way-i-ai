@@ -3,13 +3,12 @@ export interface Collection {
   title: string;
   displayTitle: string;
   titleBackground?: string;
+  titleBackgroundPosition?: string;
+  repositoryUrl?: string;
   description: string;
   eyebrow: string;
-  category: string;
-  tagline: string;
   subtitle: string;
   introduction: string[];
-  note: { title: string; body: string };
   topics: string[];
 }
 export interface SourceDocument { file: string; label: string; headingOffset?: number }
@@ -59,4 +58,14 @@ export interface RenderedTopic extends Topic {
 export interface ShellOptions {
   title: string; description: string; body: string; css: string; js: string;
   fonts: string; collection: Collection; prefix?: string; page?: string;
+  wordmarkBackground?: boolean;
+}
+export interface WavePosition {
+  version: 1;
+  source: string;
+  mapping: 'projective';
+  units: 'em of the main title font size';
+  origin: 'top-left of the two-line title layout box';
+  cornerOrder: ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'];
+  corners: Record<'topLeft' | 'topRight' | 'bottomRight' | 'bottomLeft', { x: number; y: number }>;
 }

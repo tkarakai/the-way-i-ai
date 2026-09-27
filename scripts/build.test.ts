@@ -48,15 +48,29 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   passed(f.build('--check'));
 });
 
-test('the optional collection background is embedded only in the index, and a missing asset preserves output', async t => {
+test('the shared wordmark embeds its background once per page and missing assets preserve output', async t => {
   const f = await fixture(t);
   passed(f.build());
   const index = await f.read('index.html');
-  const image = index.match(/<img class="title-background" src="data:image\/png;base64,([^"]+)" alt="">/);
-  assert.ok(image, 'The title background must be embedded for standalone reading');
-  assert.deepEqual(Buffer.from(image[1], 'base64'), await readFile(resolve(f.path, 'topics/assets/logo-bg.png')));
-  assert.match(index, /<span class="title-art" aria-hidden="true">/);
-  assert.ok(!(await f.read('topics/worktrees/index.html')).includes('<img class="title-background"'));
+  for (const removed of ['One idea, two ways in.', 'one connected practice', 'Practical workflows. Useful mental models.', 'AI in practice']) {
+    assert.ok(!index.includes(removed), `The collection omits removed copy: ${removed}`);
+  }
+  assert.ok(index.includes('A collection of ideas'));
+  const source = await readFile(resolve(f.path, 'topics/assets/logo-bg.png'));
+  for (const file of ['index.html', 'topics/worktrees/index.html', 'topics/agent-roles/index.html']) {
+    const html = await f.read(file);
+    const images = [...html.matchAll(/--wordmark-wave-image: url\("data:image\/png;base64,([^"]+)"\)/g)];
+    assert.equal(images.length, 1, 'The standalone page embeds one shared copy of the wave');
+    assert.deepEqual(Buffer.from(images[0][1], 'base64'), source);
+    const header = html.match(/<header class="masthead">[\s\S]*?<\/header>/)![0];
+    assert.match(header, /class="brand" href="(?:\.\.\/\.\.\/)?index.html" aria-label="The Way I AI — home"/);
+    assert.match(header, /<span class="wordmark" aria-hidden="true"><span class="title-art"/);
+    assert.ok(!header.match(/<a class="brand"[\s\S]*?<\/a>/)![0].includes('<svg'), 'The shared wordmark replaces the old asterisk');
+    assert.match(header, /class="repo-link" href="https:\/\/github.com\/tkarakai\/the-way-i-ai" target="_blank" rel="noopener noreferrer"/);
+    assert.match(header, /aria-label="View the repository on GitHub \(opens in a new tab\)"/);
+    assert.equal([...html.matchAll(/<span class="title-art"/g)].length, file === 'index.html' ? 2 : 1);
+    assert.equal([...html.matchAll(/<h1\b/g)].length, 1, 'The header logo must not create an extra page heading');
+  }
   passed(f.build('--check'));
 
   const registry = JSON.parse(await f.read('topics/topics.json'));
@@ -78,6 +92,38 @@ test('the optional collection background is embedded only in the index, and a mi
   const outside = f.build('--site');
   assert.notEqual(outside.status, 0);
   assert.match(outside.stderr, /local image inside topics/);
+});
+
+test('wave positioning is optional, validated before output changes, and tied to its image source', async t => {
+  const f = await fixture(t);
+  passed(f.build());
+  const original = await f.read('index.html');
+  const registry = JSON.parse(await f.read('topics/topics.json'));
+  const file = `topics/${registry.titleBackgroundPosition}`;
+  const position = JSON.parse(await f.read(file));
+  const invalid = structuredClone(position);
+  invalid.corners.topLeft = invalid.corners.bottomRight;
+  await f.write(file, JSON.stringify(invalid));
+  const crossed = f.build();
+  assert.notEqual(crossed.status, 0);
+  assert.match(crossed.stderr, /convex clockwise quadrilateral/);
+  assert.equal(await f.read('index.html'), original);
+  await f.write(file, JSON.stringify({ ...position, source: 'topics/assets/another.png' }));
+  const wrongSource = f.build();
+  assert.notEqual(wrongSource.status, 0);
+  assert.match(wrongSource.stderr, /source must match/);
+  assert.equal(await f.read('index.html'), original);
+  registry.titleBackgroundPosition = '../outside.json';
+  await f.write('topics/topics.json', JSON.stringify(registry));
+  const outside = f.build('--site');
+  assert.notEqual(outside.status, 0);
+  assert.match(outside.stderr, /local JSON file inside topics/);
+  assert.equal(await f.read('index.html'), original);
+  delete registry.titleBackgroundPosition;
+  await f.write('topics/topics.json', JSON.stringify(registry));
+  passed(f.build());
+  assert.match(await f.read('index.html'), /<span class="title-art"/);
+  passed(f.build('--check'));
 });
 
 test('a named Markdown excerpt is shared by the full reader and visual explorer; stale output is rejected', async t => {
@@ -132,6 +178,7 @@ test('the publication bundle is clean and contains the same standalone pages and
   assert.equal(await f.read('_site/topics/worktrees/README.md'), await f.read('topics/worktrees/README.md'));
   assert.equal(await f.read('_site/topics/agent-roles/assets/diagram.svg'), await f.read('topics/agent-roles/assets/diagram.svg'));
   assert.deepEqual(await readFile(resolve(f.path, '_site/topics/assets/logo-bg.png')), await readFile(resolve(f.path, 'topics/assets/logo-bg.png')));
+  assert.equal(await f.read('_site/topics/assets/title-wave-position.json'), await f.read('topics/assets/title-wave-position.json'));
   await access(resolve(f.path, '_site/.nojekyll'));
   await assert.rejects(access(resolve(f.path, '_site/stale.html')));
   await assert.rejects(access(resolve(f.path, '_site/node_modules')));

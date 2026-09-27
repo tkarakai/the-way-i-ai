@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source": "topics/assets/logo-bg.png",
+  "mapping": "projective",
+  "units": "em of the main title font size",
+  "origin": "top-left of the two-line title layout box",
+  "cornerOrder": ["topLeft", "topRight", "bottomRight", "bottomLeft"],
+  "corners": {
+    "topLeft": { "x": 0.88143, "y": -0.18118 },
+    "topRight": { "x": 3.38572, "y": -0.59053 },
+    "bottomRight": { "x": 3.16639, "y": 1.48505 },
+    "bottomLeft": { "x": 1.0428, "y": 1.48353 }
+  }
+}

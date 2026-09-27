@@ -1,0 +1,21 @@
+{
+  "title": "The Way I AI",
+  "displayTitle": "The way\nI AI.",
+  "description": "Related ideas about working with AI: software development, agent roles, and the practice behind them.",
+  "eyebrow": "A collection of ideas",
+  "category": "AI in practice",
+  "tagline": "Practical workflows. Useful mental models.",
+  "subtitle": "Ideas & practice",
+  "introduction": [
+    "Working with AI is a practice.\nThese are the ideas behind mine.",
+    "From the way I develop software to the way I define agents in an organization."
+  ],
+  "note": {
+    "title": "One idea, two ways in.",
+    "body": "Read each topic as an interactive edition, or explore the Markdown behind it. Both carry the complete ideas. The collection will grow as the practice evolves."
+  },
+  "topics": [
+    "worktrees",
+    "agent-roles"
+  ]
+}

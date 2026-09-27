@@ -1,0 +1,23 @@
+{
+  "name": "the-way-i-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Related ideas about working with AI, in Markdown and standalone HTML.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "build:site": "node scripts/build.mjs --site",
+    "test": "node --test scripts/*.test.mjs",
+    "preview": "npm run build:site && node scripts/preview.mjs"
+  },
+  "devDependencies": {
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/newsreader": "5.3.0",
+    "@pierre/diffs": "1.2.10",
+    "marked": "18.0.14"
+  }
+}

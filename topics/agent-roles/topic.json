@@ -1,0 +1,68 @@
+{
+  "title": "Defining AI agent roles",
+  "category": "Agentic organizations",
+  "description": "A professional lens, a concrete operational environment, and a discoverable profile. A framework for making AI roles useful in real organizations.",
+  "thesis": "Define the context behind the title.",
+  "documents": [
+    {
+      "file": "README.md",
+      "label": "The framework",
+      "headingOffset": 1
+    }
+  ],
+  "cover": "assets/cover.svg",
+  "explorer": {
+    "title": "Three parts of an effective role.",
+    "instruction": "Select a layer to explore the framework.",
+    "diagram": "assets/diagram.svg",
+    "caption": "A professional operating context for a generally capable AI.",
+    "controls": "labels",
+    "panels": [
+      {
+        "id": "lens",
+        "label": "Professional lens",
+        "source": {
+          "document": "README.md",
+          "excerpt": "professional-lens"
+        },
+        "context": {
+          "document": "README.md",
+          "heading": "2. The First Layer: Generic Professional Knowledge"
+        },
+        "highlight": [
+          "role-lens"
+        ]
+      },
+      {
+        "id": "environment",
+        "label": "Local environment",
+        "source": {
+          "document": "README.md",
+          "excerpt": "local-environment"
+        },
+        "context": {
+          "document": "README.md",
+          "heading": "3. The Second Layer: The Local Agentic Environment"
+        },
+        "highlight": [
+          "role-environment"
+        ]
+      },
+      {
+        "id": "profile",
+        "label": "Discoverable profile",
+        "source": {
+          "document": "README.md",
+          "excerpt": "discoverable-profile"
+        },
+        "context": {
+          "document": "README.md",
+          "heading": "11. Every Agent Should Have a Discoverable Profile"
+        },
+        "highlight": [
+          "role-profile"
+        ]
+      }
+    ]
+  }
+}

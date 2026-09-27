@@ -97,7 +97,7 @@
     return text;
   };
   const searchable = headings.map(heading => {
-    let text = heading.textContent ?? ''; 
+    let text = heading.textContent ?? '';
     let sibling = heading.nextElementSibling;
     while (sibling && !(sibling.matches('h2,h3,h4,h5,h6') && Number(sibling.tagName.slice(1)) <= Number(heading.tagName.slice(1)))) {
       text += ' ' + textOf(sibling);

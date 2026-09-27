@@ -123,7 +123,7 @@ The excerpt is not hidden content. It remains visible in the Markdown document a
 
 Use `npm run preview` to build and serve the current branch locally. After edits, rebuild with `npm run build:site` and refresh. PR builds upload a complete downloadable preview artifact, linked from the Actions run summary. Preview builds must not deploy the main Pages site.
 
-The Pages workflow checks the source/output contract, builds the publication bundle, and deploys on the default branch or manual dispatch. Repository setup instructions live in `README.md`. Preparing files does not itself enable Pages or publish the current branch.
+The Pages workflow checks the source/output contract, builds the publication bundle, and deploys on the default branch or manual dispatch. Pages is configured at https://tkarakai.github.io/the-way-i-ai/. Documentation should lead readers to this rendered site, with a prominent link at the very top of the root README. Use absolute Pages URLs for interactive-edition links in Markdown, since GitHub's file viewer displays HTML source. Keep navigation inside HTML relative with explicit `index.html` filenames so the downloaded folder also works through `file://`. Do not include raw Markdown links in rendered pages. Local builds do not publish the current branch.
 
 ## Worktree tool constraints
 
@@ -138,4 +138,6 @@ The Pages workflow checks the source/output contract, builds the publication bun
 
 Author site tooling, tests, and browser behavior in TypeScript only; never use Python for maintenance commands or helpers. The topic’s existing Bash worktree tools remain Bash. Node.js 24 runs the tooling directly; `npm run typecheck` checks all authored TypeScript strictly. The build compiles `reader.ts` to embedded plain JavaScript, so readers need no compiler or network. Shared metadata and rendered-document types live in `design-system/types.ts`.
 
-The collection name, when shown on two lines, must be “The Way I” / “AI” (visual casing and punctuation may remain). Never separate “I” from “The Way”. The newline in `topics/topics.json`’s `displayTitle` is authoritative; the generic layout renders each line as an unbreakable span and sizes it responsively. Other visible brand occurrences stay on one line. Check desktop and 320/390px layouts for extra lines and horizontal overflow after title or typography edits.
+The collection name, when shown on two lines, must be “The Way I” / “AI”, without a trailing period. Never separate “I” from “The Way”. Align the second line's right edge with the first line's right edge. The newline in `topics/topics.json`’s `displayTitle` is authoritative; the generic layout renders each line as an unbreakable span and sizes it responsively. Other visible brand occurrences stay on one line. Check desktop and 320/390px layouts for alignment, extra lines, and horizontal overflow after title or typography edits.
+
+Each collection topic card is one native link covering the entire card, with its heading as the accessible name. Preserve keyboard activation, visible focus, and open-in-new-tab behavior; do not nest links or simulate a link with click handlers.

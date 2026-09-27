@@ -41,9 +41,6 @@ jobs:
           PREVIEW_URL: ${{ steps.preview.outputs.artifact-url }}
         run: |
           echo "Download the [complete site preview]($PREVIEW_URL), unzip it, and open index.html in your browser." >> "$GITHUB_STEP_SUMMARY"
-      - name: Configure Pages
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: actions/configure-pages@v5
       - name: Upload publication bundle
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v4

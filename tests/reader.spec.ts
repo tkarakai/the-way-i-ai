@@ -32,23 +32,38 @@ for (const width of [1440, 390, 320]) {
         expect(headerOrder).toBe(true);
         await expect(page.locator('.collection-nav a[href*="github.com"],.footer a[href*="github.com"]')).toHaveCount(0);
         await expect(page.locator('.reading-status,.reading-track,[data-progress]')).toHaveCount(0);
-        await expect(page.locator('.theme-picker summary')).toHaveAccessibleName('Color theme: System. Choose a theme');
+        await expect(page.locator('[data-print]')).toHaveCount(0);
+        await expect(page.getByText(/Print \/ save PDF/i)).toHaveCount(0);
+        await expect(page.locator('.theme-toggle')).toHaveAccessibleName(`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`);
+        await expect(page.locator(`.theme-toggle .theme-${theme === 'light' ? 'dark' : 'light'}`)).toBeVisible();
+        await expect(page.locator(`.theme-toggle .theme-${theme}`)).not.toBeVisible();
         const layout = await page.evaluate(() => {
           const ids = [...document.querySelectorAll('[id]')].map(node => node.id);
           return {
             overflow: document.documentElement.scrollWidth - innerWidth,
             duplicates: ids.filter((id, i) => ids.indexOf(id) !== i),
-            icons: [...document.querySelectorAll('.theme-picker summary,.theme-options button,.repo-link')].every(node => !node.textContent?.trim() && !!node.querySelector('svg')),
+            icons: [...document.querySelectorAll('.focus-toggle,.theme-toggle,.repo-link')].every(node => !node.textContent?.trim() && !!node.querySelector('svg')),
             code: [...document.querySelectorAll('diffs-container')].every(node => !!node.shadowRoot?.textContent),
           };
         });
         expect(layout).toEqual({ overflow: 0, duplicates: [], icons: true, code: true });
+        await expect(page.getByText(/\d+ min read/i)).toHaveCount(0);
         if (path !== 'index.html') {
           await expect(page.locator('.collection-contents')).not.toHaveAttribute('open');
           await expect(page.locator('.prose').first()).toBeVisible();
+          await expect(page.locator('.focus-toggle')).toHaveAccessibleName('Focus on reading');
+          await expect(page.locator('.ambient-canvas')).toHaveCount(0);
+          await expect(page.locator('.topic-dates time')).toHaveCount(2);
+          await expect(page.locator('meta[property="article:published_time"]')).toHaveCount(1);
+          await expect(page.locator('meta[property="article:modified_time"]')).toHaveCount(1);
         } else {
           await expect(page.locator('.topic-card')).toHaveCount(registry.topics.length);
           await expect(page.locator('.wordmark .title-line')).toHaveCount(4);
+          await expect(page.locator('.collection-intro .intro-line')).toHaveCount(2);
+          await expect(page.locator('body')).toHaveAttribute('data-ambient', 'F');
+          await expect(page.locator('.ambient-canvas')).toHaveCSS('opacity', '0.2');
+          await expect(page.locator('.ambient-canvas')).toHaveCSS('pointer-events', 'none');
+          expect(await page.evaluate(() => getComputedStyle(document.body, '::before').animationName)).toBe('none');
         }
         await page.screenshot({ path: `test-results/folio-${path.replaceAll('/', '-')}-${width}-${theme}.png`, fullPage: false, animations: 'disabled' });
       }
@@ -57,31 +72,39 @@ for (const width of [1440, 390, 320]) {
   }
 }
 
-test('theme icons support keyboard choice, persistence and live System changes', async ({ page }) => {
-  await page.emulateMedia({ colorScheme: 'light' });
+test('theme toggles in one click or keypress, shows the target icon, and returns to live System after idle expiry', async ({ page }) => {
+  await page.clock.install();
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.goto(url('index.html'));
-  const picker = page.locator('.theme-picker summary');
-  await picker.focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('button', { name: 'System theme', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Dark theme', exact: true }).focus();
+  const toggle = page.locator('.theme-toggle');
+  await expect(page.locator('.theme-picker,.theme-options,.theme-system')).toHaveCount(0);
+  await expect(toggle).toHaveAccessibleName('Switch to dark theme');
+  await expect(toggle.locator('.theme-dark')).toBeVisible();
+  await toggle.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect(picker).toBeFocused();
+  await expect(toggle).toBeFocused();
+  await expect(toggle).toHaveAccessibleName('Switch to light theme');
+  await expect(toggle.locator('.theme-light')).toBeVisible();
+  await expect(toggle.locator('.theme-dark')).not.toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await toggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await picker.click();
-  await page.getByRole('button', { name: 'System theme', exact: true }).click();
+  await page.clock.fastForward(2 * 60 * 60 * 1000 + 1000);
+  await expect(page.locator('html')).toHaveAttribute('data-theme-preference', 'system');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(toggle.locator('.theme-dark')).toBeVisible();
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await picker.click();
-  await expect(page.getByRole('button', { name: 'System theme', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page.keyboard.press('Escape');
-  await expect(page.locator('.theme-picker')).not.toHaveAttribute('open');
+  await expect(toggle.locator('.theme-light')).toBeVisible();
+  await toggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
 
-test('sidebar starts collapsed, animates both ways, and resets after topic navigation', async ({ page }) => {
+test('sidebar starts collapsed, animates both ways, and persists after topic navigation', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(url(topicPath));
   const sidebar = page.locator('.collection-contents');
@@ -99,8 +122,8 @@ test('sidebar starts collapsed, animates both ways, and resets after topic navig
   await expect.poll(width).toBe(64);
   await toggle.click();
   await sidebar.locator('.nav-topic').last().click();
-  await expect(sidebar).not.toHaveAttribute('open');
-  await expect.poll(width).toBe(64);
+  await expect(page.locator('.collection-contents')).toHaveAttribute('open');
+  await expect.poll(() => page.locator('.collection-nav').evaluate(node => node.getBoundingClientRect().width)).toBe(220);
 });
 
 for (const width of [1691, 1100]) {
@@ -129,6 +152,15 @@ for (const width of [1691, 1100]) {
     expect(expanded.search - collapsed.search).toBeCloseTo(headerInset - 12, 1);
     expect(expanded.github).toBe(collapsed.github);
     expect(expanded.outlineRight).toBeLessThan(expanded.articleLeft);
+    const navigationTop = await page.evaluate(() => {
+      const textTop = (selector: string) => {
+        const element = document.querySelector(selector)!;
+        const node = [...element.childNodes].find(child => child.nodeType === Node.TEXT_NODE && child.textContent?.trim()) ?? element.firstChild!;
+        const range = document.createRange(); range.selectNodeContents(node); return range.getBoundingClientRect().top;
+      };
+      return [textTop('.collection-contents summary span'), textTop('.contents-label'), textTop('.breadcrumbs a')];
+    });
+    expect(Math.max(...navigationTop) - Math.min(...navigationTop)).toBeLessThanOrEqual(3);
     await page.screenshot({ path: `test-results/folio-left-navigation-expanded-${width}.png`, animations: 'disabled' });
 
     // Sample both actual CSS animations at halfway. Matching normalized travel
@@ -168,6 +200,54 @@ for (const width of [1691, 1100]) {
   });
 }
 
+test('desktop navigation and reading columns can be resized with pointer and keyboard', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url(topicPath));
+  await page.locator('.collection-contents summary').click();
+  const collection = page.locator('.collection-nav');
+  const collectionHandle = page.locator('.collection-resizer');
+  await collectionHandle.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => collection.evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(230);
+  await expect(collectionHandle).toHaveAttribute('aria-valuenow', '230');
+
+  const toc = page.locator('.on-page');
+  const tocHandle = page.locator('.toc-resizer');
+  const before = await toc.evaluate(node => Math.round(node.getBoundingClientRect().width));
+  const box = await tocHandle.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2 + 35, box!.y + 100);
+  await page.mouse.up();
+  await expect.poll(() => toc.evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(before + 35);
+  await expect(tocHandle).toHaveAttribute('aria-valuenow', String(before + 35));
+
+  const reading = page.locator('.reading-main');
+  const readingHandle = page.locator('.reading-resizer');
+  const initialReading = await reading.boundingBox();
+  await readingHandle.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => reading.evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(Math.round(initialReading!.width) + 10);
+  const resizedByKeyboard = await reading.boundingBox();
+  expect(resizedByKeyboard!.x + resizedByKeyboard!.width / 2).toBeCloseTo(initialReading!.x + initialReading!.width / 2, 0);
+  const readingHandleBox = await readingHandle.boundingBox();
+  await page.mouse.move(readingHandleBox!.x + readingHandleBox!.width / 2, readingHandleBox!.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(readingHandleBox!.x + readingHandleBox!.width / 2 + 25, readingHandleBox!.y + 100);
+  await page.mouse.up();
+  await expect.poll(() => reading.evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(Math.round(initialReading!.width) + 60);
+  const resizedByPointer = await reading.boundingBox();
+  expect(resizedByPointer!.x + resizedByPointer!.width / 2).toBeCloseTo(initialReading!.x + initialReading!.width / 2, 0);
+  await expect(readingHandle).toHaveAttribute('aria-valuenow', String(Math.round(initialReading!.width) + 60));
+
+  await page.reload();
+  await expect(page.locator('.collection-contents')).toHaveAttribute('open');
+  await expect.poll(() => page.locator('.collection-nav').evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(230);
+  await expect.poll(() => page.locator('.on-page').evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(before + 35);
+  await expect.poll(() => page.locator('.reading-main').evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(Math.round(initialReading!.width) + 60);
+});
+
 test('topic header shrinks on scroll and restores at the top without oscillating', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(url(topicPath));
@@ -186,7 +266,7 @@ test('topic header shrinks on scroll and restores at the top without oscillating
   expect(await height()).toBe(60);
 });
 
-test('search, section links, explorers, code copying, focus and print remain usable', async ({ page, context }) => {
+test('search, section links, explorers, code copying, focus and print layout remain usable', async ({ page, context }) => {
   await context.setOffline(true);
   await page.goto(url(topicPath));
   await page.keyboard.press('ControlOrMeta+k');
@@ -195,15 +275,23 @@ test('search, section links, explorers, code copying, focus and print remain usa
   const input = page.locator('#collection-search');
   await input.fill('permissions');
   await expect(page.locator('.search-result').first()).toBeVisible();
+  expect(await page.locator('.search-results mark.search-hit').count()).toBeGreaterThan(0);
   await input.fill('zxxyynonexistent');
   await expect(page.locator('.search-result')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(search).not.toBeVisible();
   await page.keyboard.press('/');
   await expect(page.locator('#section-search')).toBeFocused();
+  await expect(page.locator('#section-search')).toHaveCSS('outline-offset', '-2px');
   await page.locator('#section-search').fill('cleanup');
   await expect(page.locator('[data-search-status]')).toContainText('matching');
+  expect(await page.locator('.article mark.search-hit').count()).toBeGreaterThan(0);
+  await page.locator('#section-search').fill('Parallel Work');
+  await expect(page.locator('.toc-link', { hasText: 'Parallel Work' }).locator('mark.search-hit')).toHaveCount(2);
+  await expect(page.locator('#worktrees-doc-2-parallel-work mark.search-hit')).toHaveCount(2);
+  await page.screenshot({ path: 'test-results/folio-search-highlights.png', animations: 'disabled' });
   await page.keyboard.press('Escape');
+  await expect(page.locator('.reading-main mark.search-hit,.contents mark.search-hit')).toHaveCount(0);
   await page.locator('.visual-guide summary').click();
   const control = page.locator('[data-select]').nth(1);
   await control.click();
@@ -212,11 +300,42 @@ test('search, section links, explorers, code copying, focus and print remain usa
   await expect(page.locator('[data-select]').nth(2)).toHaveAttribute('aria-pressed', 'true');
   await page.locator('.article [data-copy]').first().click();
   await expect(page.locator('.toast')).toHaveText(/Copied to clipboard/);
-  await page.locator('[data-focus]').click();
+  const focus = page.locator('[data-focus]');
+  await focus.click();
+  const focusMotion = await page.evaluate(() => ({
+    header: document.querySelector('.masthead')!.getAnimations().some(animation => animation.playState === 'running'),
+    collection: document.querySelector('.collection-nav')!.getAnimations().some(animation => animation.playState === 'running'),
+    workspace: document.querySelector('.workspace')!.getAnimations().some(animation => animation.playState === 'running'),
+    outline: document.querySelector('.on-page')!.getAnimations().some(animation => animation.playState === 'running'),
+    reading: document.querySelector('.reading-layout')!.getAnimations().some(animation => animation.playState === 'running'),
+    icon: document.querySelector('[data-focus]')!.getAnimations().some(animation => animation.playState === 'running'),
+  }));
+  expect(focusMotion).toEqual({ header: true, collection: true, workspace: true, outline: true, reading: true, icon: true });
+  await expect(page.locator('body')).toHaveClass(/focus-mode/);
   await expect(page.locator('.on-page')).not.toBeVisible();
-  await page.locator('[data-focus]').click();
+  await expect(page.locator('.collection-nav')).not.toBeVisible();
+  await expect(page.locator('.brand')).not.toBeVisible();
+  await expect(focus).toHaveAccessibleName('Show navigation');
+  await expect(focus).toHaveCSS('position', 'fixed');
+  await page.waitForTimeout(350);
+  const floating = await focus.boundingBox();
+  const viewportWidth = await page.evaluate(() => innerWidth);
+  expect(floating!.x + floating!.width).toBeGreaterThan(viewportWidth - 24);
+  await page.screenshot({ path: 'test-results/folio-focus-mode.png', animations: 'disabled' });
+  await page.reload();
+  await expect(page.locator('body')).toHaveClass(/focus-mode/);
+  await expect(focus).toHaveAccessibleName('Show navigation');
+  await page.keyboard.press('Escape');
+  const restoreMotion = await page.evaluate(() => [
+    document.querySelector('.masthead'), document.querySelector('.collection-nav'), document.querySelector('.workspace'),
+    document.querySelector('.on-page'), document.querySelector('.reading-layout')
+  ].every(node => node!.getAnimations().some(animation => animation.playState === 'running')));
+  expect(restoreMotion).toBe(true);
+  await expect(page.locator('body')).not.toHaveClass(/focus-mode/);
   await expect(page.locator('.on-page')).toBeVisible();
-  await page.locator('.visual-guide summary').click();
+  await expect(page.locator('.masthead')).toBeVisible();
+  await expect(focus).toHaveAccessibleName('Focus on reading');
+  await page.locator('.visual-guide').evaluate((details: HTMLDetailsElement) => { details.open = false; });
   await page.evaluate(() => dispatchEvent(new Event('beforeprint')));
   await expect(page.locator('.visual-guide')).toHaveAttribute('open');
   await page.evaluate(() => dispatchEvent(new Event('afterprint')));
@@ -224,8 +343,35 @@ test('search, section links, explorers, code copying, focus and print remain usa
   await page.locator('[data-open-search]').click();
   await input.fill('Create a worktree');
   await page.locator('.search-result').first().click();
-  await expect(page).toHaveURL(/#worktrees-doc-/);
+  await expect(page).toHaveURL(/\?q=Create(?:\+|%20)a(?:\+|%20)worktree#worktrees-doc-/);
   await expect(search).not.toBeVisible();
+  await expect(page.locator('#section-search')).toHaveValue('Create a worktree');
+  expect(await page.locator('.article mark.search-hit').count()).toBeGreaterThan(0);
+});
+
+test('each topic restores its reading position', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(url(topicPath));
+  await page.evaluate(() => scrollTo({ top: 700, behavior: 'instant' }));
+  await page.waitForTimeout(500);
+  const saved = await page.evaluate(() => Number(localStorage.getItem(`the-way-i-ai-scroll-${document.body.dataset.page}`)));
+  expect(saved).toBeGreaterThan(600);
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Math.round(scrollY))).toBe(Math.round(saved));
+});
+
+test('mobile focus mode collapses navigation without leaving empty space', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url(topicPath));
+  const focus = page.locator('[data-focus]');
+  await focus.click();
+  await expect(page.locator('.collection-nav')).not.toBeVisible();
+  await expect(page.locator('.on-page')).not.toBeVisible();
+  await expect.poll(() => page.locator('.topic-hero').evaluate(node => Math.round(node.getBoundingClientRect().top))).toBeLessThan(80);
+  await expect(focus).toHaveCSS('position', 'fixed');
+  await focus.click();
+  await expect(page.locator('.collection-nav')).toBeVisible();
+  await expect(page.locator('.on-page')).toBeVisible();
 });
 
 test('the full article and native collection navigation work without JavaScript', async ({ browser }) => {
@@ -233,7 +379,7 @@ test('the full article and native collection navigation work without JavaScript'
   const page = await context.newPage();
   await page.goto(url(topicPath));
   await expect(page.locator('.prose').first()).toBeVisible();
-  await expect(page.locator('.theme-picker')).not.toBeVisible();
+  await expect(page.locator('.theme-toggle')).not.toBeVisible();
   await page.locator('.collection-contents summary').click();
   await expect(page.locator('.collection-contents .nav-topic').first()).toBeVisible();
   await page.locator('.visual-guide summary').press('Enter');

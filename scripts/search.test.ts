@@ -17,7 +17,7 @@ test('search uses visible prose and original code, not syntax-highlight CSS or c
 
 test('collection search includes opening prose and every section, with stable relative result links', () => {
   const topic: RenderedTopic = {
-    id: 'example', title: 'An example', category: 'Practice', description: 'Description', thesis: 'Thesis', documents: [], number: '01', minutes: 1, coverSVG: '', diagramSVG: '',
+    id: 'example', title: 'An example', category: 'Practice', description: 'Description', thesis: 'Thesis', documents: [], number: '01', coverSVG: '', diagramSVG: '',
     rendered: [{ id: 'example-doc-1', file: 'README.md', label: 'The idea', title: 'Full title', markdown: '', sha256: '', excerpts: new Map(),
       html: `<p>Opening argument.</p>${codeExample('git status')}<h2 id="first">First section</h2><p>First text.</p>${codeExample('git worktree add feature')}<h3 id="second">Subsection</h3><p>Second text.</p>`,
       headings: [{ id: 'first', text: 'First section', level: 2, excerpt: '' }, { id: 'second', text: 'Subsection', level: 3, excerpt: '' }],

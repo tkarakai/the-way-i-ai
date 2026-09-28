@@ -45,11 +45,34 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   assert.ok(embedded, 'The generated standalone edition must embed the image');
   assert.equal(Buffer.from(embedded[1], 'base64').toString(), diagram);
   assert.ok(!html.includes('data-explorer aria-'), 'An explorer is optional');
+  assert.ok(!html.includes('article:published_time'), 'Missing Git history omits creation metadata');
+  assert.ok(!html.includes('class="topic-dates"'), 'Missing Git history omits the visible date block');
+  assert.ok(!html.includes('min read'), 'Reading-time estimates are not rendered');
   const search = JSON.parse(index.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { title: string; text: string; href: string }[];
   assert.ok(search.some(entry => entry.title === 'The premise' && entry.text.includes('This complete paragraph belongs to the source.') && entry.href === 'topics/new-idea/index.html#new-idea-doc-1-the-premise'));
   const nestedSearch = JSON.parse(html.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { href: string }[];
   assert.ok(nestedSearch.every(entry => entry.href.startsWith('../../topics/')));
   passed(f.build('--check'));
+});
+
+test('topic dates come from Git history and are emitted as metadata and visible dates', async t => {
+  const f = await fixture(t);
+  const git = (args: string[], date?: string) => spawnSync('git', args, { cwd: f.path, encoding: 'utf8', env: date ? { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } : process.env });
+  assert.equal(git(['init']).status, 0);
+  assert.equal(git(['config', 'user.name', 'Test Author']).status, 0);
+  assert.equal(git(['config', 'user.email', 'test@example.com']).status, 0);
+  assert.equal(git(['add', 'topics/agent-roles']).status, 0);
+  assert.equal(git(['commit', '-m', 'Create agent roles'], '2024-01-02T12:00:00Z').status, 0);
+  const file = 'topics/agent-roles/README.md';
+  await f.write(file, `${await f.read(file)}\n`);
+  assert.equal(git(['add', file]).status, 0);
+  assert.equal(git(['commit', '-m', 'Update agent roles'], '2025-03-04T12:00:00Z').status, 0);
+  passed(f.build());
+  const html = await f.read('topics/agent-roles/index.html');
+  assert.match(html, /<meta property="article:published_time" content="2024-01-02T12:00:00Z">/);
+  assert.match(html, /<meta property="article:modified_time" content="2025-03-04T12:00:00Z">/);
+  assert.match(html, /Created<\/dt><dd><time datetime="2024-01-02T12:00:00Z">Jan 2, 2024<\/time>/);
+  assert.match(html, /Last Updated<\/dt><dd><time datetime="2025-03-04T12:00:00Z">Mar 4, 2025<\/time>/);
 });
 
 test('the shared wordmark embeds its background once per page and missing assets preserve output', async t => {
@@ -59,7 +82,13 @@ test('the shared wordmark embeds its background once per page and missing assets
   for (const removed of ['One idea, two ways in.', 'one connected practice', 'Practical workflows. Useful mental models.', 'AI in practice', 'A collection of ideas. A practice in progress.', 'Thoughtfully made. Freely shared.', 'Independent thinking. Practical tools.']) {
     assert.ok(!index.includes(removed), `The collection omits removed copy: ${removed}`);
   }
-  assert.ok(index.includes('The reading list'));
+  assert.ok(index.includes('id="topics-heading">The collection'));
+  assert.ok(index.includes('A software engineer&#39;s thoughts about that...'));
+  assert.ok(index.includes('<span class="intro-accent">practice</span>'));
+  assert.ok(!index.includes('Explore the collection'));
+  assert.ok(index.includes('data-ambient="F"'));
+  assert.ok(index.includes('class="ambient-canvas" aria-hidden="true" style="--ambient-intensity:0.2"'));
+  assert.ok(index.includes("[data-ambient='A']::before"), 'Option A remains available in the generated design system');
   const source = await readFile(resolve(f.path, 'topics/assets/logo-bg.png'));
   for (const file of ['index.html', 'topics/worktrees/index.html', 'topics/agent-roles/index.html']) {
     const html = await f.read(file);
@@ -96,6 +125,28 @@ test('the shared wordmark embeds its background once per page and missing assets
   const outside = f.build('--site');
   assert.notEqual(outside.status, 0);
   assert.match(outside.stderr, /local image inside topics/);
+});
+
+test('ambient configuration retains A, keeps F homepage-only, and rejects invalid settings before writing', async t => {
+  const f = await fixture(t);
+  const registry = JSON.parse(await f.read('topics/topics.json'));
+  passed(f.build());
+  assert.ok((await f.read('index.html')).includes('window.drawMurmuration ='));
+  assert.ok(!(await f.read('topics/worktrees/index.html')).includes('window.drawMurmuration'));
+  registry.ambientBackground = 'A';
+  await f.write('topics/topics.json', JSON.stringify(registry));
+  passed(f.build());
+  const original = await f.read('index.html');
+  assert.ok(original.includes('data-ambient="A"'));
+  assert.ok(!original.includes('<canvas class="ambient-canvas"'));
+  assert.ok(!original.includes('window.drawMurmuration'));
+  for (const patch of [{ ambientBackground: 'B' }, { ambientIntensity: 20 }, { ambientIntensity: -.1 }, { ambientIntensity: '0.2' }]) {
+    await f.write('topics/topics.json', JSON.stringify({ ...registry, ...patch }));
+    const invalid = f.build();
+    assert.notEqual(invalid.status, 0);
+    assert.match(invalid.stderr, /ambientBackground|ambientIntensity/);
+    assert.equal(await f.read('index.html'), original);
+  }
 });
 
 test('wave positioning is optional, validated before output changes, and tied to its image source', async t => {

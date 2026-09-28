@@ -9,6 +9,9 @@ export interface Collection {
   eyebrow: string;
   subtitle: string;
   introduction: string[];
+  introductionAccent?: string;
+  ambientBackground?: 'A' | 'F';
+  ambientIntensity?: number;
   topics: string[];
 }
 export interface SourceDocument { file: string; label: string; headingOffset?: number }
@@ -53,14 +56,15 @@ export interface RenderedTopic extends Topic {
   coverSVG: string;
   diagramSVG: string;
   rendered: RenderedDocument[];
-  minutes: number;
+  created?: string;
+  updated?: string;
 }
 export interface SearchEntry { title: string; topic: string; href: string; text: string }
 export interface ShellOptions {
   title: string; description: string; body: string; css: string; js: string;
   themeJS: string; search: SearchEntry[];
   fonts: string; collection: Collection; prefix?: string; page?: string;
-  wordmarkBackground?: boolean;
+  wordmarkBackground?: boolean; created?: string; updated?: string;
 }
 export interface WavePosition {
   version: 1;

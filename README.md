@@ -58,7 +58,7 @@ Download or clone the repository and open `index.html` in a modern browser. Ever
 
 GitHub's repository file viewer shows HTML source; the [live site](https://thewayiai.com/) serves the interactive edition. Documentation links lead to that live site, while navigation inside the generated HTML stays relative for both hosted and local reading. The rendered pages contain no links to raw Markdown; source documents remain available in the repository.
 
-The Folio edition includes local collection-wide search (⌘/Ctrl+K), section search (`/`), an expandable collection sidebar, and optional visual guides. Topic pages start with the sidebar collapsed and compact the header while you scroll. Use “Focus on reading” to hide navigation beside the article, then “Show navigation” to restore it. The icon next to GitHub selects Light, Dark, or System theme; System is the default and follows device changes. All text is readable without JavaScript.
+The Folio edition includes local collection-wide search (⌘/Ctrl+K), section search (`/`), an expandable collection sidebar, and optional visual guides. Topic pages start with the sidebar collapsed and compact the header while you scroll. Use “Focus on reading” to hide navigation beside the article, then “Show navigation” to restore it. The icon next to GitHub switches directly to the opposite theme: a moon for Dark, a sun for Light. System is the default and follows device changes; a manual choice resets to System after two hours without scrolling, typing, or navigation. All text is readable without JavaScript.
 
 ## Editing and adding topics
 

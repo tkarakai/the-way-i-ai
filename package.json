@@ -12,7 +12,9 @@
     "check": "node scripts/build.ts --check",
     "build:site": "node scripts/build.ts --site",
     "test": "node --test scripts/*.test.ts",
-    "test:browser": "npm run build:site && playwright test",
+    "test:browser": "npm run build:site && npm run build:previews && playwright test",
+    "build:previews": "node previews/build-backgrounds.ts",
+    "preview:backgrounds": "npm run build && npm run build:previews",
     "preview": "npm run build:site && node scripts/preview.ts",
     "typecheck": "tsc --noEmit"
   },

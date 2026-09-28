@@ -20,7 +20,7 @@ Topic-specific copy, diagram labels, SVG geometry, and explorer configuration be
 
 Local Markdown images become data URLs. SVG sources used inline must be standalone, script-free, and free of external render dependencies. Assets can use the shared CSS variables, with fallback values for opening the SVG on its own.
 
-`npm run build` updates the checked-in HTML. `npm run check` rejects stale output, invalid source references, broken links, duplicate IDs, and external render dependencies. `npm test` checks the generator's source/output contract. `npm run build:site` creates an ignored `_site/` bundle for publication using the same generator. `npm run test:browser` builds that bundle and runs Playwright acceptance checks: offline desktop/320/390px rendering in both themes, native keyboard controls, theme persistence and system changes, sidebar animation and reset, compact-header scrolling, search, copying, visual guides, print state, reduced motion, and no-JavaScript reading. Install Chromium with `npx playwright install chromium` first; CI installs it automatically.
+See the root README for [build and verification commands](../README.md#editing-and-adding-topics) and [publication bundle usage](../README.md#github-pages). `npm run check` rejects stale output, invalid source references, broken links, duplicate IDs, and external render dependencies. Browser acceptance coverage is defined in [`tests/reader.spec.ts`](../tests/reader.spec.ts).
 
 The only repository navigation link is the GitHub icon at the masthead's far right. The adjacent icon-only theme picker offers Light, Dark, and System, defaulting to System. Controls have accessible names and native keyboard behavior. Avoid promotional taglines or extra sidebar/footer links.
 

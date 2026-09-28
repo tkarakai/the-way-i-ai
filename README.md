@@ -58,11 +58,15 @@ Download or clone the repository and open `index.html` in a modern browser. Ever
 
 GitHub's repository file viewer shows HTML source; the [live site](https://thewayiai.com/) serves the interactive edition. Documentation links lead to that live site, while navigation inside the generated HTML stays relative for both hosted and local reading. The rendered pages contain no links to raw Markdown; source documents remain available in the repository.
 
-The Folio edition includes local collection-wide search (⌘/Ctrl+K), section search (`/`), an expandable collection sidebar, and optional visual guides. Topic pages start with the sidebar collapsed and compact the header while you scroll. Use “Focus on reading” to hide navigation beside the article, then “Show navigation” to restore it. The icon next to GitHub selects Light, Dark, or System theme; System is the default and follows device changes. All text is readable without JavaScript.
+The Folio edition includes local collection-wide search (⌘/Ctrl+K), section search (`/`), an expandable collection sidebar, and optional visual guides. Topic headers compact while you scroll. Use the header’s “Focus on reading” icon to hide navigation, then “Show navigation” or Escape to restore it. On desktop, drag the column boundaries or focus their resize handles and use Left/Right arrows to adjust the navigation and reading widths. When browser storage is available, the site remembers those widths, focus mode, and whether you opened the initially collapsed collection sidebar. It also restores each topic’s reading position unless you follow a link to a specific section.
+
+The icon next to GitHub switches directly to the opposite theme: a moon for Dark, a sun for Light. System is the default and follows device changes; a manual choice resets to System after two hours without scrolling, typing, or navigation. All text is readable without JavaScript.
 
 ## Editing and adding topics
 
 Use Node.js 24 or newer for building. Node.js and npm are not needed for reading.
+
+Build from a Git checkout with full history to reproduce the topic dates in committed HTML. For an existing shallow clone, run `git fetch --unshallow` first; automated checkouts must fetch full history, as the Pages workflow does. Source archives remain buildable, but omit history-derived dates and therefore cannot reproduce the committed HTML exactly. See the [date derivation contract](design-system/README.md#build-contract).
 
 ```sh
 npm ci

@@ -5,6 +5,7 @@ import { readFile, writeFile, access, mkdir, rm, cp } from 'node:fs/promises';
 import { dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { Marked, Renderer } from 'marked';
 import { preloadFile } from '@pierre/diffs/ssr';
 import { shell, collectionBody, readerBody, escape } from '../design-system/layout.ts';
@@ -21,6 +22,11 @@ const compile = (path: string) => read(path).then(source => ts.transpileModule(s
 const [registry, css, js, themeJS] = await Promise.all([
   read('topics/topics.json').then(text => JSON.parse(text) as Collection), read('design-system/theme.css'), compile('design-system/reader.ts'), compile('design-system/theme.ts')
 ]);
+if (registry.ambientBackground !== undefined && registry.ambientBackground !== 'F') throw new Error('Unsupported ambientBackground: expected F.');
+if (registry.ambientIntensity !== undefined && (!Number.isFinite(registry.ambientIntensity) || registry.ambientIntensity < 0 || registry.ambientIntensity > 1)) throw new Error('ambientIntensity must be a number between 0 and 1.');
+const ambientJS = registry.ambientBackground === 'F'
+  ? (await Promise.all(['design-system/murmuration.ts', 'design-system/ambient.ts'].map(compile))).join('\n')
+  : '';
 const fontLicenses = await Promise.all(['newsreader-OFL.txt', 'dm-sans-OFL.txt', 'pierre-diffs-Apache-2.0.txt', 'octicons-MIT.txt'].map(file => read(`design-system/licenses/${file}`)));
 const fonts = `/* Embedded font, icon, and code-renderer licenses:\n${fontLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/\n` + (await Promise.all([
   ['Newsreader', 'newsreader'], ['DM Sans', 'dm-sans']
@@ -32,6 +38,17 @@ const fonts = `/* Embedded font, icon, and code-renderer licenses:\n${fontLicens
 const slug = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').trim().replace(/\s+/g, '-');
 const plain = (text: string) => text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
 const safeJSON = (value: unknown) => JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
+function gitDates(id: string) {
+  const runGit = (args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  try {
+    const files = runGit(['ls-files', `topics/${id}`]).split('\n').filter(file => file && !file.endsWith('/index.html'));
+    if (!files.length) return {};
+    const recent = runGit(['log', '-1', '--format=%aI', '--', ...files]);
+    const firstDates = files.flatMap(file => runGit(['log', '--follow', '--format=%aI', '--', file]).split('\n').filter(Boolean));
+    const created = firstDates.sort((a, b) => Date.parse(a) - Date.parse(b))[0];
+    return { ...(created ? { created } : {}), ...(recent ? { updated: recent } : {}) };
+  } catch { return {}; }
+}
 const codeCache = new Map<string, Promise<string>>();
 const renderedCode = new WeakMap<Tokens.Code, string>();
 async function embedImage(imagePath: string) {
@@ -128,7 +145,7 @@ const topics: RenderedTopic[] = [];
 for (const [index, id] of registry.topics.entries()) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error(`Invalid topic id: ${id}`);
   const topic = JSON.parse(await read(`topics/${id}/topic.json`)) as Topic;
-  topics.push({ ...topic, id, coverSVG: '', diagramSVG: '', rendered: [], minutes: 0, number: String(index + 1).padStart(2, '0') });
+  topics.push({ ...topic, ...gitDates(id), id, coverSVG: '', diagramSVG: '', rendered: [], number: String(index + 1).padStart(2, '0') });
 }
 for (const topic of topics) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(topic.id) || ids.has(topic.id)) throw new Error(`Invalid or duplicate topic id: ${topic.id}`);
@@ -137,7 +154,6 @@ for (const topic of topics) {
   topic.diagramSVG = topic.explorer ? await loadSVG(topic, topic.explorer.diagram) : '';
   topic.rendered = [];
   for (const [index, document] of topic.documents.entries()) topic.rendered.push(await renderDocument(topic, document, index));
-  topic.minutes = Math.ceil(topic.rendered.reduce((sum, doc) => sum + doc.markdown.split(/\s+/).length, 0) / 220);
 }
 
 const outputs = new Map();
@@ -151,10 +167,10 @@ if (wavePosition && resolve(root, wavePosition.source) !== titleBackgroundPath) 
 const pageCSS = `${css}\n${wordmarkStyles(titleBackground, wavePosition)}`;
 const wordmarkBackground = Boolean(titleBackground);
 const search = collectionSearch(topics);
-outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js, themeJS, search, fonts, collection: registry, wordmarkBackground }));
+outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, wordmarkBackground }));
 for (const topic of topics) {
   const fingerprints = `<!-- Markdown sources: ${topic.rendered.map(doc => `${doc.file} sha256:${doc.sha256}`).join('; ')} -->\n`;
-  outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered)), css: pageCSS, js, themeJS, search, fonts, collection: registry, prefix: '../../', page: topic.id, wordmarkBackground }));
+  outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered)), css: pageCSS, js, themeJS, search, fonts, collection: registry, prefix: '../../', page: topic.id, wordmarkBackground, created: topic.created, updated: topic.updated }));
 }
 
 // Validate output before writing: navigation, ids, and offline render dependencies.

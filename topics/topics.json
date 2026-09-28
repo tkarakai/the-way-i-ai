@@ -7,9 +7,13 @@
   "eyebrow": "A collection of ideas",
   "subtitle": "Ideas & practice",
   "introduction": [
-    "Working with AI is a practice.\nThese are the ideas behind mine.",
+    "Working with AI\nis a practice.",
+    "A software engineer's thoughts about that...",
     "From the way I develop software to the way I define agents in an organization."
   ],
+  "introductionAccent": "practice",
+  "ambientBackground": "F",
+  "ambientIntensity": 0.2,
   "topics": [
     "worktrees",
     "agent-roles",

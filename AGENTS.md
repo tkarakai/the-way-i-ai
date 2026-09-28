@@ -78,7 +78,7 @@ Use plain Markdown plus ordinary asset files rather than embedding an applicatio
 - **Diagrams:** author standalone SVG in `assets/`. Include a `viewBox`, accessible title/description, stable node IDs, and local styles with fallback colors. Shared CSS variables can theme the inline version. Keep scripts and external references out of SVG files.
 - **Structured data:** use JSON or CSV in `assets/` when the data itself is the source. The current generator supports images and the explorer component; additional visual forms need a generic renderer before use. Do not imply arbitrary assets automatically become interactive.
 - **Cover:** set `"cover": "assets/cover.svg"` in `topic.json`. It is optional.
-- **Explorer:** configure `explorer` in `topic.json`. This uses a generic SVG-and-panels component; it is not topic-specific JavaScript. See the two existing topics for full examples.
+- **Explorer:** configure `explorer` in `topic.json`. This uses a generic SVG-and-panels component; it is not topic-specific JavaScript. See the existing topics for full examples.
 
 An explorer has `title`, `instruction`, `diagram`, `caption`, `controls` (`"labels"` or `"numbered"`), and a nonempty `panels` array. Each panel has a stable `id`, a `source` reference, and optional SVG node IDs in `highlight`. A section reference is:
 

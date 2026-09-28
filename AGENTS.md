@@ -65,7 +65,9 @@ npm ci              # First checkout, or after the lockfile changes
 npm run typecheck   # Strict TypeScript checking
 npm run build       # Regenerate root and topic HTML files
 npm run check       # Detect stale output, broken links and invalid references
-npm test            # Generator contract checks
+npm test            # Generator, search, and theme contract checks
+npx playwright install chromium # First checkout: browser test engine
+npm run test:browser # Offline, responsive, keyboard, and interaction checks
 ```
 
 Open `index.html` and the new topic's `index.html` directly in a browser. Check the title, full text, navigation, code examples, keyboard interaction, narrow layout, and offline behavior.
@@ -144,5 +146,7 @@ The collection name, when shown on two lines, must be “the way I” / “AI”
 The `.wordmark` component is shared by the large collection title and the miniature home link in every page's masthead. Resize it through `--wordmark-size`; do not recreate the lettering or reintroduce the asterisk. Other brand mentions, such as the footer, remain on one line.
 
 The optional `titleBackground` in `topics/topics.json` references a local image relative to `topics/`. Keep its source in `topics/assets/`; the generator embeds one copy per HTML file, shared by that page's wordmarks. The optional `titleBackgroundPosition` references the wave editor's JSON export, currently `assets/title-wave-position.json`. Preserve its exact corner coordinates in title-relative em units. The generator produces a static CSS projection, so the wave and letters scale together without JavaScript or separate mobile offsets. Preserve offline rendering and verify both themes at large and miniature sizes.
+
+The production presentation is Folio: an editorial reading list, serif prose, and quiet navigation. Keep the approved wordmark unchanged. There is one repository link in the site chrome, a GitHub icon at the masthead's far right; no promotional taglines or extra sidebar/footer repository links. Theme controls are icon-only with accessible names for Light, Dark, and System; System is the default and follows live device changes. Topic collection sidebars start collapsed on each navigation and animate when expanded/collapsed, honoring reduced motion. Do not reintroduce reading progress. Topic headers compact while scrolling and restore at the top; keep hysteresis between thresholds to avoid scroll/layout oscillation.
 
 Each collection topic card is one native link covering the entire card, with its heading as the accessible name. Preserve keyboard activation, visible focus, and open-in-new-tab behavior; do not nest links or simulate a link with click handlers.

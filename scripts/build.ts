@@ -10,14 +10,16 @@ import { preloadFile } from '@pierre/diffs/ssr';
 import { shell, collectionBody, readerBody, escape } from '../design-system/layout.ts';
 import { explorerFor } from '../design-system/explorers.ts';
 import { parseWavePosition, wordmarkStyles } from '../design-system/wordmark.ts';
+import { collectionSearch } from '../design-system/search.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
 const site = process.argv.includes('--site');
 if (check && site) throw new Error('Use --check and --site separately.');
 const read = (path: string) => readFile(resolve(root, path), 'utf8');
-const [registry, css, js] = await Promise.all([
-  read('topics/topics.json').then(text => JSON.parse(text) as Collection), read('design-system/theme.css'), read('design-system/reader.ts').then(source => ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.None } }).outputText)
+const compile = (path: string) => read(path).then(source => ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.None } }).outputText);
+const [registry, css, js, themeJS] = await Promise.all([
+  read('topics/topics.json').then(text => JSON.parse(text) as Collection), read('design-system/theme.css'), compile('design-system/reader.ts'), compile('design-system/theme.ts')
 ]);
 const fontLicenses = await Promise.all(['newsreader-OFL.txt', 'dm-sans-OFL.txt', 'pierre-diffs-Apache-2.0.txt', 'octicons-MIT.txt'].map(file => read(`design-system/licenses/${file}`)));
 const fonts = `/* Embedded font, icon, and code-renderer licenses:\n${fontLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/\n` + (await Promise.all([
@@ -148,10 +150,11 @@ const wavePosition = positionPath ? parseWavePosition(JSON.parse(await readFile(
 if (wavePosition && resolve(root, wavePosition.source) !== titleBackgroundPath) throw new Error('The wave positioning source must match titleBackground.');
 const pageCSS = `${css}\n${wordmarkStyles(titleBackground, wavePosition)}`;
 const wordmarkBackground = Boolean(titleBackground);
-outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js, fonts, collection: registry, wordmarkBackground }));
+const search = collectionSearch(topics);
+outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js, themeJS, search, fonts, collection: registry, wordmarkBackground }));
 for (const topic of topics) {
   const fingerprints = `<!-- Markdown sources: ${topic.rendered.map(doc => `${doc.file} sha256:${doc.sha256}`).join('; ')} -->\n`;
-  outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered)), css: pageCSS, js, fonts, collection: registry, prefix: '../../', page: topic.id, wordmarkBackground }));
+  outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered)), css: pageCSS, js, themeJS, search, fonts, collection: registry, prefix: '../../', page: topic.id, wordmarkBackground }));
 }
 
 // Validate output before writing: navigation, ids, and offline render dependencies.

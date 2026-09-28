@@ -55,8 +55,10 @@ export interface RenderedTopic extends Topic {
   rendered: RenderedDocument[];
   minutes: number;
 }
+export interface SearchEntry { title: string; topic: string; href: string; text: string }
 export interface ShellOptions {
   title: string; description: string; body: string; css: string; js: string;
+  themeJS: string; search: SearchEntry[];
   fonts: string; collection: Collection; prefix?: string; page?: string;
   wordmarkBackground?: boolean;
 }

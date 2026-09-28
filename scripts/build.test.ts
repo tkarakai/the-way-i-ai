@@ -45,6 +45,10 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   assert.ok(embedded, 'The generated standalone edition must embed the image');
   assert.equal(Buffer.from(embedded[1], 'base64').toString(), diagram);
   assert.ok(!html.includes('data-explorer aria-'), 'An explorer is optional');
+  const search = JSON.parse(index.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { title: string; text: string; href: string }[];
+  assert.ok(search.some(entry => entry.title === 'The premise' && entry.text.includes('This complete paragraph belongs to the source.') && entry.href === 'topics/new-idea/index.html#new-idea-doc-1-the-premise'));
+  const nestedSearch = JSON.parse(html.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { href: string }[];
+  assert.ok(nestedSearch.every(entry => entry.href.startsWith('../../topics/')));
   passed(f.build('--check'));
 });
 
@@ -52,10 +56,10 @@ test('the shared wordmark embeds its background once per page and missing assets
   const f = await fixture(t);
   passed(f.build());
   const index = await f.read('index.html');
-  for (const removed of ['One idea, two ways in.', 'one connected practice', 'Practical workflows. Useful mental models.', 'AI in practice']) {
+  for (const removed of ['One idea, two ways in.', 'one connected practice', 'Practical workflows. Useful mental models.', 'AI in practice', 'A collection of ideas. A practice in progress.', 'Thoughtfully made. Freely shared.', 'Independent thinking. Practical tools.']) {
     assert.ok(!index.includes(removed), `The collection omits removed copy: ${removed}`);
   }
-  assert.ok(index.includes('A collection of ideas'));
+  assert.ok(index.includes('The reading list'));
   const source = await readFile(resolve(f.path, 'topics/assets/logo-bg.png'));
   for (const file of ['index.html', 'topics/worktrees/index.html', 'topics/agent-roles/index.html']) {
     const html = await f.read(file);
@@ -139,7 +143,10 @@ test('a named Markdown excerpt is shared by the full reader and visual explorer;
   assert.match(stale.stderr, /out of date/);
   passed(f.build());
   const html = await f.read('topics/agent-roles/index.html');
-  assert.equal(html.split('This source paragraph is reused in the explorer and full reader.').length - 1, 2);
+  const visibleHTML = html.replace(/<script type="application\/json" id="collection-search-data">[\s\S]*?<\/script>/, '');
+  assert.equal(visibleHTML.split('This source paragraph is reused in the explorer and full reader.').length - 1, 2);
+  const search = JSON.parse(html.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { text: string }[];
+  assert.ok(search.some(entry => entry.text.includes('This source paragraph is reused in the explorer and full reader.')));
   passed(f.build('--check'));
 });
 

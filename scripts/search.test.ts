@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { collectionSearch, searchText } from '../design-system/search.ts';
+import type { RenderedTopic } from '../design-system/types.ts';
+
+test('search uses visible prose and original code, not syntax-highlight CSS or controls', () => {
+  const html = '<p>Use A &amp; B with &#x3B1;.</p><diffs-container><template shadowrootmode="open"><style>irrelevant-token</style><pre>rendered code</pre></template></diffs-container><script type="application/json">"if (a < b) run()"</script>';
+  assert.equal(searchText(html), 'Use A & B with α. if (a < b) run()');
+});
+
+test('collection search includes opening prose and every section, with stable relative result links', () => {
+  const topic: RenderedTopic = {
+    id: 'example', title: 'An example', category: 'Practice', description: 'Description', thesis: 'Thesis', documents: [], number: '01', minutes: 1, coverSVG: '', diagramSVG: '',
+    rendered: [{ id: 'example-doc-1', file: 'README.md', label: 'The idea', title: 'Full title', markdown: '', sha256: '', excerpts: new Map(),
+      html: '<p>Opening argument.</p><h2 id="first">First section</h2><p>First text.</p><h3 id="second">Subsection</h3><p>Second text.</p>',
+      headings: [{ id: 'first', text: 'First section', level: 2, excerpt: '' }, { id: 'second', text: 'Subsection', level: 3, excerpt: '' }],
+    }],
+  };
+  const entries = collectionSearch([topic]);
+  assert.equal(entries.length, 4);
+  assert.equal(entries[1].text, 'Opening argument.');
+  assert.equal(entries[1].href, 'topics/example/index.html#example-doc-1-title');
+  assert.equal(entries[2].text, 'First section First text.');
+  assert.equal(entries[3].text, 'Subsection Second text.');
+  assert.equal(entries[3].href, 'topics/example/index.html#second');
+});

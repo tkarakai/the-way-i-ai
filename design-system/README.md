@@ -1,11 +1,13 @@
 # The Way I AI · Design system
 
-The shared presentation layer for a collection of source-owned topics. Warm paper, dark ink, forest green, Newsreader headings, and DM Sans text define the editorial style. The collection's display title pairs plum with teal through `--title-ink` and `--title-accent`, with lighter variants for dark mode. Font and code-renderer licenses are in `licenses/` and are embedded in the generated files.
+The shared presentation layer for a collection of source-owned topics. The **Folio** design pairs warm paper, dark ink, copper accents, Newsreader headings and prose, and DM Sans navigation. The homepage is an editorial reading list; topic pages have an optional collection sidebar and a section outline. The collection's display title pairs plum with teal through `--title-ink` and `--title-accent`, with lighter variants for dark mode. Font and code-renderer licenses are in `licenses/` and are embedded in the generated files.
 
 ## Responsibilities
 
 - `theme.css`: shared tokens, typography, layouts, responsive behavior, dark mode, and print styles.
-- `reader.ts`: generic section search, navigation, progress, code copying, theme switching, and explorer selection.
+- `reader.ts`: collection/section search, navigation, code copying, theme controls, explorer selection, focus mode, and scroll-responsive header.
+- `theme.ts`: pre-paint Light / Dark / System resolution, persistence, live system changes, and cross-tab updates.
+- `search.ts`: creates the embedded collection-wide index from rendered prose and original code; result URLs remain relative.
 - `layout.ts`: collection and reader layouts; receives all collection and topic copy from source metadata.
 - `wordmark.ts`: validates the saved wave geometry and generates its scalable, static CSS projection.
 - `explorers.ts`: a generic SVG-and-panels renderer. It resolves Markdown section/excerpt references and highlights named SVG nodes.
@@ -18,7 +20,11 @@ Topic-specific copy, diagram labels, SVG geometry, and explorer configuration be
 
 Local Markdown images become data URLs. SVG sources used inline must be standalone, script-free, and free of external render dependencies. Assets can use the shared CSS variables, with fallback values for opening the SVG on its own.
 
-`npm run build` updates the checked-in HTML. `npm run check` rejects stale output, invalid source references, broken links, duplicate IDs, and external render dependencies. `npm test` checks the generator's source/output contract. `npm run build:site` creates an ignored `_site/` bundle for publication using the same generator.
+`npm run build` updates the checked-in HTML. `npm run check` rejects stale output, invalid source references, broken links, duplicate IDs, and external render dependencies. `npm test` checks the generator's source/output contract. `npm run build:site` creates an ignored `_site/` bundle for publication using the same generator. `npm run test:browser` builds that bundle and runs Playwright acceptance checks: offline desktop/320/390px rendering in both themes, native keyboard controls, theme persistence and system changes, sidebar animation and reset, compact-header scrolling, search, copying, visual guides, print state, reduced motion, and no-JavaScript reading. Install Chromium with `npx playwright install chromium` first; CI installs it automatically.
+
+The only repository navigation link is the GitHub icon at the masthead's far right. The adjacent icon-only theme picker offers Light, Dark, and System, defaulting to System. Controls have accessible names and native keyboard behavior. Avoid promotional taglines or extra sidebar/footer links.
+
+On topic pages, the collection sidebar is a native disclosure, collapsed by default on every navigation. Desktop grid columns animate its expansion/collapse; reduced-motion preferences disable transitions. There is no reading-progress indicator. Scrolling beyond 120px compacts the header; returning within 16px of the top restores it. The separate thresholds prevent layout-height changes from repeatedly retriggering the transition. Full text and native disclosures remain available without JavaScript.
 
 The shared `.wordmark` renders the same live lettering and decorative wave in the collection title and every page's home link. Set `--wordmark-size` to resize it; all spacing, optical letter adjustments, and background coordinates follow that size. The home link has an accessible name and the decorative duplicate text is hidden from assistive technology.
 

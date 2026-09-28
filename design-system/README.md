@@ -1,6 +1,6 @@
 # The Way I AI · Design system
 
-The shared presentation layer for a collection of source-owned topics. The **Folio** design pairs warm paper, dark ink, copper accents, Newsreader headings and prose, and DM Sans navigation. The homepage is an editorial reading list; topic pages have an optional collection sidebar and a section outline to the left of the article. The outline precedes the article in DOM order too, so keyboard navigation matches the layout. The collection's display title pairs plum with teal through `--title-ink` and `--title-accent`, with lighter variants for dark mode. Font and code-renderer licenses are in `licenses/` and are embedded in the generated files.
+The shared presentation layer for a collection of source-owned topics. The **Folio** design pairs warm paper, dark ink, copper accents, Newsreader headings and prose, and DM Sans navigation. The homepage is an editorial reading list; topic pages have an optional collection sidebar and a section outline to the left of the article on desktop, becoming a disclosure above the article on narrow layouts. The outline precedes the article in DOM order too, so keyboard navigation matches the layout. The collection's display title pairs plum with teal through `--title-ink` and `--title-accent`, with lighter variants for dark mode. Font and code-renderer licenses are in `licenses/` and are embedded in the generated files.
 
 ## Responsibilities
 

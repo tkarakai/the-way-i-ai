@@ -1,8 +1,27 @@
-**[Read the interactive site →](https://thewayiai.com/)**
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="topics/assets/readme-logo-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="topics/assets/readme-logo-light.png">
+    <img width="260" alt="The Way I AI" src="topics/assets/readme-logo-light.png">
+  </picture>
+</h1>
 
-# The Way I AI
+<p align="center">
+  <strong>Practical ideas for working with AI.</strong><br>
+  Workflows, mental models, and ways to organize AI systems in real life.
+</p>
 
-A collection of related ideas about working with AI: practical workflows, useful mental models, and ways to organize AI systems in real life.
+<p align="center">
+  <a href="https://github.com/tkarakai/the-way-i-ai/actions/workflows/pages.yml"><img alt="Build, test, and publish status" src="https://github.com/tkarakai/the-way-i-ai/actions/workflows/pages.yml/badge.svg?branch=main"></a>
+  <a href="https://thewayiai.com/"><img alt="Live site status" src="https://img.shields.io/website?url=https%3A%2F%2Fthewayiai.com%2F&amp;label=live%20site"></a>
+  <a href="#editing-and-adding-topics"><img alt="Node.js 24 or newer" src="https://img.shields.io/badge/Node.js-24%2B-5FA04E?logo=nodedotjs&amp;logoColor=white"></a>
+</p>
+
+<p align="center"><strong><a href="https://thewayiai.com/">Explore the interactive collection →</a></strong></p>
+
+---
+
+## About the collection
 
 Each topic has authoritative source documents and assets, plus a complete, interactive HTML edition. Start with the [live collection](https://thewayiai.com/), or choose a topic below.
 

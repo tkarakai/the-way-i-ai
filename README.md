@@ -10,6 +10,7 @@ Each topic has authoritative source documents and assets, plus a complete, inter
 | --- | --- | --- | --- |
 | **01 · Worktree-based development** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Read online](https://thewayiai.com/topics/worktrees/index.html) |
 | **02 · Defining AI agent roles** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Read online](https://thewayiai.com/topics/agent-roles/index.html) |
+| **03 · A web app starter kit built for the long run** | Architect the starter to stay useful when downstream applications replace its design, without making future improvements undo their product choices. | [The architecture](topics/web-app-starter-kit/README.md) · [Original notes](topics/web-app-starter-kit/web_app_starter_upgrade_notes.md) | [Read online](https://thewayiai.com/topics/web-app-starter-kit/index.html) |
 
 ## Sources and presentation
 
@@ -37,6 +38,12 @@ topics/
     topic.json                 Metadata and visual-guide bindings
     assets/                    Authored SVG diagrams and cover illustration
     index.html                 Generated edition
+  web-app-starter-kit/
+    README.md                  Starter architecture for long-lived downstream applications
+    web_app_starter_upgrade_notes.md  Original notes, preserved unchanged
+    topic.json                 Metadata and visual-guide bindings
+    assets/                    Architecture diagram and replaceable-UI cover illustration
+    index.html                 Generated edition of the complete article
 design-system/                Shared visual language and generic reader components
 scripts/                       Generator and contract checks
 .github/workflows/pages.yml    GitHub Pages build and deployment

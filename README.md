@@ -58,6 +58,8 @@ Download or clone the repository and open `index.html` in a modern browser. Ever
 
 GitHub's repository file viewer shows HTML source; the [live site](https://thewayiai.com/) serves the interactive edition. Documentation links lead to that live site, while navigation inside the generated HTML stays relative for both hosted and local reading. The rendered pages contain no links to raw Markdown; source documents remain available in the repository.
 
+The Folio edition includes local collection-wide search (⌘/Ctrl+K), section search (`/`), an expandable collection sidebar, and optional visual guides. Topic pages start with the sidebar collapsed and compact the header while you scroll. Use “Focus on reading” to hide navigation beside the article, then “Show navigation” to restore it. The icon next to GitHub selects Light, Dark, or System theme; System is the default and follows device changes. All text is readable without JavaScript.
+
 ## Editing and adding topics
 
 Use Node.js 24 or newer for building. Node.js and npm are not needed for reading.
@@ -70,7 +72,16 @@ npm run check
 npm test
 ```
 
-`package.json` defines these commands and the build-only dependencies: TypeScript checking/compilation, Markdown parsing, code rendering, and fonts. `package-lock.json` makes installation reproducible.
+For browser acceptance tests (also run before deployment):
+
+```sh
+npx playwright install chromium
+npm run test:browser
+```
+
+These tests build `_site/` and exercise standalone offline pages, narrow layouts, keyboard controls, themes, sidebar behavior, and header scrolling. Screenshots and failure traces are written to the ignored `test-results/` directory.
+
+`package.json` defines these commands and the development-only dependencies: TypeScript checking/compilation, Markdown parsing, code rendering, fonts, and Playwright tests. `package-lock.json` makes installation reproducible.
 
 To add a topic:
 
@@ -99,7 +110,7 @@ Every pull request also produces a **site-preview-pr-N** artifact in its **Publi
 
 ## GitHub Pages
 
-The collection is published at **[thewayiai.com](https://thewayiai.com/)**. GitHub Pages is configured to deploy through GitHub Actions. The included workflow validates the checked-in HTML, runs generator tests, creates a clean `_site/` bundle, and deploys that bundle. It does not publish the repository root or build dependencies.
+The collection is published at **[thewayiai.com](https://thewayiai.com/)**. GitHub Pages is configured to deploy through GitHub Actions. The [included workflow](.github/workflows/pages.yml) runs the checks described in [Editing and adding topics](#editing-and-adding-topics), including browser acceptance tests, before deploying the clean `_site/` bundle. It does not publish the repository root or build dependencies.
 
 To prepare the publication bundle locally:
 

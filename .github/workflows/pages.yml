@@ -26,7 +26,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run check
-      - run: npm run build:site
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
       - name: Upload PR preview
         if: github.event_name == 'pull_request'
         id: preview

@@ -95,12 +95,16 @@ test('the shared wordmark embeds its background once per page and missing assets
     assert.equal(images.length, 1, 'The standalone page embeds one shared copy of the wave');
     assert.deepEqual(Buffer.from(images[0][1], 'base64'), source);
     const header = html.match(/<header class="masthead">[\s\S]*?<\/header>/)![0];
-    assert.match(header, /class="brand" href="(?:\.\.\/\.\.\/)?index.html" aria-label="The Way I AI — home"/);
-    assert.match(header, /<span class="wordmark" aria-hidden="true"><span class="title-art"/);
-    assert.ok(!header.match(/<a class="brand"[\s\S]*?<\/a>/)![0].includes('<svg'), 'The shared wordmark replaces the old asterisk');
+    if (file === 'index.html') {
+      assert.ok(!header.includes('class="brand"'), 'The homepage hero makes a masthead wordmark redundant');
+    } else {
+      assert.match(header, /class="brand" href="\.\.\/\.\.\/index.html" aria-label="The Way I AI — home"/);
+      assert.match(header, /<span class="wordmark" aria-hidden="true"><span class="title-art"/);
+      assert.ok(!header.match(/<a class="brand"[\s\S]*?<\/a>/)![0].includes('<svg'), 'The shared wordmark replaces the old asterisk');
+    }
     assert.match(header, /class="repo-link" href="https:\/\/github.com\/tkarakai\/the-way-i-ai" target="_blank" rel="noopener noreferrer"/);
     assert.match(header, /aria-label="View the repository on GitHub \(opens in a new tab\)"/);
-    assert.equal([...html.matchAll(/<span class="title-art"/g)].length, file === 'index.html' ? 2 : 1);
+    assert.equal([...html.matchAll(/<span class="title-art"/g)].length, 1);
     assert.equal([...html.matchAll(/<h1\b/g)].length, 1, 'The header logo must not create an extra page heading');
   }
   passed(f.build('--check'));

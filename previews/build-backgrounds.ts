@@ -9,7 +9,7 @@ const styles = source.match(/<style>([\s\S]*?)<\/style>/)![1];
 const collection = source.match(/<main id="main" class="collection-page">[\s\S]*?<\/main>/)![0]
   .replaceAll('id="main"', 'id="sample-main"')
   .replace(/href="[^"]*"/g, 'href="#" tabindex="-1"');
-const brand = source.match(/<a class="brand"[^>]*>([\s\S]*?)<\/a>/)![1];
+const brand = `<span class="wordmark" aria-hidden="true">${source.match(/<h1 class="wordmark"[^>]*>([\s\S]*?)<\/h1>/)![1]}</span>`;
 const studies = [
   { id: 'A', name: 'Contour drift', kind: 'The reference', note: 'The one you liked. Fine topographic lines travel over quiet fields of color.', detail: 'The original, unchanged. Two contour systems drift against one another; the broad color fields move more slowly underneath.', cue: 'Follow an intersection between two contour lines.', engine: 'CSS · original treatment' },
   { id: 'B', name: 'Silk current', kind: 'Woven / fluid', note: 'Hundreds of fine threads turn, fold and slip past each other like suspended silk.', detail: 'Two translucent ribbons fold in three dimensions. Individual threads become visible at the edges, then gather into luminous seams as the fabric turns.', cue: 'Watch the narrow fold open into a wide ribbon.', engine: 'Canvas · parametric ribbons' },

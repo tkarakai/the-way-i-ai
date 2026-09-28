@@ -7,7 +7,7 @@ const styles = source.match(/<style>([\s\S]*?)<\/style>/)![1];
 const hero = source.match(/<section class="collection-hero">[\s\S]*?<\/section>/)![0];
 const lettering = hero.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)![1].replace(/<span class="title-art"[^>]*>[\s\S]*?<\/span>/, '');
 const edition = source.match(/<div class="edition-line eyebrow">[\s\S]*?<\/div>/)![0];
-const brand = source.match(/<a class="brand"[^>]*>([\s\S]*?)<\/a>/)![1];
+const brand = `<span class="wordmark" aria-hidden="true">${hero.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)![1]}</span>`;
 const palettes = [
   { id: 'current', name: 'Current · forest', note: 'The starting point.', light: { top: '#252e29', ai: '#275b43' }, dark: { top: '#eeefe4', ai: '#b4d3ac' } },
   { id: 'ember', name: 'Ink & copper', note: 'A warm, distinct accent.', light: { top: '#252e29', ai: '#ba4b2b' }, dark: { top: '#eeefe4', ai: '#ff986d' } },

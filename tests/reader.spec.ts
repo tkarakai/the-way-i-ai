@@ -22,11 +22,11 @@ for (const width of [1440, 390, 320]) {
         await expect(page.locator('.masthead a[href*="github.com"]')).toHaveCount(1);
         await expect(page.locator('.masthead').getByRole('link', { name: 'The collection', exact: true })).toHaveCount(0);
         const headerOrder = await page.locator('.masthead').evaluate(header => {
-          const logo = header.querySelector('.brand')!;
+          const logo = header.querySelector('.brand');
           const search = header.querySelector('[data-open-search]')!;
           const actions = header.querySelector('.header-actions')!;
-          return logo.nextElementSibling === search && search.nextElementSibling === actions
-            && logo.getBoundingClientRect().right <= search.getBoundingClientRect().left
+          return (logo ? logo.nextElementSibling === search && logo.getBoundingClientRect().right <= search.getBoundingClientRect().left : header.firstElementChild === search)
+            && search.nextElementSibling === actions
             && search.getBoundingClientRect().right <= actions.getBoundingClientRect().left;
         });
         expect(headerOrder).toBe(true);
@@ -58,7 +58,17 @@ for (const width of [1440, 390, 320]) {
           await expect(page.locator('meta[property="article:modified_time"]')).toHaveCount(1);
         } else {
           await expect(page.locator('.topic-card')).toHaveCount(registry.topics.length);
-          await expect(page.locator('.wordmark .title-line')).toHaveCount(4);
+          await expect(page.locator('.masthead .brand')).toHaveCount(0);
+          await expect(page.locator('.wordmark .title-line')).toHaveCount(2);
+          const headerAlignment = await page.evaluate(() => {
+            document.querySelector('.collection-page')!.getAnimations({ subtree: true }).forEach(animation => animation.finish());
+            const content = document.querySelector('.collection-list')!.getBoundingClientRect();
+            const search = document.querySelector('.search-trigger')!.getBoundingClientRect();
+            const repository = document.querySelector('.repo-link')!.getBoundingClientRect();
+            return { search: search.left - content.left, repository: repository.right - content.right };
+          });
+          expect(headerAlignment.search).toBeCloseTo(0, 1);
+          expect(headerAlignment.repository).toBeCloseTo(0, 1);
           await expect(page.locator('.collection-intro .intro-line')).toHaveCount(2);
           await expect(page.locator('body')).toHaveAttribute('data-ambient', 'F');
           await expect(page.locator('.ambient-canvas')).toHaveCSS('opacity', '0.2');

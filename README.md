@@ -10,6 +10,7 @@ Each topic has authoritative source documents and assets, plus a complete, inter
 | --- | --- | --- | --- |
 | **01 · Worktree-based development** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Read online](https://thewayiai.com/topics/worktrees/index.html) |
 | **02 · Defining AI agent roles** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Read online](https://thewayiai.com/topics/agent-roles/index.html) |
+| **03 · An upgradeable web app starter kit** | Design a long-lived relationship between starter and business application through ownership, versioned contracts, and plan-first upgrades. | [The idea](topics/web-app-starter-kit/README.md) · [Working design brief](topics/web-app-starter-kit/web_app_starter_upgrade_notes.md) | [Read online](https://thewayiai.com/topics/web-app-starter-kit/index.html) |
 
 ## Sources and presentation
 
@@ -37,6 +38,12 @@ topics/
     topic.json                 Metadata and visual-guide bindings
     assets/                    Authored SVG diagrams and cover illustration
     index.html                 Generated edition
+  web-app-starter-kit/
+    README.md                  Upgradeable application foundations and practical upgrade model
+    web_app_starter_upgrade_notes.md  Original working design brief
+    topic.json                 Metadata and visual-guide bindings
+    assets/                    Three-way upgrade diagram and cover illustration
+    index.html                 Generated edition of both documents
 design-system/                Shared visual language and generic reader components
 scripts/                       Generator and contract checks
 .github/workflows/pages.yml    GitHub Pages build and deployment

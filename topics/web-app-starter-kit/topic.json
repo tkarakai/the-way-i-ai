@@ -1,0 +1,48 @@
+{
+  "title": "An upgradeable web app starter kit",
+  "category": "Software development",
+  "description": "Beyond the first clone: ownership boundaries, versioned contracts, and plan-first upgrades that preserve a business application's freedom to evolve.",
+  "thesis": "Design for the relationship after the clone.",
+  "documents": [
+    { "file": "README.md", "label": "The idea", "headingOffset": 0 },
+    { "file": "web_app_starter_upgrade_notes.md", "label": "Working design brief", "headingOffset": 1 }
+  ],
+  "cover": "assets/cover.svg",
+  "explorer": {
+    "title": "Two paths forward. One deliberate upgrade.",
+    "instruction": "Explore the boundaries and decisions behind a three-way upgrade.",
+    "diagram": "assets/diagram.svg",
+    "caption": "Compare both paths from the old baseline. Reconcile intent, then validate the upgraded application.",
+    "controls": "labels",
+    "panels": [
+      {
+        "id": "ownership",
+        "label": "Ownership",
+        "source": { "document": "README.md", "excerpt": "ownership" },
+        "context": { "document": "README.md", "heading": "2. Establish ownership before customization" },
+        "highlight": ["upgrade-app"]
+      },
+      {
+        "id": "baseline",
+        "label": "Baseline",
+        "source": { "document": "README.md", "excerpt": "baseline" },
+        "context": { "document": "README.md", "heading": "3. Give the application a versioned baseline" },
+        "highlight": ["upgrade-baseline"]
+      },
+      {
+        "id": "dependencies",
+        "label": "Dependencies",
+        "source": { "document": "README.md", "excerpt": "dependencies" },
+        "context": { "document": "README.md", "heading": "5. Reconcile dependencies by compatibility, not recency" },
+        "highlight": ["upgrade-app", "upgrade-starter"]
+      },
+      {
+        "id": "workflow",
+        "label": "Upgrade process",
+        "source": { "document": "README.md", "excerpt": "workflow" },
+        "context": { "document": "README.md", "heading": "7. Use a plan-first upgrade workflow" },
+        "highlight": ["upgrade-result"]
+      }
+    ]
+  }
+}

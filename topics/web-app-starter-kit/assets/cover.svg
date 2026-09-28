@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 210" role="img" aria-labelledby="cover-upgrade-title cover-upgrade-desc">
+  <title id="cover-upgrade-title">A shared foundation, two independent paths</title>
+  <desc id="cover-upgrade-desc">An old starter baseline branches into business application changes and starter improvements. A deliberate upgrade brings the two paths together while preserving the product.</desc>
+  <style>svg{color:var(--ink,#252e29)}text{font-family:var(--sans,sans-serif);fill:currentColor}.diagram-line{fill:none;stroke:var(--accent,#275b43);stroke-width:2}.diagram-muted{fill:none;stroke:var(--line,#b5beb1);stroke-width:1.5;stroke-dasharray:4 4}.diagram-node{fill:var(--surface,#fffef9);stroke:var(--accent,#275b43);stroke-width:1.5}.diagram-dot{fill:var(--accent,#275b43)}</style>
+  <path class="diagram-line" d="M49 107H87C115 107 109 56 140 56H295M87 107C115 107 109 154 140 154H295"/>
+  <path class="diagram-muted" d="M295 56C336 56 322 107 364 107M295 154C336 154 322 107 364 107"/>
+  <g id="cover-upgrade-baseline"><title>Old baseline</title><circle class="diagram-node" cx="49" cy="107" r="7"/><text x="24" y="132" font-size="11">baseline</text></g>
+  <g id="cover-upgrade-business"><title>Business application changes</title><circle class="diagram-dot" cx="166" cy="56" r="4"/><circle class="diagram-dot" cx="232" cy="56" r="4"/><circle class="diagram-node" cx="295" cy="56" r="6"/><text x="142" y="35" font-size="12">business application</text></g>
+  <g id="cover-upgrade-starter"><title>Starter improvements</title><circle class="diagram-dot" cx="191" cy="154" r="4"/><circle class="diagram-dot" cx="254" cy="154" r="4"/><circle class="diagram-node" cx="295" cy="154" r="6"/><text x="142" y="182" font-size="12">starter improvements</text></g>
+  <g id="cover-upgrade-result"><title>Deliberate upgrade</title><rect class="diagram-node" x="357" y="96" width="22" height="22" rx="3"/><path class="diagram-line" d="m362 107 4 4 8-9"/><text x="340" y="139" font-size="11">upgrade</text></g>
+</svg>

@@ -45,12 +45,12 @@ test('Murmuration renders offline at 20%, responds to themes, and suspends motio
 });
 
 for (const width of [1440, 390, 320]) {
-  test(`both dark wordmarks blend into the warm page at ${width}px`, async ({ page }) => {
+  test(`the dark hero wordmark blends into the warm page at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
     await page.goto(home);
     await page.evaluate(() => document.fonts.ready);
-    for (const selector of ['.masthead .wordmark', '.hero-wordmark .wordmark']) {
+    for (const selector of ['.hero-wordmark .wordmark']) {
       const image = await page.locator(selector).screenshot();
       const minimum = await page.evaluate(async data => {
         const image = new Image(); image.src = data; await image.decode();

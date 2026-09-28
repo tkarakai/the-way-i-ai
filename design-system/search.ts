@@ -8,6 +8,7 @@ export function searchText(html: string): string {
     if (typeof value === 'string') code.push(value);
     return '';
   }).replace(/<(template|style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<div class="code-toolbar">[\s\S]*?<\/div>/g, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&#(x[\da-f]+|\d+);/gi, (_match, value: string) => String.fromCodePoint(value[0].toLowerCase() === 'x' ? parseInt(value.slice(1), 16) : Number(value)))
     .replace(/&(amp|lt|gt|quot|apos|#39);/g, (_match, entity: string) => ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'" }[entity]!));

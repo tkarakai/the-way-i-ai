@@ -20,6 +20,16 @@ for (const width of [1440, 390, 320]) {
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
         await expect(page.locator('h1')).toHaveCount(1);
         await expect(page.locator('.masthead a[href*="github.com"]')).toHaveCount(1);
+        await expect(page.locator('.masthead').getByRole('link', { name: 'The collection', exact: true })).toHaveCount(0);
+        const headerOrder = await page.locator('.masthead').evaluate(header => {
+          const logo = header.querySelector('.brand')!;
+          const search = header.querySelector('[data-open-search]')!;
+          const actions = header.querySelector('.header-actions')!;
+          return logo.nextElementSibling === search && search.nextElementSibling === actions
+            && logo.getBoundingClientRect().right <= search.getBoundingClientRect().left
+            && search.getBoundingClientRect().right <= actions.getBoundingClientRect().left;
+        });
+        expect(headerOrder).toBe(true);
         await expect(page.locator('.collection-nav a[href*="github.com"],.footer a[href*="github.com"]')).toHaveCount(0);
         await expect(page.locator('.reading-status,.reading-track,[data-progress]')).toHaveCount(0);
         await expect(page.locator('.theme-picker summary')).toHaveAccessibleName('Color theme: System. Choose a theme');
@@ -92,6 +102,71 @@ test('sidebar starts collapsed, animates both ways, and resets after topic navig
   await expect(sidebar).not.toHaveAttribute('open');
   await expect.poll(width).toBe(64);
 });
+
+for (const width of [1691, 1100]) {
+  test(`left outline and header follow sidebar state at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1554 });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto(url(topicPath));
+    await page.evaluate(() => document.fonts.ready);
+    const geometry = () => page.evaluate(() => {
+      const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+      const logo = box('.brand'), search = box('.search-trigger'), shell = box('.site-shell');
+      const outline = box('.on-page'), article = box('.reading-main');
+      return { logo: logo.left - shell.left, search: search.left, github: box('.repo-link').right,
+        sidebar: box('.collection-nav').width, outlineRight: outline.right, articleLeft: article.left };
+    });
+    const collapsed = await geometry();
+    expect(collapsed.logo).toBe(12);
+    expect(collapsed.outlineRight).toBeLessThan(collapsed.articleLeft);
+    expect(await page.locator('#main').evaluate(main => main.firstElementChild?.classList.contains('on-page'))).toBe(true);
+    await page.locator('.collection-contents summary').click();
+    const headerInset = width > 1200 ? 60 : 35;
+    const sidebarWidth = width > 1200 ? 220 : 200;
+    await expect.poll(async () => (await geometry()).sidebar).toBe(sidebarWidth);
+    const expanded = await geometry();
+    expect(expanded.logo).toBe(headerInset);
+    expect(expanded.search - collapsed.search).toBeCloseTo(headerInset - 12, 1);
+    expect(expanded.github).toBe(collapsed.github);
+    expect(expanded.outlineRight).toBeLessThan(expanded.articleLeft);
+    await page.screenshot({ path: `test-results/folio-left-navigation-expanded-${width}.png`, animations: 'disabled' });
+
+    // Sample both actual CSS animations at halfway. Matching normalized travel
+    // verifies synchronized motion rather than merely naming a transition in CSS.
+    const midway = await page.evaluate(() => {
+      document.querySelector<HTMLElement>('.collection-contents summary')!.click();
+      const header = document.querySelector('.masthead')!, workspace = document.querySelector('.workspace')!;
+      getComputedStyle(header).paddingLeft;
+      getComputedStyle(workspace).gridTemplateColumns;
+      const transitions = [header, workspace].map(node => node.getAnimations().find(animation =>
+        animation instanceof CSSTransition && ['padding-left', 'grid-template-columns'].includes(animation.transitionProperty))!);
+      transitions.forEach(animation => { animation.pause(); animation.currentTime = Number(animation.effect!.getTiming().duration) / 2; });
+      return { inset: parseFloat(getComputedStyle(header).paddingLeft), sidebar: document.querySelector('.collection-nav')!.getBoundingClientRect().width };
+    });
+    const headerTravel = (headerInset - midway.inset) / (headerInset - 12);
+    const sidebarTravel = (sidebarWidth - midway.sidebar) / (sidebarWidth - 64);
+    expect(headerTravel).toBeGreaterThan(0);
+    expect(headerTravel).toBeLessThan(1);
+    expect(headerTravel).toBeCloseTo(sidebarTravel, 2);
+    await page.evaluate(() => document.getAnimations().filter(animation => animation.playState === 'paused').forEach(animation => animation.play()));
+    await expect.poll(async () => (await geometry()).logo).toBe(12);
+    await expect.poll(async () => (await geometry()).sidebar).toBe(64);
+    expect((await geometry()).search).toBeCloseTo(collapsed.search, 1);
+
+    // The outline remains sticky and its native anchor still reaches the section.
+    const scrollEnd = page.evaluate(() => new Promise<void>(resolve => window.addEventListener('scrollend', () => resolve(), { once: true })));
+    await page.locator('.toc-link', { hasText: 'Parallel Work' }).click();
+    await scrollEnd;
+    await expect(page).toHaveURL(/#worktrees-doc-2-parallel-work$/);
+    await expect(page.locator('html')).toHaveClass(/is-scrolled/);
+    await expect(page.locator('.contents')).toBeInViewport();
+    await expect(page.locator('#worktrees-doc-2-parallel-work')).toBeInViewport();
+    await expect.poll(() => page.locator('.masthead').evaluate(header => header.getBoundingClientRect().height)).toBe(60);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await expect(page.locator('html')).not.toHaveClass(/is-scrolled/);
+    await page.screenshot({ path: `test-results/folio-left-navigation-collapsed-${width}.png`, animations: 'disabled' });
+  });
+}
 
 test('topic header shrinks on scroll and restores at the top without oscillating', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -171,6 +246,7 @@ test('reduced-motion users get immediate layout changes', async ({ page }) => {
   await page.goto(url(topicPath));
   await page.locator('.collection-contents summary').click();
   expect(await page.locator('.workspace').evaluate(node => getComputedStyle(node).transitionDuration)).toBe('0s');
+  expect(await page.locator('.masthead').evaluate(node => getComputedStyle(node).transitionDuration)).toBe('0s');
   await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }));
   await expect(page.locator('html')).toHaveClass(/is-scrolled/);
   expect(await page.locator('.masthead').evaluate(node => getComputedStyle(node).transitionDuration)).toBe('0s');

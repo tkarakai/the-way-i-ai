@@ -2,9 +2,9 @@
 
 ## Introduction
 
-Assigning human-style professional titles to AI agents—such as **software engineer**, **quality assurance engineer**, **product manager**, **security specialist**, **marketing analyst**, or **operations lead**—can be useful, but only if the meaning of a "role" is defined carefully.
+I used to think that giving an AI agent a role was stupid. Calling a general-purpose AI a **software engineer** or **product manager** felt like putting it in costume: a human-style title that encouraged role-play without adding any real capability.
 
-The purpose of a role is not to pretend that an AI agent is literally a human professional. The useful abstraction is that a role gives a generally capable AI system a **professional operating context**.
+I changed my mind, but only after becoming more precise about what a role should mean. Its purpose is not to pretend that an AI agent is literally a human professional. A useful role gives a generally capable AI system a **professional operating context**.
 
 That operating context has three major parts:
 

@@ -20,7 +20,19 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(viewer).toBeVisible();
       await expect(page.locator('#lab-stage-effect')).toHaveAttribute('data-effect', id);
       await expect(viewer.locator('[data-lab-content]')).toBeVisible();
-      if (id !== 'A') {
+      if (id === 'A') {
+        const appearance = await page.locator('#lab-stage-effect').evaluate(node => {
+          const before = getComputedStyle(node, '::before');
+          const after = getComputedStyle(node, '::after');
+          return { fields: before.backgroundImage, contours: after.backgroundImage, blend: before.mixBlendMode, position: before.position, drift: before.animationName, motion: after.animationName };
+        });
+        expect(appearance.fields).toContain('radial-gradient');
+        expect(appearance.contours).toContain('repeating-radial-gradient');
+        expect(appearance.blend).toBe(theme === 'dark' ? 'screen' : 'multiply');
+        expect(appearance.position).toBe('absolute');
+        expect(appearance.drift).toBe('ambient-drift');
+        expect(appearance.motion).toBe('ambient-contours');
+      } else {
         await expect(page.locator('#lab-stage-effect')).toHaveAttribute('data-frame');
         await expect.poll(() => page.locator('#lab-stage-effect canvas').evaluate((canvas: HTMLCanvasElement) => {
           const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;

@@ -22,7 +22,7 @@ const compile = (path: string) => read(path).then(source => ts.transpileModule(s
 const [registry, css, js, themeJS] = await Promise.all([
   read('topics/topics.json').then(text => JSON.parse(text) as Collection), read('design-system/theme.css'), compile('design-system/reader.ts'), compile('design-system/theme.ts')
 ]);
-if (registry.ambientBackground !== undefined && !['A', 'F'].includes(registry.ambientBackground)) throw new Error('Unsupported ambientBackground: expected A or F.');
+if (registry.ambientBackground !== undefined && registry.ambientBackground !== 'F') throw new Error('Unsupported ambientBackground: expected F.');
 if (registry.ambientIntensity !== undefined && (!Number.isFinite(registry.ambientIntensity) || registry.ambientIntensity < 0 || registry.ambientIntensity > 1)) throw new Error('ambientIntensity must be a number between 0 and 1.');
 const ambientJS = registry.ambientBackground === 'F'
   ? (await Promise.all(['design-system/murmuration.ts', 'design-system/ambient.ts'].map(compile))).join('\n')

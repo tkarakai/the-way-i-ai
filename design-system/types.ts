@@ -10,7 +10,7 @@ export interface Collection {
   subtitle: string;
   introduction: string[];
   introductionAccent?: string;
-  ambientBackground?: 'A' | 'F';
+  ambientBackground?: 'F';
   ambientIntensity?: number;
   topics: string[];
 }

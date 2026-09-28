@@ -88,7 +88,6 @@ test('the shared wordmark embeds its background once per page and missing assets
   assert.ok(!index.includes('Explore the collection'));
   assert.ok(index.includes('data-ambient="F"'));
   assert.ok(index.includes('class="ambient-canvas" aria-hidden="true" style="--ambient-intensity:0.2"'));
-  assert.ok(index.includes("[data-ambient='A']::before"), 'Option A remains available in the generated design system');
   const source = await readFile(resolve(f.path, 'topics/assets/logo-bg.png'));
   for (const file of ['index.html', 'topics/worktrees/index.html', 'topics/agent-roles/index.html']) {
     const html = await f.read(file);
@@ -127,20 +126,20 @@ test('the shared wordmark embeds its background once per page and missing assets
   assert.match(outside.stderr, /local image inside topics/);
 });
 
-test('ambient configuration retains A, keeps F homepage-only, and rejects invalid settings before writing', async t => {
+test('ambient configuration keeps F homepage-only, allows omission, and rejects invalid settings before writing', async t => {
   const f = await fixture(t);
   const registry = JSON.parse(await f.read('topics/topics.json'));
   passed(f.build());
   assert.ok((await f.read('index.html')).includes('window.drawMurmuration ='));
   assert.ok(!(await f.read('topics/worktrees/index.html')).includes('window.drawMurmuration'));
-  registry.ambientBackground = 'A';
+  delete registry.ambientBackground;
   await f.write('topics/topics.json', JSON.stringify(registry));
   passed(f.build());
   const original = await f.read('index.html');
-  assert.ok(original.includes('data-ambient="A"'));
+  assert.ok(!original.includes('data-ambient="A"'));
   assert.ok(!original.includes('<canvas class="ambient-canvas"'));
   assert.ok(!original.includes('window.drawMurmuration'));
-  for (const patch of [{ ambientBackground: 'B' }, { ambientIntensity: 20 }, { ambientIntensity: -.1 }, { ambientIntensity: '0.2' }]) {
+  for (const patch of [{ ambientBackground: 'A' }, { ambientBackground: 'B' }, { ambientIntensity: 20 }, { ambientIntensity: -.1 }, { ambientIntensity: '0.2' }]) {
     await f.write('topics/topics.json', JSON.stringify({ ...registry, ...patch }));
     const invalid = f.build();
     assert.notEqual(invalid.status, 0);

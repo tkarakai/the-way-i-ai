@@ -547,8 +547,6 @@ SOFTWARE.
   --line: #d9d2c5; --accent: #855144; --tint: #eee8db; --accent-ink: #fffaf3;
   --ochre: #9a6336; --code: #f0ebe2; --search-hit: #f1d89a;
   --title-ink: #4b2e4a; --title-accent: #147c86;
-  --ambient-one: #147c8624; --ambient-two: #85514420; --ambient-line-one: #147c8630; --ambient-line-two: #85514428;
-  --ambient-blend: multiply;
   --serif: 'Newsreader', Georgia, serif; --sans: 'DM Sans', sans-serif;
   --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-family: var(--sans); font-synthesis: none; background: var(--paper); color: var(--ink);
@@ -559,8 +557,6 @@ SOFTWARE.
   --line: #4b4237; --accent: #dfb199; --tint: #353029; --accent-ink: #24221f;
   --ochre: #dfb485; --code: #302b25; --search-hit: #715b2d;
   --title-ink: #edd7e8; --title-accent: #64cfd3;
-  --ambient-one: #64cfd328; --ambient-two: #dfb19922; --ambient-line-one: #64cfd338; --ambient-line-two: #dfb1992c;
-  --ambient-blend: screen;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
@@ -568,8 +564,6 @@ SOFTWARE.
     --paper: #24221f; --surface: #2c2925; --ink: #f0e9dc; --muted: #bdb0a1;
     --line: #4b4237; --accent: #dfb199; --tint: #353029; --accent-ink: #24221f;
     --ochre: #dfb485; --code: #302b25; --search-hit: #715b2d; --title-ink: #edd7e8; --title-accent: #64cfd3;
-    --ambient-one: #64cfd328; --ambient-two: #dfb19922; --ambient-line-one: #64cfd338; --ambient-line-two: #dfb1992c;
-    --ambient-blend: screen;
   }
   :root:not([data-theme]) .title-art::before { filter: invert(1) hue-rotate(180deg); }
 }
@@ -577,10 +571,6 @@ SOFTWARE.
 :root.is-scrolled { --header-height: 60px; }
 html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-height) + 28px); }
 body { margin: 0; font-size: 16px; line-height: 1.65; }
-body[data-page='collection'][data-ambient='A']::before, body[data-page='collection'][data-ambient='A']::after { content: ''; position: fixed; z-index: 0; pointer-events: none; mix-blend-mode: var(--ambient-blend); }
-/* Option A: drifting color fields crossed by slow topographic contours. */
-body[data-page='collection'][data-ambient='A']::before { inset: -18vmax; background: radial-gradient(ellipse 38% 30% at 22% 35%, var(--ambient-one), transparent 72%), radial-gradient(ellipse 34% 42% at 78% 65%, var(--ambient-two), transparent 74%), radial-gradient(ellipse 24% 20% at 60% 18%, var(--ambient-one), transparent 76%); filter: blur(34px); animation: ambient-drift 44s ease-in-out infinite alternate; }
-body[data-page='collection'][data-ambient='A']::after { inset: -12vmax; opacity: .3; background: repeating-radial-gradient(ellipse 68% 52% at 6% 18%, transparent 0 72px, var(--ambient-line-one) 73px 74px, transparent 75px 122px), repeating-radial-gradient(ellipse 62% 48% at 94% 82%, transparent 0 86px, var(--ambient-line-two) 87px 88px, transparent 89px 142px); animation: ambient-contours 32s ease-in-out infinite alternate; }
 /* F uses the same transparent canvas and opacity scale as the review gallery. */
 .ambient-canvas { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; opacity: var(--ambient-intensity, .2); pointer-events: none; }
 body[data-page='collection'] .site-shell { position: relative; z-index: 1; }
@@ -819,8 +809,6 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 .js .search-wrap { display: block; }
 .js .toc-list li[data-subsection='true']:not(.search-match) { display: none; }
 @keyframes arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes ambient-drift { from { transform: translate3d(-3%, -2%, 0) scale(1) rotate(-1.5deg); } to { transform: translate3d(3%, 2%, 0) scale(1.08) rotate(1.5deg); } }
-@keyframes ambient-contours { from { transform: translate3d(-3%, -2%, 0) rotate(-.8deg); } to { transform: translate3d(3%, 2%, 0) rotate(.8deg); } }
 /* Reference-inspired entrance: fade + zoom from 90% + slide from above.
    Keep the two sections intact, and leave no transform/layer after the entrance. */
 @keyframes collection-enter {

@@ -1,3 +1,19 @@
+:root {
+  --ambient-one: #147c8624; --ambient-two: #85514420; --ambient-line-one: #147c8630; --ambient-line-two: #85514428;
+  --ambient-blend: multiply;
+}
+:root[data-theme='dark'] {
+  --ambient-one: #64cfd328; --ambient-two: #dfb19922; --ambient-line-one: #64cfd338; --ambient-line-two: #dfb1992c;
+  --ambient-blend: screen;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --ambient-one: #64cfd328; --ambient-two: #dfb19922; --ambient-line-one: #64cfd338; --ambient-line-two: #dfb1992c;
+    --ambient-blend: screen;
+  }
+}
+@keyframes ambient-drift { from { transform: translate3d(-3%, -2%, 0) scale(1) rotate(-1.5deg); } to { transform: translate3d(3%, 2%, 0) scale(1.08) rotate(1.5deg); } }
+@keyframes ambient-contours { from { transform: translate3d(-3%, -2%, 0) rotate(-.8deg); } to { transform: translate3d(3%, 2%, 0) rotate(.8deg); } }
 /* Review UI only. The selected F renderer is shared with the site separately. */
 .lab-body { --lab-effect-strength: .85; background: var(--paper); }
 .lab-gallery { max-width: 1440px; margin: auto; padding: 0 48px 30px; }
@@ -23,6 +39,8 @@
 .lab-effect { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: var(--lab-effect-strength); }
 .lab-effect canvas { display: block; width: 100%; height: 100%; }
 .lab-effect[data-effect='A']::before, .lab-effect[data-effect='A']::after { content: ''; position: absolute; mix-blend-mode: var(--ambient-blend); pointer-events: none; }
+.lab-effect[data-effect='A']::before { inset: -18vmax; background: radial-gradient(ellipse 38% 30% at 22% 35%, var(--ambient-one), transparent 72%), radial-gradient(ellipse 34% 42% at 78% 65%, var(--ambient-two), transparent 74%), radial-gradient(ellipse 24% 20% at 60% 18%, var(--ambient-one), transparent 76%); filter: blur(34px); animation: ambient-drift 44s ease-in-out infinite alternate; }
+.lab-effect[data-effect='A']::after { inset: -12vmax; opacity: .3; background: repeating-radial-gradient(ellipse 68% 52% at 6% 18%, transparent 0 72px, var(--ambient-line-one) 73px 74px, transparent 75px 122px), repeating-radial-gradient(ellipse 62% 48% at 94% 82%, transparent 0 86px, var(--ambient-line-two) 87px 88px, transparent 89px 142px); animation: ambient-contours 32s ease-in-out infinite alternate; }
 .lab-effect[data-effect='A'] canvas { display: none; }
 .lab-card .lab-effect[data-effect='A']::before { inset: -25%; filter: blur(18px); }
 .lab-card .lab-effect[data-effect='A']::after { inset: -25%; }

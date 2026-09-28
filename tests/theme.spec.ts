@@ -13,7 +13,10 @@ test('scrolling, typing, and navigation extend the override rather than its orig
   await page.locator('.theme-toggle').click();
   await page.clock.fastForward(hour);
   // An element scroll does not bubble; the activity listener must capture it.
-  await page.locator('.contents').evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await page.locator('.contents').evaluate(node => new Promise<void>(resolve => {
+    node.addEventListener('scroll', () => resolve(), { once: true });
+    node.scrollTop = node.scrollHeight;
+  }));
   await expect.poll(() => page.locator('.contents').evaluate(node => node.scrollTop)).toBeGreaterThan(0);
   await page.clock.fastForward(hour + hour / 4);
   await expect(page.locator('html')).toHaveAttribute('data-theme-preference', 'dark');

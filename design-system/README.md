@@ -1,6 +1,6 @@
 # The Way I AI · Design system
 
-The shared presentation layer for a collection of source-owned topics. The **Folio** design pairs warm paper, dark ink, copper accents, Newsreader headings and prose, and DM Sans navigation. The homepage is an editorial reading list; topic pages have an optional collection sidebar and a section outline. The collection's display title pairs plum with teal through `--title-ink` and `--title-accent`, with lighter variants for dark mode. Font and code-renderer licenses are in `licenses/` and are embedded in the generated files.
+The shared presentation layer for a collection of source-owned topics. The **Folio** design pairs warm paper, dark ink, copper accents, Newsreader headings and prose, and DM Sans navigation. The homepage is an editorial reading list; topic pages have an optional collection sidebar and a section outline to the left of the article on desktop, becoming a disclosure above the article on narrow layouts. The outline precedes the article in DOM order too, so keyboard navigation matches the layout. The collection's display title pairs plum with teal through `--title-ink` and `--title-accent`, with lighter variants for dark mode. Font and code-renderer licenses are in `licenses/` and are embedded in the generated files.
 
 ## Responsibilities
 
@@ -22,7 +22,7 @@ Local Markdown images become data URLs. SVG sources used inline must be standalo
 
 See the root README for [build and verification commands](../README.md#editing-and-adding-topics) and [publication bundle usage](../README.md#github-pages). `npm run check` rejects stale output, invalid source references, broken links, duplicate IDs, and external render dependencies. Browser acceptance coverage is defined in [`tests/reader.spec.ts`](../tests/reader.spec.ts).
 
-The only repository navigation link is the GitHub icon at the masthead's far right. The adjacent icon-only theme picker offers Light, Dark, and System, defaulting to System. Controls have accessible names and native keyboard behavior. Avoid promotional taglines or extra sidebar/footer links.
+The masthead places search directly after the home wordmark, with no redundant “The collection” link. Theme and GitHub controls remain at the right. On desktop topic pages, the logo and search shift left as the collection sidebar collapses; header padding and the sidebar grid share the same motion token. Mobile keeps a stable header inset while navigation disclosures stack above the article. The only repository navigation link is the GitHub icon at the masthead's far right. The adjacent icon-only theme picker offers Light, Dark, and System, defaulting to System. Controls have accessible names and native keyboard behavior. Avoid promotional taglines or extra sidebar/footer links.
 
 On topic pages, the collection sidebar is a native disclosure, collapsed by default on every navigation. Desktop grid columns animate its expansion/collapse; reduced-motion preferences disable transitions. There is no reading-progress indicator. Scrolling beyond 120px compacts the header; returning within 16px of the top restores it. The separate thresholds prevent layout-height changes from repeatedly retriggering the transition. Full text and native disclosures remain available without JavaScript.
 

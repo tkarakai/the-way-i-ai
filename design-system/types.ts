@@ -55,6 +55,7 @@ export interface RenderedTopic extends Topic {
   title: string;
   id: string;
   number: string;
+  illustrations?: { homepage: string; hero: string };
   coverSVG: string;
   diagramSVG: string;
   rendered: RenderedDocument[];

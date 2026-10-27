@@ -12,6 +12,7 @@ import { explorerFor } from '../design-system/explorers.ts';
 import { parseWavePosition, wordmarkStyles } from '../design-system/wordmark.ts';
 import { collectionSearch } from '../design-system/search.ts';
 import { topicSource, splitFrontMatter } from './markdown-source.ts';
+import { loadIllustrations } from './illustrations.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
@@ -158,6 +159,7 @@ for (const topic of topics) {
   topic.rendered = [];
   for (const [index, document] of topic.documents.entries()) topic.rendered.push(await renderDocument(topic, document, index));
   topic.title = topic.rendered[0].title;
+  topic.illustrations = await loadIllustrations(root, topic.id, topic.rendered);
 }
 
 const outputs = new Map();

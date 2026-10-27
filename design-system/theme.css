@@ -120,8 +120,16 @@ body[data-page='collection'] .masthead { width: calc(100% - 120px); max-width: 1
 .topic-card { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 40px; padding: 27px 0; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; min-width: 0; transition: transform .2s, border-color .2s; }
 .topic-card:hover { color: var(--ink); border-color: var(--accent); transform: translateX(4px); }
 .topic-visual { position: relative; display: flex; align-items: center; background: var(--tint); border-radius: 3px; padding: 25px 20px; min-height: 125px; }
-.card-number { position: absolute; top: 12px; left: 15px; font: 10px var(--mono); color: var(--accent); }
+.topic-number { font-family: var(--mono); color: var(--accent); }
 .topic-visual svg { max-height: 115px; }
+.topic-visual:has(.editorial-image) { padding: 0; background: transparent; }
+.editorial-image { display: block; width: 100%; height: auto; border-radius: 3px; }
+.editorial-homepage { aspect-ratio: 16 / 9; object-fit: cover; object-position: center; }
+.editorial-hero, .prose .editorial-chapter { aspect-ratio: 4 / 1; object-fit: cover; object-position: center; }
+.editorial-hero { margin: 0 0 32px; }
+.editorial-hero.editorial-portrait { aspect-ratio: 16 / 9; object-fit: contain; }
+.prose .editorial-chapter { margin: 20px 0 28px; }
+@media print { .editorial-image { break-inside: avoid; } }
 .topic-copy { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 35px; align-content: start; min-width: 0; }
 .card-meta { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 15px; margin-bottom: 9px; color: var(--muted); font-size: 11px; }
 .card-meta > span:last-child { flex-shrink: 0; }

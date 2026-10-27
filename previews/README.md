@@ -1,4 +1,6 @@
-# Background motion studies
+# Presentation studies
+
+## Background motion studies
 
 Open **[backgrounds.html](backgrounds.html)** directly in a browser. It is fully offline and separate from the published site.
 

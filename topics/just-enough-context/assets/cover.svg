@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 210" role="img" aria-labelledby="jec-cover-title" aria-describedby="jec-cover-desc">
+  <title id="jec-cover-title">Focused context, shared knowledge, human judgment</title>
+  <desc id="jec-cover-desc">Selected strands of project knowledge reach a focused specialist agent. A small decision card represents human judgment, with a return path carrying reusable decisions back to project knowledge.</desc>
+  <style>
+    .jec-paper{fill:var(--surface,#fcfaf5);stroke:var(--line,#d9d2c5);stroke-width:2}
+    .jec-quiet{fill:none;stroke:var(--muted,#746b64);stroke-width:2;stroke-linecap:round;opacity:.5}
+    .jec-context{fill:none;stroke:var(--chapter-ink,#28696b);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+    .jec-focus{fill:var(--surface,#fcfaf5);stroke:var(--chapter-ink,#28696b);stroke-width:2.6}
+    .jec-core{fill:var(--chapter-ink,#28696b)}
+    .jec-feedback{fill:none;stroke:var(--subchapter-ink,#865344);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .jec-decision{fill:var(--surface,#fcfaf5);stroke:var(--subchapter-ink,#865344);stroke-width:2}
+  </style>
+  <g id="jec-project-knowledge">
+    <title>Project knowledge</title>
+    <rect class="jec-paper" x="22" y="59" width="91" height="99" rx="5"/>
+    <rect class="jec-paper" x="31" y="47" width="91" height="99" rx="5"/>
+    <rect class="jec-paper" x="40" y="35" width="91" height="99" rx="5"/>
+    <path class="jec-quiet" d="M56 57h52M56 85h38M56 113h27"/>
+    <path class="jec-context" d="M56 71h75M56 99h75"/>
+  </g>
+  <g id="jec-context-selection">
+    <title>Task-relevant context</title>
+    <path class="jec-context" d="M131 71C159 71 156 83 183 83M131 99C159 99 156 105 183 105"/>
+    <path class="jec-quiet" d="M143 46h14M152 137h14"/>
+  </g>
+  <g id="jec-specialist-focus">
+    <title>Focused specialist agent</title>
+    <circle class="jec-focus" cx="224" cy="94" r="42"/>
+    <circle class="jec-quiet" cx="224" cy="94" r="26"/>
+    <path class="jec-context" d="M224 73v10M224 105v10M203 94h10M235 94h10"/>
+    <path class="jec-core" d="m224 87 7 7-7 7-7-7Z"/>
+    <path class="jec-context" d="M266 94h51m-7-6 7 6-7 6"/>
+  </g>
+  <g id="jec-human-decision">
+    <title>Focused human decision</title>
+    <rect class="jec-paper" x="331" y="53" width="76" height="81" rx="6"/>
+    <rect class="jec-decision" x="320" y="65" width="87" height="83" rx="6"/>
+    <path class="jec-quiet" d="M336 82h50M336 92h34"/>
+    <path class="jec-feedback" d="m339 117 7 7 14-15"/>
+    <path class="jec-quiet" d="m375 113 9 9m0-9-9 9"/>
+  </g>
+  <g id="jec-decision-feedback">
+    <title>Reusable decisions become future context</title>
+    <path class="jec-feedback" d="M364 148v5c0 27-61 31-140 31H96c-20 0-29-9-29-25m-6 7 6-7 6 7"/>
+  </g>
+</svg>

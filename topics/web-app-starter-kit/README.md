@@ -1,4 +1,44 @@
+---
+category: Software development
+description: >-
+  The application can replace the starter's entire design. How should the starter
+  be architected to remain useful and keep delivering improvements to that different product?
+thesis: Let the application become its own product.
+cover: assets/cover.svg
+explorer:
+  title: A different product. Still a useful foundation.
+  instruction: Explore how the starter can support downstream freedom.
+  diagram: assets/diagram.svg
+  caption: >-
+    Keep useful capabilities without keeping the default product design. Tooling
+    preserves application choices; agent experiments test the separation.
+  controls: labels
+  panels:
+    - id: presentation
+      label: Capabilities, not a fixed UI
+      source: { document: README.md, excerpt: presentation }
+      context: { document: README.md, heading: "3. Separate reusable capabilities from the starter's own UI" }
+      highlight: [architecture-platform, architecture-business]
+    - id: separation
+      label: Separation before cloning
+      source: { document: README.md, excerpt: separation }
+      context: { document: README.md, heading: 2. Create separation before the clone }
+      highlight: [architecture-extensions, architecture-business]
+    - id: experiments
+      label: Agents as stress tests
+      source: { document: README.md, excerpt: experiments }
+      context: { document: README.md, heading: 4. Use AI agents as architecture stress tests }
+      highlight: [architecture-experiments]
+    - id: tooling
+      label: Built-in maintenance
+      source: { document: README.md, excerpt: tooling }
+      context: { document: README.md, heading: 9. Build upgrade and validation tooling into the starter }
+      highlight: [architecture-tooling]
+---
+
 # A web app starter kit built for the long run
+
+## Introduction
 
 A business application that clones a web app starter kit does not need to keep the starter's design. It may replace the entire UI, remove the sidebar and dashboard, introduce completely different workflows, and become a product the starter's authors never imagined. **That is a normal use of a starter, not a compatibility problem to prevent.**
 

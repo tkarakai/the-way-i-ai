@@ -1,5 +1,7 @@
 # AI-Aided Development Workflow
 
+## Introduction
+
 > **Note:** This document reflects the state of things as of early 2026. AI-assisted development tools are evolving at a breakneck pace — interfaces, capabilities, and trade-offs described here may be outdated by the time you read this.
 
 A worktree-per-task workflow using VSCode, Claude Code, and git worktrees. Each task gets its own isolated branch, directory, and VSCode window.

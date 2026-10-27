@@ -1,10 +1,20 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 
 const root = new URL('../_site/', import.meta.url);
 const registry = JSON.parse(await readFile(new URL('topics/topics.json', root), 'utf8')) as { topics: string[] };
 const topicPath = `topics/${registry.topics[0]}/index.html`;
 const url = (path: string) => new URL(path, root).href;
+const topicsWithHistory = new Set(registry.topics.filter(id => {
+  try {
+    const git = (args: string[]) => execFileSync('git', args, { cwd: new URL('../', import.meta.url), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    const files = git(['ls-files', `topics/${id}`]).split('\n').filter(file => file && !file.endsWith('/index.html'));
+    return files.length > 0 && !!git(['log', '-1', '--format=%aI', '--', ...files]);
+  } catch {
+    return false; // Source archives, like uncommitted topics, have no history-derived dates.
+  }
+}));
 
 for (const width of [1440, 390, 320]) {
   for (const theme of ['light', 'dark'] as const) {
@@ -53,11 +63,19 @@ for (const width of [1440, 390, 320]) {
           await expect(page.locator('.prose').first()).toBeVisible();
           await expect(page.locator('.focus-toggle')).toHaveAccessibleName('Focus on reading');
           await expect(page.locator('.ambient-canvas')).toHaveCount(0);
-          await expect(page.locator('.topic-dates time')).toHaveCount(2);
-          await expect(page.locator('meta[property="article:published_time"]')).toHaveCount(1);
-          await expect(page.locator('meta[property="article:modified_time"]')).toHaveCount(1);
+          const hasDates = topicsWithHistory.has(path.split('/')[1]!);
+          await expect(page.locator('.article-presentation')).toHaveCount(1);
+          const created = await page.locator('meta[property="article:published_time"]').getAttribute('content');
+          const updated = await page.locator('meta[property="article:modified_time"]').getAttribute('content');
+          const dateCount = hasDates ? created?.slice(0, 10) === updated?.slice(0, 10) ? 1 : 2 : 0;
+          await expect(page.locator('.topic-dates time')).toHaveCount(dateCount);
+          await expect(page.locator('meta[property="article:published_time"]')).toHaveCount(hasDates ? 1 : 0);
+          await expect(page.locator('meta[property="article:modified_time"]')).toHaveCount(hasDates ? 1 : 0);
         } else {
           await expect(page.locator('.topic-card')).toHaveCount(registry.topics.length);
+          expect(await page.locator('.topic-card').evaluateAll(cards => cards.map(card => card.getAttribute('href'))))
+            .toEqual(registry.topics.toReversed().map(id => `topics/${id}/index.html`));
+          await expect(page.locator('.topic-card[href="topics/just-enough-context/index.html"] .topic-visual svg')).toHaveAccessibleName('Focused context, shared knowledge, human judgment');
           await expect(page.locator('.masthead .brand')).toHaveCount(0);
           await expect(page.locator('.wordmark .title-line')).toHaveCount(2);
           const headerAlignment = await page.evaluate(() => {

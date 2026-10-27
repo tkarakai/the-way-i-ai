@@ -17,7 +17,8 @@
   "topics": [
     "worktrees",
     "agent-roles",
-    "web-app-starter-kit"
+    "web-app-starter-kit",
+    "just-enough-context"
   ],
   "repositoryUrl": "https://github.com/tkarakai/the-way-i-ai"
 }

@@ -95,7 +95,8 @@ test('keyboard focus finishes the entrance immediately and never restarts it on 
   await page.locator('.theme-toggle').focus();
   expect(await entranceCount(page)).toBe(0);
   await page.goto(topic);
-  expect(await page.evaluate(() => document.getAnimations().some(animation => animation instanceof CSSAnimation && animation.animationName === 'collection-enter'))).toBe(false);
+  await expect(page.locator('.collection-hero,.collection-list')).toHaveCount(0);
+  await expect(page.locator('.article-hero')).toHaveCount(1);
 });
 
 for (const mode of ['reduced motion', 'print'] as const) {
@@ -117,7 +118,7 @@ test('CSS entrance and immediate keyboard focus work without JavaScript', async 
     const page = await context.newPage();
     await page.goto(home);
     await expect(page.locator('.collection-list')).toHaveCSS('animation-name', 'collection-enter');
-    const card = page.locator('.topic-card').first();
+    const card = page.locator('.topic-card[href="topics/worktrees/index.html"]');
     await card.focus();
     await expect(page.locator('.collection-list')).toHaveCSS('opacity', '1');
     await expect(page.locator('.collection-list')).toHaveCSS('transform', 'none');

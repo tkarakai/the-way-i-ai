@@ -1,5 +1,7 @@
 ---
 category: Agentic software development
+created: 2026-10-26
+updated: 2026-10-26
 cover: assets/cover.svg
 description: >-
   A context-efficient architecture for agentic software development: focused agent

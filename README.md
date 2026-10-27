@@ -87,7 +87,7 @@ The icon next to GitHub switches directly to the opposite theme: a moon for Dark
 
 Use Node.js 24 or newer for building. Node.js and npm are not needed for reading.
 
-Build from a Git checkout with full history to reproduce the topic dates in committed HTML. For an existing shallow clone, run `git fetch --unshallow` first; automated checkouts must fetch full history, as the Pages workflow does. Source archives remain buildable, but omit history-derived dates and therefore cannot reproduce the committed HTML exactly. See the [date derivation contract](design-system/README.md#build-contract).
+Topic dates are authored in the main README's optional `created` and `updated` front-matter fields, not derived from Git history or the build clock. Full checkouts, shallow clones, and source archives produce the same HTML; squash merges do not invalidate generated output. See the [date metadata contract](design-system/README.md#build-contract).
 
 ```sh
 npm ci

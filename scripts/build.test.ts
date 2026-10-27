@@ -18,6 +18,10 @@ async function fixture(t: TestContext) {
   for (const item of ['scripts', 'design-system', 'topics', 'package.json', 'README.md', 'AGENTS.md', 'CLAUDE.md']) {
     await cp(resolve(root, item), resolve(path, item), { recursive: true, filter: file => !file.endsWith('.html') });
   }
+  // Source-editing fixtures start without optional delivered artwork bindings.
+  // Actual deliveries and partial/missing files have separate acceptance coverage.
+  const registry = JSON.parse(await readFile(resolve(path, 'topics/topics.json'), 'utf8')) as { topics: string[] };
+  for (const id of registry.topics) await rm(resolve(path, 'topics', id, 'assets/illustrations'), { recursive: true, force: true });
   await symlink(resolve(root, 'node_modules'), resolve(path, 'node_modules'), 'dir');
   return {
     path,
@@ -32,6 +36,18 @@ async function updateMetadata(f: Awaited<ReturnType<typeof fixture>>, id: string
   const { metadata, body } = splitFrontMatter(await f.read(file), file);
   update(metadata!);
   await f.write(file, `---\n${stringify(metadata)}---\n${body}`);
+}
+
+// Synthetic artwork covers the generic explorer without retaining retired illustrations.
+async function addExplorer(f: Awaited<ReturnType<typeof fixture>>, id: string) {
+  await mkdir(resolve(f.path, `topics/${id}/assets`), { recursive: true });
+  await f.write(`topics/${id}/assets/test-diagram.svg`, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle id="test-node" cx="5" cy="5" r="3"/></svg>');
+  await updateMetadata(f, id, metadata => {
+    metadata.explorer = {
+      title: 'Test explorer', instruction: 'Select a panel', caption: 'Test artwork', controls: 'labels', diagram: 'assets/test-diagram.svg',
+      panels: [{ id: 'test', label: 'Test panel', context: { document: 'README.md', heading: 'Introduction' }, source: id === 'agent-roles' ? { document: 'README.md', excerpt: 'professional-lens' } : { document: 'WORKFLOW.md', heading: '1. Create a worktree' }, highlight: ['test-node'] }]
+    };
+  });
 }
 
 test('an ordinary new topic builds without renderer changes; its image is embedded and navigation is relative', async t => {
@@ -49,7 +65,7 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   assert.ok(index.includes('href="topics/new-idea/index.html"'));
   assert.deepEqual([...index.matchAll(/<a class="topic-card" href="([^"]+)"/g)].map(match => match[1]), registry.topics.toReversed().map((id: string) => `topics/${id}/index.html`));
   assert.deepEqual([...html.matchAll(/<a class="nav-topic" href="([^"]+)"/g)].map(match => match[1]), registry.topics.map((id: string) => `../${id}/index.html`), 'Homepage order does not mutate the reading order');
-  assert.match(index, new RegExp(`class="card-number">${String(registry.topics.length).padStart(2, '0')}<`));
+  assert.match(index, new RegExp(`class="topic-number">${String(registry.topics.length).padStart(2, '0')}<`));
   assert.ok(html.includes('This complete paragraph belongs to the source.'));
   assert.ok(html.includes('href="../../index.html"'));
   const embedded = html.match(/src="data:image\/svg\+xml;base64,([^"]+)"/);
@@ -196,7 +212,7 @@ test('the shared wordmark embeds its background once per page and missing assets
     assert.ok(!index.includes(removed), `The collection omits removed copy: ${removed}`);
   }
   assert.ok(index.includes('id="topics-heading">The collection'));
-  assert.ok(index.includes('A software engineer&#39;s thoughts about that...'));
+  assert.ok(index.includes('One way. Mine. Still being worked out.'));
   assert.ok(index.includes('<span class="intro-accent">practice</span>'));
   assert.ok(!index.includes('Explore the collection'));
   assert.ok(index.includes('data-ambient="F"'));
@@ -299,6 +315,7 @@ test('wave positioning is optional, validated before output changes, and tied to
 
 test('a named Markdown excerpt is shared by the full reader and visual explorer; stale output is rejected', async t => {
   const f = await fixture(t);
+  await addExplorer(f, 'agent-roles');
   passed(f.build());
   const file = 'topics/agent-roles/README.md';
   const original = await f.read(file);
@@ -319,6 +336,7 @@ test('a named Markdown excerpt is shared by the full reader and visual explorer;
 
 test('broken explorer references fail before any generated file is overwritten', async t => {
   const f = await fixture(t);
+  await addExplorer(f, 'worktrees');
   passed(f.build());
   const before = await f.read('index.html');
   await updateMetadata(f, 'worktrees', metadata => {
@@ -333,6 +351,7 @@ test('broken explorer references fail before any generated file is overwritten',
 
 test('a missing SVG highlight target fails instead of silently losing the explanation', async t => {
   const f = await fixture(t);
+  await addExplorer(f, 'agent-roles');
   await updateMetadata(f, 'agent-roles', metadata => {
     const explorer = metadata.explorer as NonNullable<Topic['explorer']>;
     explorer.panels[0].highlight = ['missing-node'];
@@ -352,7 +371,7 @@ test('the publication bundle is clean and contains the same standalone pages and
     assert.equal(await f.read(`_site/${file}`), await f.read(file));
   }
   assert.equal(await f.read('_site/topics/worktrees/README.md'), await f.read('topics/worktrees/README.md'));
-  assert.equal(await f.read('_site/topics/agent-roles/assets/diagram.svg'), await f.read('topics/agent-roles/assets/diagram.svg'));
+  assert.equal(await f.read('_site/topics/agent-roles/README.md'), await f.read('topics/agent-roles/README.md'));
   assert.deepEqual(await readFile(resolve(f.path, '_site/topics/assets/logo-bg.png')), await readFile(resolve(f.path, 'topics/assets/logo-bg.png')));
   assert.equal(await f.read('_site/topics/assets/title-wave-position.json'), await f.read('topics/assets/title-wave-position.json'));
   await access(resolve(f.path, '_site/.nojekyll'));
@@ -382,7 +401,7 @@ test('the local preview serves the generated site, links and images without serv
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type') ?? '', /text\/html/);
     assert.equal(await response.text(), await f.read('_site/index.html'));
-    for (const file of ['topics/worktrees/index.html', 'topics/agent-roles/README.md', 'topics/agent-roles/assets/diagram.svg']) {
+    for (const file of ['topics/worktrees/index.html', 'topics/agent-roles/README.md', 'topics/topics.json']) {
       const linked = await fetch(new URL(file, base));
       assert.equal(linked.status, 200);
       assert.equal(await linked.text(), await f.read(`_site/${file}`));

@@ -48,22 +48,22 @@ topics/
   worktrees/
     README.md                  Topic metadata, document order, tools, and setup
     WORKFLOW.md                Development and review workflow
-    assets/                    Authored SVG diagrams and cover illustration
+    assets/illustrations/      Optional generated images and placement manifest
     worktree-new.sh             wwt tool
     worktree-done.sh            wwtd tool
     index.html                 Generated edition of both documents
   agent-roles/
     README.md                  Topic metadata, complete role framework, and excerpts
-    assets/                    Authored SVG diagrams and cover illustration
+    assets/illustrations/      Optional generated images and placement manifest
     index.html                 Generated edition
   web-app-starter-kit/
     README.md                  Topic metadata and long-lived starter architecture
     web_app_starter_upgrade_notes.md  Original notes, preserved unchanged
-    assets/                    Architecture diagram and replaceable-UI cover illustration
+    assets/illustrations/      Optional generated images and placement manifest
     index.html                 Generated edition of the complete article
   just-enough-context/
     README.md                  Topic metadata and complete JEC article
-    assets/cover.svg           Focused context, project knowledge, and human decisions
+    assets/illustrations/      Optional generated images and placement manifest
     index.html                 Generated edition
 design-system/                Shared visual language and generic reader components
 scripts/                       Generator and contract checks
@@ -71,7 +71,9 @@ scripts/                       Generator and contract checks
 _site/                         Generated publication bundle (ignored by Git)
 ```
 
-Diagrams are content: their SVG sources live with their topic, where their labels and relationships can be reviewed. Interactive panels reuse sections or named excerpts from Markdown. Short labels and bindings live in the main README's YAML front matter. Shared components arrange these sources without knowing which topic they represent.
+Topic illustration folders are optional and may not exist until artwork is delivered. See the [AI image delivery guide](design-system/illustration-style/README.md) for exact filenames, chapter bindings, and a ready-to-extract ZIP contract. Missing images display nothing; homepage illustration blocks stay empty. Use the [wildlife generation prompt](design-system/illustration-style/single-topic-illustration-prompt.md) with an animal species and attached reference images (any number, at least one); extract its ZIP directly into the chosen topic's illustration folder. No topic research or chapter mapping is needed. This is the sole generation prompt.
+
+Diagrams, when authored, are content: their SVG sources live with their topic, where their labels and relationships can be reviewed. Interactive panels reuse sections or named excerpts from Markdown. Short labels and bindings live in the main README's YAML front matter. Shared components arrange these sources without knowing which topic they represent.
 
 ## Reading locally
 

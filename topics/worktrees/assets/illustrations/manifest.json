@@ -1,0 +1,41 @@
+{
+  "version": 3,
+  "species": "European red squirrel (Sciurus vulgaris)",
+  "images": [
+    {
+      "file": "hero.png",
+      "placement": "hero",
+      "alt": "",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": "panorama-01.png",
+      "placement": "panorama",
+      "alt": "",
+      "width": 1600,
+      "height": 400
+    },
+    {
+      "file": "panorama-02.png",
+      "placement": "panorama",
+      "alt": "",
+      "width": 1600,
+      "height": 400
+    },
+    {
+      "file": "panorama-03.png",
+      "placement": "panorama",
+      "alt": "",
+      "width": 1600,
+      "height": 400
+    },
+    {
+      "file": "panorama-04.png",
+      "placement": "panorama",
+      "alt": "",
+      "width": 1600,
+      "height": 400
+    }
+  ]
+}

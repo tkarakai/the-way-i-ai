@@ -39,9 +39,11 @@ for (const width of [1440, 390, 320]) {
         const first = document.querySelector<HTMLElement>('.prose h2')!;
         const chapter = document.querySelectorAll<HTMLElement>('.prose h2')[1];
         const subsection = document.querySelectorAll<HTMLElement>('.prose h3')[1];
-        const metadata = document.querySelector('.topic-dates') ?? document.querySelector('.topic-hero .lead')!;
+        const hero = document.querySelector('.editorial-hero');
+        const opening = hero ?? document.querySelector('.topic-dates') ?? document.querySelector('.topic-hero .lead')!;
         return {
-          firstGap: first.getBoundingClientRect().top - metadata.getBoundingClientRect().bottom,
+          hasHero: Boolean(hero),
+          firstGap: first.getBoundingClientRect().top - opening.getBoundingClientRect().bottom,
           firstMargin: getComputedStyle(first).marginTop,
           firstBorder: getComputedStyle(first).borderTopWidth,
           firstMark: getComputedStyle(first, '::before').display,
@@ -54,7 +56,7 @@ for (const width of [1440, 390, 320]) {
         };
       });
       expect(rhythm.firstGap).toBeGreaterThanOrEqual(16);
-      expect(rhythm.firstGap).toBeLessThanOrEqual(40);
+      expect(rhythm.firstGap).toBeLessThanOrEqual(rhythm.hasHero ? 64 : 40);
       expect(rhythm).toMatchObject({ firstMargin: '0px', firstBorder: '0px', firstMark: 'none', chapterBorder: '0px', subsectionMark: '44px' });
       expect(rhythm.chapterRule).toContain('linear-gradient');
       expect(rhythm.chapterRule).toMatch(/^linear-gradient\(to right, rgb\(/);
@@ -98,7 +100,7 @@ for (const width of [1440, 390, 320]) {
 }
 
 for (const theme of ['light', 'dark'] as const) {
-  test(`JEC leads the homepage with an embedded cover in ${theme}`, async ({ page, context }) => {
+  test(`JEC leads the homepage with its delivered illustration in ${theme}`, async ({ page, context }) => {
     await context.setOffline(true);
     await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
     for (const width of [1440, 390, 320]) {
@@ -108,8 +110,9 @@ for (const theme of ['light', 'dark'] as const) {
       const card = page.locator('.topic-card').first();
       await expect(card).toHaveAttribute('href', 'topics/just-enough-context/index.html');
       await expect(card).toHaveAccessibleName(title);
-      await expect(card.locator('svg')).toHaveAccessibleName('Focused context, shared knowledge, human judgment');
-      await expect(card.locator('svg')).toHaveAccessibleDescription(/Selected strands of project knowledge/);
+      await expect(card.locator('.topic-visual img')).toBeVisible();
+      await expect(card.locator('.topic-visual img')).toHaveAttribute('src', /^data:image\/(?:png|webp);base64,/);
+      expect(await card.locator('.topic-visual img').evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight])).toEqual([1600, 900]);
       await card.screenshot({ path: `test-results/jec-cover-${width}-${theme}.png`, animations: 'disabled' });
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
     }

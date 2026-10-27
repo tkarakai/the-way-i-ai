@@ -67,7 +67,7 @@ for (const width of [1440, 390, 320]) {
           await expect(page.locator('.topic-card')).toHaveCount(registry.topics.length);
           expect(await page.locator('.topic-card').evaluateAll(cards => cards.map(card => card.getAttribute('href'))))
             .toEqual(registry.topics.toReversed().map(id => `topics/${id}/index.html`));
-          await expect(page.locator('.topic-card[href="topics/just-enough-context/index.html"] .topic-visual svg')).toHaveAccessibleName('Focused context, shared knowledge, human judgment');
+          await expect(page.locator('.topic-card[href="topics/just-enough-context/index.html"] .topic-visual img')).toBeVisible();
           await expect(page.locator('.masthead .brand')).toHaveCount(0);
           await expect(page.locator('.wordmark .title-line')).toHaveCount(2);
           const headerAlignment = await page.evaluate(() => {
@@ -286,7 +286,7 @@ test('topic header shrinks on scroll and restores at the top without oscillating
   expect(await height()).toBe(60);
 });
 
-test('search, section links, explorers, code copying, focus and print layout remain usable', async ({ page, context }) => {
+test('search, section links, code copying, focus and print layout remain usable', async ({ page, context }) => {
   await context.setOffline(true);
   await page.goto(url(topicPath));
   await page.keyboard.press('ControlOrMeta+k');
@@ -300,6 +300,7 @@ test('search, section links, explorers, code copying, focus and print layout rem
   await expect(page.locator('.search-result')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(search).not.toBeVisible();
+  await expect(page.locator('[data-open-search]')).toBeFocused();
   await page.keyboard.press('/');
   await expect(page.locator('#section-search')).toBeFocused();
   await expect(page.locator('#section-search')).toHaveCSS('outline-offset', '-2px');
@@ -312,12 +313,7 @@ test('search, section links, explorers, code copying, focus and print layout rem
   await page.screenshot({ path: 'test-results/folio-search-highlights.png', animations: 'disabled' });
   await page.keyboard.press('Escape');
   await expect(page.locator('.reading-main mark.search-hit,.contents mark.search-hit')).toHaveCount(0);
-  await page.locator('.visual-guide summary').click();
-  const control = page.locator('[data-select]').nth(1);
-  await control.click();
-  await expect(control).toHaveAttribute('aria-pressed', 'true');
-  await control.press('ArrowRight');
-  await expect(page.locator('[data-select]').nth(2)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.visual-guide')).toHaveCount(0);
   await page.locator('.article [data-copy]').first().click();
   await expect(page.locator('.toast')).toHaveText(/Copied to clipboard/);
   const focus = page.locator('[data-focus]');
@@ -355,11 +351,9 @@ test('search, section links, explorers, code copying, focus and print layout rem
   await expect(page.locator('.on-page')).toBeVisible();
   await expect(page.locator('.masthead')).toBeVisible();
   await expect(focus).toHaveAccessibleName('Focus on reading');
-  await page.locator('.visual-guide').evaluate((details: HTMLDetailsElement) => { details.open = false; });
   await page.evaluate(() => dispatchEvent(new Event('beforeprint')));
-  await expect(page.locator('.visual-guide')).toHaveAttribute('open');
+  await expect(page.locator('.prose').first()).toBeVisible();
   await page.evaluate(() => dispatchEvent(new Event('afterprint')));
-  await expect(page.locator('.visual-guide')).not.toHaveAttribute('open');
   await page.locator('[data-open-search]').click();
   await input.fill('Create a worktree');
   await page.locator('.search-result').first().click();
@@ -367,6 +361,27 @@ test('search, section links, explorers, code copying, focus and print layout rem
   await expect(search).not.toBeVisible();
   await expect(page.locator('#section-search')).toHaveValue('Create a worktree');
   expect(await page.locator('.article mark.search-hit').count()).toBeGreaterThan(0);
+});
+
+test('collection search restores the invoking control on every keyboard close path', async ({ page }) => {
+  await page.goto(url(topicPath));
+  const dialog = page.getByRole('dialog');
+  const trigger = page.locator('[data-open-search]');
+  const sectionSearch = page.locator('#section-search');
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press('/');
+  await expect(sectionSearch).toBeFocused();
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(sectionSearch).toBeFocused();
+  await trigger.click();
+  await page.locator('[data-close-search]').click();
+  await expect(trigger).toBeFocused();
 });
 
 test('each topic restores its reading position', async ({ page }) => {
@@ -402,8 +417,7 @@ test('the full article and native collection navigation work without JavaScript'
   await expect(page.locator('.theme-toggle')).not.toBeVisible();
   await page.locator('.collection-contents summary').click();
   await expect(page.locator('.collection-contents .nav-topic').first()).toBeVisible();
-  await page.locator('.visual-guide summary').press('Enter');
-  await expect(page.locator('.explorer-panel').last()).toBeVisible();
+  await expect(page.locator('.visual-guide')).toHaveCount(0);
   await context.close();
 });
 

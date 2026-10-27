@@ -1,5 +1,7 @@
 ---
 category: Software development
+created: 2026-02-16
+updated: 2026-10-26
 description: >-
   One task. One branch. One working directory. A practical workflow for building
   with Claude Code, reviewing changes, and working in parallel.

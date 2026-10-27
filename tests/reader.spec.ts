@@ -1,20 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
+import { topicSource } from '../scripts/markdown-source.ts';
 
 const root = new URL('../_site/', import.meta.url);
 const registry = JSON.parse(await readFile(new URL('topics/topics.json', root), 'utf8')) as { topics: string[] };
 const topicPath = `topics/${registry.topics[0]}/index.html`;
 const url = (path: string) => new URL(path, root).href;
-const topicsWithHistory = new Set(registry.topics.filter(id => {
-  try {
-    const git = (args: string[]) => execFileSync('git', args, { cwd: new URL('../', import.meta.url), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    const files = git(['ls-files', `topics/${id}`]).split('\n').filter(file => file && !file.endsWith('/index.html'));
-    return files.length > 0 && !!git(['log', '-1', '--format=%aI', '--', ...files]);
-  } catch {
-    return false; // Source archives, like uncommitted topics, have no history-derived dates.
-  }
-}));
+const topicMetadata = new Map(await Promise.all(registry.topics.map(async id => [id,
+  topicSource(await readFile(new URL(`topics/${id}/README.md`, root), 'utf8'), `${id}/README.md`).topic,
+] as const)));
 
 for (const width of [1440, 390, 320]) {
   for (const theme of ['light', 'dark'] as const) {
@@ -63,14 +57,12 @@ for (const width of [1440, 390, 320]) {
           await expect(page.locator('.prose').first()).toBeVisible();
           await expect(page.locator('.focus-toggle')).toHaveAccessibleName('Focus on reading');
           await expect(page.locator('.ambient-canvas')).toHaveCount(0);
-          const hasDates = topicsWithHistory.has(path.split('/')[1]!);
+          const { created, updated } = topicMetadata.get(path.split('/')[1]!)!;
           await expect(page.locator('.article-presentation')).toHaveCount(1);
-          const created = await page.locator('meta[property="article:published_time"]').getAttribute('content');
-          const updated = await page.locator('meta[property="article:modified_time"]').getAttribute('content');
-          const dateCount = hasDates ? created?.slice(0, 10) === updated?.slice(0, 10) ? 1 : 2 : 0;
+          const dateCount = Number(Boolean(created)) + Number(Boolean(updated && updated !== created));
           await expect(page.locator('.topic-dates time')).toHaveCount(dateCount);
-          await expect(page.locator('meta[property="article:published_time"]')).toHaveCount(hasDates ? 1 : 0);
-          await expect(page.locator('meta[property="article:modified_time"]')).toHaveCount(hasDates ? 1 : 0);
+          await expect(page.locator('meta[property="article:published_time"]')).toHaveCount(created ? 1 : 0);
+          await expect(page.locator('meta[property="article:modified_time"]')).toHaveCount(updated ? 1 : 0);
         } else {
           await expect(page.locator('.topic-card')).toHaveCount(registry.topics.length);
           expect(await page.locator('.topic-card').evaluateAll(cards => cards.map(card => card.getAttribute('href'))))

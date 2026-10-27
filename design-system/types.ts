@@ -28,6 +28,8 @@ export interface Topic {
   category: string;
   description: string;
   thesis: string;
+  created?: string;
+  updated?: string;
   documents: SourceDocument[];
   cover?: string;
   explorer?: {
@@ -56,8 +58,6 @@ export interface RenderedTopic extends Topic {
   coverSVG: string;
   diagramSVG: string;
   rendered: RenderedDocument[];
-  created?: string;
-  updated?: string;
 }
 export interface SearchEntry { title: string; topic: string; href: string; text: string }
 export interface ShellOptions {

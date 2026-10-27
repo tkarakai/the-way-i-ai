@@ -56,8 +56,8 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   assert.ok(embedded, 'The generated standalone edition must embed the image');
   assert.equal(Buffer.from(embedded[1], 'base64').toString(), diagram);
   assert.ok(!html.includes('data-explorer aria-'), 'An explorer is optional');
-  assert.ok(!html.includes('article:published_time'), 'Missing Git history omits creation metadata');
-  assert.ok(!html.includes('class="topic-dates"'), 'Missing Git history omits the visible date block');
+  assert.ok(!html.includes('article:published_time'), 'Missing authored dates omit creation metadata');
+  assert.ok(!html.includes('class="topic-dates"'), 'Missing authored dates omit the visible date block');
   assert.ok(!html.includes('min read'), 'Reading-time estimates are not rendered');
   const search = JSON.parse(index.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { title: string; text: string; href: string }[];
   assert.ok(search.some(entry => entry.title === 'The premise' && entry.text.includes('This complete paragraph belongs to the source.') && entry.href === 'topics/new-idea/index.html#new-idea-doc-1-the-premise'));
@@ -143,47 +143,49 @@ test('a single README supplies article metadata without topic.json and keeps blo
   assert.equal(await f.read('topics/just-enough-context/index.html'), html, 'Invalid metadata preserves output');
 });
 
-test('article dates collapse same-day updates while retaining source-history metadata', async t => {
+test('front-matter dates work without Git and omit redundant same-day updates', async t => {
   const f = await fixture(t);
-  const git = (args: string[], date?: string) => spawnSync('git', args, { cwd: f.path, encoding: 'utf8', env: date ? { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } : process.env });
-  passed(git(['init']));
-  passed(git(['config', 'user.name', 'Test Author']));
-  passed(git(['config', 'user.email', 'test@example.com']));
-  passed(git(['add', 'topics/just-enough-context']));
-  passed(git(['commit', '-m', 'Create article'], '2024-01-02T12:00:00Z'));
-  const file = 'topics/just-enough-context/README.md';
-  for (const [date, count] of [['2024-01-02T18:00:00Z', 1], ['2025-03-04T12:00:00Z', 2]] as const) {
-    await f.write(file, `${await f.read(file)}\n`);
-    passed(git(['add', file]));
-    passed(git(['commit', '-m', 'Update article'], date));
+  for (const [date, count] of [['2024-01-02', 1], ['2025-03-04', 2]] as const) {
+    await updateMetadata(f, 'just-enough-context', metadata => { metadata.created = '2024-01-02'; metadata.updated = date; });
     passed(f.build());
     const html = await f.read('topics/just-enough-context/index.html');
     const dates = html.match(/<dl class="topic-dates">([\s\S]*?)<\/dl>/)![1];
     assert.equal((dates.match(/<time /g) ?? []).length, count);
-    assert.match(html, /article:published_time" content="2024-01-02T12:00:00Z"/);
+    assert.match(html, /article:published_time" content="2024-01-02"/);
     assert.ok(html.includes(`article:modified_time" content="${date}"`));
-    assert.ok(!dates.includes('Published'), 'Git history is not relabeled as publication history');
+    assert.match(dates, /Created<\/dt><dd><time datetime="2024-01-02">Jan 2, 2024<\/time>/);
+    if (count === 2) assert.match(dates, /Last Updated<\/dt><dd><time datetime="2025-03-04">Mar 4, 2025<\/time>/);
   }
 });
 
-test('topic dates come from Git history and are emitted as metadata and visible dates', async t => {
+test('squash merges and source archives preserve byte-identical generated HTML', async t => {
   const f = await fixture(t);
   const git = (args: string[], date?: string) => spawnSync('git', args, { cwd: f.path, encoding: 'utf8', env: date ? { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } : process.env });
-  assert.equal(git(['init']).status, 0);
-  assert.equal(git(['config', 'user.name', 'Test Author']).status, 0);
-  assert.equal(git(['config', 'user.email', 'test@example.com']).status, 0);
-  assert.equal(git(['add', 'topics/agent-roles']).status, 0);
-  assert.equal(git(['commit', '-m', 'Create agent roles'], '2024-01-02T12:00:00Z').status, 0);
-  const file = 'topics/agent-roles/README.md';
-  await f.write(file, `${await f.read(file)}\n`);
-  assert.equal(git(['add', file]).status, 0);
-  assert.equal(git(['commit', '-m', 'Update agent roles'], '2025-03-04T12:00:00Z').status, 0);
   passed(f.build());
-  const html = await f.read('topics/agent-roles/index.html');
-  assert.match(html, /<meta property="article:published_time" content="2024-01-02T12:00:00Z">/);
-  assert.match(html, /<meta property="article:modified_time" content="2025-03-04T12:00:00Z">/);
-  assert.match(html, /Created<\/dt><dd><time datetime="2024-01-02T12:00:00Z">Jan 2, 2024<\/time>/);
-  assert.match(html, /Last Updated<\/dt><dd><time datetime="2025-03-04T12:00:00Z">Mar 4, 2025<\/time>/);
+  passed(git(['init', '-b', 'main']));
+  passed(git(['config', 'user.name', 'Test Author']));
+  passed(git(['config', 'user.email', 'test@example.com']));
+  passed(git(['add', 'topics']));
+  passed(git(['commit', '-m', 'Initial sources'], '2001-01-01T12:00:00Z'));
+  passed(git(['checkout', '-b', 'feature']));
+  const file = 'topics/agent-roles/README.md';
+  await f.write(file, `${await f.read(file)}\nA source change before the squash merge.\n`);
+  passed(f.build());
+  const registry = JSON.parse(await f.read('topics/topics.json')) as { topics: string[] };
+  const paths = ['index.html', ...registry.topics.map(id => `topics/${id}/index.html`)];
+  const expected = await Promise.all(paths.map(path => f.read(path)));
+  passed(git(['add', 'topics']));
+  passed(git(['commit', '-m', 'Feature sources and output'], '2002-02-02T12:00:00Z'));
+  passed(git(['checkout', 'main']));
+  passed(git(['merge', '--squash', 'feature']));
+  passed(git(['commit', '-m', 'Squashed feature'], '2035-03-03T12:00:00Z'));
+  passed(f.build('--check'));
+  passed(f.build());
+  assert.deepEqual(await Promise.all(paths.map(path => f.read(path))), expected);
+  await rm(resolve(f.path, '.git'), { recursive: true });
+  passed(f.build('--check'));
+  passed(f.build());
+  assert.deepEqual(await Promise.all(paths.map(path => f.read(path))), expected);
 });
 
 test('the shared wordmark embeds its background once per page and missing assets preserve output', async t => {

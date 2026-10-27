@@ -12,6 +12,7 @@ test('YAML front matter supplies metadata and leaves authored Markdown untouched
     category: 'Agentic software development', description: 'One description, folded across lines.',
     thesis: 'Knowledge: available when needed.', documents: [{ file: 'README.md' }],
   });
+  assert.deepEqual(topicSource(source.replace('category:', 'created: 2024-02-29\nupdated: 2026-10-26\ncategory:'), 'README.md').topic, { ...article.topic, created: '2024-02-29', updated: '2026-10-26' });
   assert.equal(article.body, body);
   assert.equal(splitFrontMatter(body, 'README.md').metadata, undefined);
   assert.equal(splitFrontMatter(body, 'README.md').body, body);
@@ -32,6 +33,10 @@ test('front matter rejects ambiguous, mistyped, or malformed metadata', () => {
     [`---\n${metadata.replace('thesis: "Knowledge: available when needed."', 'thesis: ""')}---\n${body}`, /thesis.*nonempty string/],
     [`---\n- not a mapping\n---\n${body}`, /must be a mapping/],
     [`---\n${metadata}cover: 42\n---\n${body}`, /cover.*nonempty string/],
+    [`---\n${metadata}created: 2026-02-29\n---\n${body}`, /valid YYYY-MM-DD/],
+    [`---\n${metadata}created: 2026-10-26T12:00:00Z\n---\n${body}`, /valid YYYY-MM-DD/],
+    [`---\n${metadata}created: 2026-10-26\nupdated: 2026-10-25\n---\n${body}`, /must not precede/],
+    [`---\n${metadata}updated: 2026-10-26\n---\n${body}`, /updated requires created/],
     [`---\n${metadata}explorer: []\n---\n${body}`, /explorer.*must be a mapping/],
     ...['[]', '[WORKFLOW.md]', '[README.md, README.md]', '[README.md, ../outside.md]', '[README.md, /outside.md]', '[README.md, {file: WORKFLOW.md}]'].map(value => [`---\n${metadata}documents: ${value}\n---\n${body}`, /documents must be unique local/] as const),
   ] as const) assert.throws(() => topicSource(invalid, 'README.md'), message as RegExp);

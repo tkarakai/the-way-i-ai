@@ -19,7 +19,7 @@ export function splitFrontMatter(source: string, file: string): { metadata?: Rec
 export function topicSource(source: string, file: string): { topic: Topic; body: string } {
   const { metadata, body } = splitFrontMatter(source, file);
   if (!metadata) throw new Error(`${file}: README.md must start with YAML front matter.`);
-  const allowed = new Set(['category', 'description', 'thesis', 'cover', 'explorer', 'documents']);
+  const allowed = new Set(['category', 'description', 'thesis', 'cover', 'explorer', 'documents', 'created', 'updated']);
   for (const key of Object.keys(metadata)) {
     if (!allowed.has(key)) throw new Error(`${file}: unsupported front matter field "${key}". The title comes from the main README's single # heading.`);
   }
@@ -32,6 +32,14 @@ export function topicSource(source: string, file: string): { topic: Topic; body:
     category: text('category'), description: text('description'), thesis: text('thesis'),
     documents: [{ file: 'README.md' }],
   };
+  for (const key of ['created', 'updated'] as const) {
+    if (metadata[key] === undefined) continue;
+    const value = text(key);
+    const date = new Date(`${value}T00:00:00Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) throw new Error(`${file}: ${key} must be a valid YYYY-MM-DD date.`);
+    topic[key] = value;
+  }
+  if (topic.updated && (!topic.created || topic.updated < topic.created)) throw new Error(`${file}: updated requires created and must not precede it.`);
   if (metadata.documents !== undefined) {
     const documents = metadata.documents;
     if (!Array.isArray(documents) || !documents.length || documents[0] !== 'README.md'

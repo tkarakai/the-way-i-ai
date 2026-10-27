@@ -1,5 +1,7 @@
 ---
 category: Agentic organizations
+created: 2026-09-26
+updated: 2026-10-26
 description: >-
   A professional lens, a concrete operational environment, and a discoverable
   profile. A framework for making AI roles useful in real organizations.

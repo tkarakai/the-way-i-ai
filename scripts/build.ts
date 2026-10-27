@@ -5,7 +5,6 @@ import { readFile, writeFile, access, mkdir, rm, cp } from 'node:fs/promises';
 import { dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
 import { Marked, Renderer } from 'marked';
 import { preloadFile } from '@pierre/diffs/ssr';
 import { shell, collectionBody, readerBody, escape } from '../design-system/layout.ts';
@@ -39,17 +38,6 @@ const fonts = `/* Embedded font, icon, and code-renderer licenses:\n${fontLicens
 const slug = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').trim().replace(/\s+/g, '-');
 const plain = (text: string) => text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
 const safeJSON = (value: unknown) => JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
-function gitDates(id: string) {
-  const runGit = (args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-  try {
-    const files = runGit(['ls-files', `topics/${id}`]).split('\n').filter(file => file && !file.endsWith('/index.html'));
-    if (!files.length) return {};
-    const recent = runGit(['log', '-1', '--format=%aI', '--', ...files]);
-    const firstDates = files.flatMap(file => runGit(['log', '--follow', '--format=%aI', '--', file]).split('\n').filter(Boolean));
-    const created = firstDates.sort((a, b) => Date.parse(a) - Date.parse(b))[0];
-    return { ...(created ? { created } : {}), ...(recent ? { updated: recent } : {}) };
-  } catch { return {}; }
-}
 const codeCache = new Map<string, Promise<string>>();
 const renderedCode = new WeakMap<Tokens.Code, string>();
 async function embedImage(imagePath: string) {
@@ -160,7 +148,7 @@ for (const [index, id] of registry.topics.entries()) {
   if (json !== undefined) throw new Error(`${id}: topic.json is no longer supported; move metadata to README.md front matter.`);
   const source = topicSource(await read(`topics/${id}/README.md`), `${id}/README.md`);
   articleBodies.set(id, source.body);
-  topics.push({ ...source.topic, title: '', ...gitDates(id), id, coverSVG: '', diagramSVG: '', rendered: [], number: String(index + 1).padStart(2, '0') });
+  topics.push({ ...source.topic, title: '', id, coverSVG: '', diagramSVG: '', rendered: [], number: String(index + 1).padStart(2, '0') });
 }
 for (const topic of topics) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(topic.id) || ids.has(topic.id)) throw new Error(`Invalid or duplicate topic id: ${topic.id}`);

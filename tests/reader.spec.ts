@@ -64,11 +64,18 @@ for (const width of [1440, 390, 320]) {
           await expect(page.locator('.focus-toggle')).toHaveAccessibleName('Focus on reading');
           await expect(page.locator('.ambient-canvas')).toHaveCount(0);
           const hasDates = topicsWithHistory.has(path.split('/')[1]!);
-          await expect(page.locator('.topic-dates time')).toHaveCount(hasDates ? 2 : 0);
+          const article = await page.locator('.article-presentation').count() > 0;
+          const created = await page.locator('meta[property="article:published_time"]').getAttribute('content');
+          const updated = await page.locator('meta[property="article:modified_time"]').getAttribute('content');
+          const dateCount = hasDates ? article && created?.slice(0, 10) === updated?.slice(0, 10) ? 1 : 2 : 0;
+          await expect(page.locator('.topic-dates time')).toHaveCount(dateCount);
           await expect(page.locator('meta[property="article:published_time"]')).toHaveCount(hasDates ? 1 : 0);
           await expect(page.locator('meta[property="article:modified_time"]')).toHaveCount(hasDates ? 1 : 0);
         } else {
           await expect(page.locator('.topic-card')).toHaveCount(registry.topics.length);
+          expect(await page.locator('.topic-card').evaluateAll(cards => cards.map(card => card.getAttribute('href'))))
+            .toEqual(registry.topics.toReversed().map(id => `topics/${id}/index.html`));
+          await expect(page.locator('.topic-card[href="topics/just-enough-context/index.html"] .topic-visual svg')).toHaveAccessibleName('Focused context, shared knowledge, human judgment');
           await expect(page.locator('.masthead .brand')).toHaveCount(0);
           await expect(page.locator('.wordmark .title-line')).toHaveCount(2);
           const headerAlignment = await page.evaluate(() => {

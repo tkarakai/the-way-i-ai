@@ -65,8 +65,8 @@ topics/
     assets/                    Architecture diagram and replaceable-UI cover illustration
     index.html                 Generated edition of the complete article
   just-enough-context/
-    README.md                  Full JEC concept essay, including project knowledge and JEA
-    topic.json                 Metadata and document order
+    README.md                  JEC article and YAML front matter (single-file topic trial)
+    assets/cover.svg           Focused context, project knowledge, and human decisions
     index.html                 Generated edition
 design-system/                Shared visual language and generic reader components
 scripts/                       Generator and contract checks

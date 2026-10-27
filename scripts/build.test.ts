@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn, spawnSync } from 'node:child_process';
+import { articleSource } from './markdown-source.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 async function fixture(t: TestContext) {
@@ -39,6 +40,9 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   const index = await f.read('index.html');
   const html = await f.read('topics/new-idea/index.html');
   assert.ok(index.includes('href="topics/new-idea/index.html"'));
+  assert.deepEqual([...index.matchAll(/<a class="topic-card" href="([^"]+)"/g)].map(match => match[1]), registry.topics.toReversed().map((id: string) => `topics/${id}/index.html`));
+  assert.deepEqual([...html.matchAll(/<a class="nav-topic" href="([^"]+)"/g)].map(match => match[1]), registry.topics.map((id: string) => `../${id}/index.html`), 'Homepage order does not mutate the reading order');
+  assert.match(index, new RegExp(`class="card-number">${String(registry.topics.length).padStart(2, '0')}<`));
   assert.ok(html.includes('This complete paragraph belongs to the source.'));
   assert.ok(html.includes('href="../../index.html"'));
   const embedded = html.match(/src="data:image\/svg\+xml;base64,([^"]+)"/);
@@ -53,6 +57,106 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   const nestedSearch = JSON.parse(html.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { href: string }[];
   assert.ok(nestedSearch.every(entry => entry.href.startsWith('../../topics/')));
   passed(f.build('--check'));
+});
+
+test('opt-in articles derive their title and nested outline from Markdown without affecting legacy topics', async t => {
+  const f = await fixture(t);
+  const metadata = 'topics/just-enough-context/topic.json';
+  const { topic } = articleSource(await f.read('topics/just-enough-context/README.md'), 'README.md');
+  topic.description = 'One article description.';
+  await f.write(metadata, JSON.stringify(topic));
+  await f.write('topics/just-enough-context/README.md', '# A source-owned title\n\nOpening prose for collection search.\n\n## 07. Authored chapter\n\nChapter text.\n\n### Introduction\n\nNested prose.\n\n### Another authored heading\n\nMore prose.\n\n## Unnumbered chapter\n\nFinal prose.\n\n```text\n# This is code, not a second title\n```\n');
+  passed(f.build());
+  const html = await f.read('topics/just-enough-context/index.html');
+  assert.match(html, /<title>A source-owned title · The Way I AI<\/title>/);
+  assert.match(html, /<h1 id="just-enough-context-doc-1-title">A source-owned title<\/h1>/);
+  assert.equal((html.match(/>A source-owned title<\/h[1-6]>/g) ?? []).length, 1);
+  assert.ok(!html.includes('class="source-heading"'));
+  assert.ok(!html.includes('class="toc-group"'));
+  assert.ok(!html.includes('The concept'));
+  assert.match(html, /<li class="toc-chapter" data-subsection="false"><a class="toc-link" href="#just-enough-context-doc-1-07-authored-chapter">07\. Authored chapter<\/a><ol class="toc-list"><li data-subsection="true">/);
+  assert.match(html, /<h3 id="just-enough-context-doc-1-introduction">/);
+  assert.match(html, /<h2 id="just-enough-context-doc-1-unnumbered-chapter">/);
+  const index = await f.read('index.html');
+  assert.match(index, /id="topic-just-enough-context-title">A source-owned title<\/h3>/);
+  assert.ok((await f.read('topics/worktrees/index.html')).includes('class="source-heading"'));
+  const entries = JSON.parse(html.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { title: string; text: string; href: string }[];
+  assert.ok(entries.some(entry => entry.title === 'A source-owned title' && entry.text.includes('Opening prose') && entry.href.endsWith('#just-enough-context-doc-1-title')));
+  passed(f.build('--check'));
+
+  const original = await f.read('topics/just-enough-context/README.md');
+  const failures = [
+    { markdown: `${original}\n# Another title\n`, metadata: topic, error: /exactly one level-one title/ },
+    { markdown: '## No document title\n', metadata: topic, error: /must start with a level-one title/ },
+    { markdown: original, metadata: { ...topic, title: 'A competing title' }, error: /title comes from Markdown/ },
+    { markdown: original, metadata: { ...topic, documents: [...topic.documents, ...topic.documents] }, error: /requires one document/ },
+    { markdown: original, metadata: { ...topic, documents: [{ file: 'README.md', headingOffset: 1 }] }, error: /headingOffset 0/ },
+    { markdown: '# Title\n\n### Orphaned subsection\n', metadata: topic, error: /preceding level-two chapter/ },
+  ];
+  for (const failure of failures) {
+    await f.write(metadata, JSON.stringify(failure.metadata));
+    await f.write('topics/just-enough-context/README.md', failure.markdown);
+    const result = f.build();
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, failure.error);
+    assert.equal(await f.read('topics/just-enough-context/index.html'), html, 'Invalid input preserves generated output');
+  }
+});
+
+test('a single README supplies article metadata without topic.json and keeps blockquotes as content', async t => {
+  const f = await fixture(t);
+  const file = 'topics/just-enough-context/README.md';
+  const source = '---\ncategory: Test category\ndescription: >-\n  A front matter description\n  spanning two lines.\nthesis: A reusable takeaway.\n---\n\n# A single-file article\n\n> An ordinary opening quotation.\n\n## 9. Keep this heading\n\nArticle prose.\n\n### Nested heading\n\nNested prose.\n';
+  await f.write(file, source);
+  await assert.rejects(access(resolve(f.path, 'topics/just-enough-context/topic.json')));
+  passed(f.build());
+  const html = await f.read('topics/just-enough-context/index.html');
+  assert.match(html, /<title>A single-file article · The Way I AI<\/title>/);
+  assert.match(html, /<p class="lead">A front matter description spanning two lines\.<\/p>/);
+  assert.match(html, /<meta name="description" content="A front matter description spanning two lines\.">/);
+  const prose = html.match(/<div class="prose" data-source="README.md">([\s\S]*?)<\/section>/)![1];
+  assert.match(prose, /<blockquote>\s*<p>An ordinary opening quotation\.<\/p>\s*<\/blockquote>/);
+  assert.ok(!prose.includes('description:') && !prose.includes('A front matter description'));
+  assert.match(await f.read('index.html'), /<p>A front matter description spanning two lines\.<\/p>/);
+  passed(f.build('--site'));
+  assert.equal(await f.read(`_site/${file}`), source, 'Publication keeps the full authored source');
+  await assert.rejects(access(resolve(f.path, '_site/topics/just-enough-context/topic.json')));
+  passed(f.build('--check'));
+
+  await f.write('topics/just-enough-context/topic.json', JSON.stringify(articleSource(source, file).topic));
+  const conflict = f.build();
+  assert.notEqual(conflict.status, 0);
+  assert.match(conflict.stderr, /front matter or topic.json, not both/);
+  assert.equal(await f.read('topics/just-enough-context/index.html'), html);
+  await rm(resolve(f.path, 'topics/just-enough-context/topic.json'));
+  await f.write(file, source.replace('thesis: A reusable takeaway.\n', ''));
+  const invalid = f.build();
+  assert.notEqual(invalid.status, 0);
+  assert.match(invalid.stderr, /thesis.*nonempty string/);
+  assert.equal(await f.read('topics/just-enough-context/index.html'), html, 'Invalid metadata preserves output');
+});
+
+test('article dates collapse same-day updates while retaining source-history metadata', async t => {
+  const f = await fixture(t);
+  const git = (args: string[], date?: string) => spawnSync('git', args, { cwd: f.path, encoding: 'utf8', env: date ? { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } : process.env });
+  passed(git(['init']));
+  passed(git(['config', 'user.name', 'Test Author']));
+  passed(git(['config', 'user.email', 'test@example.com']));
+  passed(git(['add', 'topics/just-enough-context']));
+  passed(git(['commit', '-m', 'Create article'], '2024-01-02T12:00:00Z'));
+  const file = 'topics/just-enough-context/README.md';
+  for (const [date, count] of [['2024-01-02T18:00:00Z', 1], ['2025-03-04T12:00:00Z', 2]] as const) {
+    await f.write(file, `${await f.read(file)}\n`);
+    passed(git(['add', file]));
+    passed(git(['commit', '-m', 'Update article'], date));
+    passed(f.build());
+    const html = await f.read('topics/just-enough-context/index.html');
+    const dates = html.match(/<dl class="topic-dates">([\s\S]*?)<\/dl>/)![1];
+    assert.equal((dates.match(/<time /g) ?? []).length, count);
+    assert.match(html, /article:published_time" content="2024-01-02T12:00:00Z"/);
+    assert.ok(html.includes(`article:modified_time" content="${date}"`));
+    assert.ok(!dates.includes('Published'), 'Git history is not relabeled as publication history');
+  }
 });
 
 test('topic dates come from Git history and are emitted as metadata and visible dates', async t => {

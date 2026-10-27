@@ -12,6 +12,7 @@ import { shell, collectionBody, readerBody, escape } from '../design-system/layo
 import { explorerFor } from '../design-system/explorers.ts';
 import { parseWavePosition, wordmarkStyles } from '../design-system/wordmark.ts';
 import { collectionSearch } from '../design-system/search.ts';
+import { articleSource, splitFrontMatter } from './markdown-source.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
@@ -67,8 +68,11 @@ async function renderCode(text: string, lang: string) {
   return codeCache.get(key)!;
 }
 
+const articleBodies = new Map<string, string>();
 async function renderDocument(topic: RenderedTopic, document: SourceDocument, index: number): Promise<RenderedDocument> {
   const markdown = await read(`topics/${topic.id}/${document.file}`);
+  if (!articleBodies.has(topic.id) && splitFrontMatter(markdown, `${topic.id}/${document.file}`).metadata) throw new Error(`${topic.id}: use Markdown front matter or topic.json, not both.`);
+  const content = articleBodies.get(topic.id) ?? markdown;
   const docId = `${topic.id}-doc-${index + 1}`;
   let codeIndex = 0;
   const headings: Heading[] = [];
@@ -85,12 +89,13 @@ async function renderDocument(topic: RenderedTopic, document: SourceDocument, in
     },
     renderer: {
       heading(token) {
+        if (topic.presentation === 'article' && token.depth === 1) throw new Error(`${topic.id}/${document.file}: article presentation requires exactly one level-one title.`);
         const content = this.parser.parseInline(token.tokens);
         const text = plain(content);
         let id = `${docId}-${slug(text)}`;
         while (used.has(id)) id += '-2';
         used.add(id);
-        const level = text === 'Introduction' ? 2 : Math.min(6, Math.max(2, token.depth + (document.headingOffset ?? 0)));
+        const level = topic.presentation === 'article' ? token.depth : text === 'Introduction' ? 2 : Math.min(6, Math.max(2, token.depth + (document.headingOffset ?? 0)));
         headings.push({ id, text, level, excerpt: '' });
         return `<h${level} id="${id}"><a class="heading-link" href="#${id}">${content}</a></h${level}>\n`;
       },
@@ -105,11 +110,12 @@ async function renderDocument(topic: RenderedTopic, document: SourceDocument, in
       }
     }
   });
-  const tokens = parser.lexer(markdown);
+  const tokens = parser.lexer(content);
   const first = tokens.findIndex(token => token.type !== 'space');
   if (tokens[first]?.type !== 'heading' || tokens[first].depth !== 1) throw new Error(`${topic.id}/${document.file} must start with a level-one title.`);
   const title = plain(await parser.parseInline(tokens[first].text));
-  const bodyMarkdown = markdown.replace(tokens[first].raw, '');
+  if (topic.presentation === 'article' && !title.trim()) throw new Error(`${topic.id}/${document.file}: article title must not be empty.`);
+  const bodyMarkdown = content.replace(tokens[first].raw, '');
   const html = await parser.parse(bodyMarkdown);
   // Extract each heading's complete section, including subsections, directly from the rendered source.
   for (let i = 0; i < headings.length; i++) {
@@ -144,8 +150,23 @@ const ids = new Set();
 const topics: RenderedTopic[] = [];
 for (const [index, id] of registry.topics.entries()) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error(`Invalid topic id: ${id}`);
-  const topic = JSON.parse(await read(`topics/${id}/topic.json`)) as Topic;
-  topics.push({ ...topic, ...gitDates(id), id, coverSVG: '', diagramSVG: '', rendered: [], number: String(index + 1).padStart(2, '0') });
+  const json = await read(`topics/${id}/topic.json`).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return undefined;
+    throw error;
+  });
+  let topic: Topic;
+  if (json !== undefined) topic = JSON.parse(json) as Topic;
+  else {
+    const source = articleSource(await read(`topics/${id}/README.md`), `${id}/README.md`);
+    topic = source.topic;
+    articleBodies.set(id, source.body);
+  }
+  if (topic.presentation !== undefined && topic.presentation !== 'article') throw new Error(`${id}: unsupported presentation.`);
+  if (topic.presentation === 'article') {
+    if (topic.documents.length !== 1 || (topic.documents[0].headingOffset ?? 0) !== 0) throw new Error(`${id}: article presentation requires one document with headingOffset 0.`);
+    if (topic.title !== undefined) throw new Error(`${id}: article title comes from Markdown; omit title from topic metadata.`);
+  } else if (!topic.title?.trim()) throw new Error(`${id}: topic title is required.`);
+  topics.push({ ...topic, title: topic.title ?? '', ...gitDates(id), id, coverSVG: '', diagramSVG: '', rendered: [], number: String(index + 1).padStart(2, '0') });
 }
 for (const topic of topics) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(topic.id) || ids.has(topic.id)) throw new Error(`Invalid or duplicate topic id: ${topic.id}`);
@@ -154,6 +175,7 @@ for (const topic of topics) {
   topic.diagramSVG = topic.explorer ? await loadSVG(topic, topic.explorer.diagram) : '';
   topic.rendered = [];
   for (const [index, document] of topic.documents.entries()) topic.rendered.push(await renderDocument(topic, document, index));
+  if (topic.presentation === 'article') topic.title = topic.rendered[0].title;
 }
 
 const outputs = new Map();

@@ -117,7 +117,7 @@ test('CSS entrance and immediate keyboard focus work without JavaScript', async 
     const page = await context.newPage();
     await page.goto(home);
     await expect(page.locator('.collection-list')).toHaveCSS('animation-name', 'collection-enter');
-    const card = page.locator('.topic-card').first();
+    const card = page.locator('.topic-card[href="topics/worktrees/index.html"]');
     await card.focus();
     await expect(page.locator('.collection-list')).toHaveCSS('opacity', '1');
     await expect(page.locator('.collection-list')).toHaveCSS('transform', 'none');

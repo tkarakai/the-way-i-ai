@@ -189,6 +189,82 @@
 
   const article = document.querySelector('.article');
   if (!article) return;
+
+  // Progressive enhancement: source headings stay intact, and each h2/h3 block
+  // gets its own once-only entrance. Subsections are peers, not nested transforms.
+  let revealSection = (_target: Element | null) => {};
+  let revealAllSections = () => {};
+  let revealVisibleSections = () => {};
+  const prose = article.querySelector<HTMLElement>('.article-presentation .prose');
+  if (prose) {
+    const hero = document.querySelector<HTMLElement>('.article-hero');
+    const enteredAt = performance.now();
+    const finishHero = () => { if (hero) hero.dataset.reveal = 'shown'; };
+    hero?.addEventListener('animationend', event => {
+      if (event.target === hero && event.animationName === 'collection-enter') finishHero();
+    });
+    const groups: HTMLElement[] = [];
+    let group: HTMLElement | undefined;
+    for (const node of [...prose.childNodes]) {
+      if (node instanceof HTMLElement && node.matches('h2,h3')) {
+        group = document.createElement('section');
+        group.className = 'article-reveal';
+        group.setAttribute('aria-labelledby', node.id);
+        prose.insertBefore(group, node);
+        groups.push(group);
+      }
+      group?.append(node);
+    }
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    let observer: IntersectionObserver | undefined;
+    const finish = (section: HTMLElement) => {
+      section.dataset.reveal = 'shown';
+      observer?.unobserve(section);
+    };
+    revealSection = target => {
+      if (target?.closest('.article-hero')) finishHero();
+      const section = target?.closest<HTMLElement>('.article-reveal');
+      if (section) finish(section);
+    };
+    revealAllSections = () => { finishHero(); groups.forEach(finish); observer?.disconnect(); };
+    revealVisibleSections = () => groups.forEach(section => {
+      const box = section.getBoundingClientRect();
+      if (box.top < innerHeight && box.bottom > 0) finish(section);
+    });
+    if (!motion.matches && typeof IntersectionObserver === 'function') {
+      observer = new IntersectionObserver(entries => entries.forEach(entry => {
+        const section = entry.target as HTMLElement;
+        if (entry.isIntersecting && section.dataset.reveal === 'pending') {
+          if (section === groups[0] && !location.hash && scrollY < 16 && performance.now() - enteredAt < 500) section.dataset.entranceDelay = 'true';
+          section.dataset.reveal = 'entering';
+          observer!.unobserve(section);
+        }
+      }), { rootMargin: '0px 0px -48px 0px', threshold: 0 });
+      groups.forEach(section => {
+        section.dataset.reveal = 'pending';
+        section.addEventListener('animationend', event => {
+          if (event.target === section && event.animationName === 'collection-enter') finish(section);
+        });
+        observer!.observe(section);
+      });
+    } else revealAllSections();
+    const revealHash = (hash: string) => {
+      try { revealSection(document.getElementById(decodeURIComponent(hash.slice(1)))); } catch { /* Ignore malformed fragment identifiers. */ }
+    };
+    revealHash(location.hash);
+    addEventListener('hashchange', () => revealHash(location.hash));
+    document.addEventListener('focusin', event => { if (event.target instanceof Element) revealSection(event.target); });
+    document.addEventListener('click', event => {
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null;
+      if (link && link.origin === location.origin && link.pathname === location.pathname && link.hash) revealHash(link.hash);
+    }, true);
+    document.addEventListener('keydown', event => {
+      if (((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') || event.key === 'F3') revealAllSections();
+    });
+    motion.addEventListener('change', () => { if (motion.matches) revealAllSections(); });
+    addEventListener('beforeprint', () => revealAllSections());
+    addEventListener('pageshow', event => { if (event.persisted) revealVisibleSections(); });
+  }
   const contents = document.querySelector<HTMLDetailsElement>('.contents')!;
   const mobile = matchMedia('(max-width: 980px)');
   const collectionContents = document.querySelector<HTMLDetailsElement>('.collection-contents')!;
@@ -265,9 +341,12 @@
     return text;
   };
   const searchable = headings.map(heading => {
-    let text = heading.textContent ?? '';
-    let sibling = heading.nextElementSibling;
-    while (sibling && !(sibling.matches('h2,h3,h4,h5,h6') && Number(sibling.tagName.slice(1)) <= Number(heading.tagName.slice(1)))) {
+    const group = heading.closest('.article-reveal');
+    let text = group ? textOf(group) : heading.textContent ?? '';
+    let sibling = (group ?? heading).nextElementSibling;
+    while (sibling) {
+      const nextHeading = sibling.matches('.article-reveal') ? sibling.querySelector('h2,h3') : sibling.matches('h2,h3,h4,h5,h6') ? sibling : null;
+      if (nextHeading && Number(nextHeading.tagName.slice(1)) <= Number(heading.tagName.slice(1))) break;
       text += ' ' + textOf(sibling);
       sibling = sibling.nextElementSibling;
     }
@@ -303,6 +382,7 @@
   };
   search.addEventListener('input', () => {
     const words = termsOf(search.value);
+    if (words.length) revealAllSections();
     let count = 0;
     links.forEach((link, index) => {
       const match = words.every(word => searchable[index].includes(word));
@@ -344,8 +424,8 @@
     else if (scrollY < 16) root.classList.remove('is-scrolled');
     let active = -1;
     headings.forEach((heading, index) => { if (heading.getBoundingClientRect().top < innerHeight * .35) active = index; });
-    // Keep the parent chapter active when its subsection is not shown in the index.
-    while (active > 0 && links[active].parentElement!.dataset.subsection === 'true') active--;
+    // Legacy outlines hide subsections; article outlines expose them as nested links.
+    while (active > 0 && links[active].parentElement!.dataset.subsection === 'true' && !links[active].closest('.toc-article')) active--;
     links.forEach((link, index) => {
       if (index === active) link.setAttribute('aria-current', 'location');
       else link.removeAttribute('aria-current');
@@ -363,6 +443,7 @@
     document.fonts.ready.then(() => requestAnimationFrame(() => {
       scrollReady = true;
       scrollTo({ top: savedScroll, behavior: 'instant' });
+      revealVisibleSections();
       track();
       requestAnimationFrame(() => root.classList.remove('restoring-position'));
     }));

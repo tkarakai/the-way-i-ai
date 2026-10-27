@@ -300,6 +300,7 @@ test('search, section links, code copying, focus and print layout remain usable'
   await expect(page.locator('.search-result')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(search).not.toBeVisible();
+  await expect(page.locator('[data-open-search]')).toBeFocused();
   await page.keyboard.press('/');
   await expect(page.locator('#section-search')).toBeFocused();
   await expect(page.locator('#section-search')).toHaveCSS('outline-offset', '-2px');
@@ -360,6 +361,27 @@ test('search, section links, code copying, focus and print layout remain usable'
   await expect(search).not.toBeVisible();
   await expect(page.locator('#section-search')).toHaveValue('Create a worktree');
   expect(await page.locator('.article mark.search-hit').count()).toBeGreaterThan(0);
+});
+
+test('collection search restores the invoking control on every keyboard close path', async ({ page }) => {
+  await page.goto(url(topicPath));
+  const dialog = page.getByRole('dialog');
+  const trigger = page.locator('[data-open-search]');
+  const sectionSearch = page.locator('#section-search');
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press('/');
+  await expect(sectionSearch).toBeFocused();
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(sectionSearch).toBeFocused();
+  await trigger.click();
+  await page.locator('[data-close-search]').click();
+  await expect(trigger).toBeFocused();
 });
 
 test('each topic restores its reading position', async ({ page }) => {

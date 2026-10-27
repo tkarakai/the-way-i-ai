@@ -34,6 +34,14 @@
 
   const searchDialog = document.querySelector<HTMLDialogElement>('.search-dialog')!;
   const collectionInput = document.querySelector<HTMLInputElement>('#collection-search')!;
+  const searchTrigger = document.querySelector<HTMLButtonElement>('[data-open-search]')!;
+  let searchReturnFocus: HTMLElement = searchTrigger;
+  const closeSearch = () => {
+    searchDialog.close();
+    // Explicitly restore a useful target even when the dialog was opened with
+    // a shortcut while <body> held focus. Do not leave focus in its hidden input.
+    (searchReturnFocus.isConnected ? searchReturnFocus : searchTrigger).focus({ preventScroll: true });
+  };
   const results = searchDialog.querySelector<HTMLElement>('.search-results')!;
   const resultStatus = searchDialog.querySelector<HTMLElement>('.search-result-status')!;
   type SearchEntry = { title: string; topic: string; href: string; text: string };
@@ -71,20 +79,23 @@
       const start = terms.length ? Math.max(0, entry.text.toLocaleLowerCase().indexOf(terms[0]) - 45) : 0;
       appendHighlightedText(excerpt, `${start ? '…' : ''}${entry.text.slice(start, start + 170)}${entry.text.length > start + 170 ? '…' : ''}`, terms);
       link.append(label, title, excerpt); results.append(link);
-      link.addEventListener('click', () => searchDialog.close());
+      link.addEventListener('click', closeSearch);
     });
     if (!matches.length) { const empty = document.createElement('p'); empty.textContent = 'No matches. Try a different search.'; results.append(empty); }
   };
-  const openSearch = () => { showResults(); searchDialog.showModal(); collectionInput.focus(); };
-  document.querySelector('[data-open-search]')!.addEventListener('click', openSearch);
-  document.querySelector('[data-close-search]')!.addEventListener('click', () => searchDialog.close());
+  const openSearch = () => {
+    searchReturnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : searchTrigger;
+    showResults(); searchDialog.showModal(); collectionInput.focus();
+  };
+  searchTrigger.addEventListener('click', openSearch);
+  document.querySelector('[data-close-search]')!.addEventListener('click', closeSearch);
   searchDialog.addEventListener('click', event => {
     const rect = searchDialog.getBoundingClientRect();
-    if (event.target === searchDialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) searchDialog.close();
+    if (event.target === searchDialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeSearch();
   });
   searchDialog.addEventListener('keydown', event => {
     // Search inputs may consume Escape to clear text before the native dialog does.
-    if (event.key === 'Escape') { event.preventDefault(); searchDialog.close(); }
+    if (event.key === 'Escape') { event.preventDefault(); closeSearch(); }
   });
   collectionInput.addEventListener('input', showResults);
   collectionInput.addEventListener('keydown', event => {
@@ -93,7 +104,7 @@
   });
   document.addEventListener('keydown', event => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-      event.preventDefault(); if (searchDialog.open) searchDialog.close(); else openSearch();
+      event.preventDefault(); if (searchDialog.open) closeSearch(); else openSearch();
     }
   });
   const focusButton = document.querySelector<HTMLButtonElement>('[data-focus]');

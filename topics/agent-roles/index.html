@@ -1896,6 +1896,14 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
     addEventListener('afterprint', () => { printDetails.forEach(details => { details.open = false; }); });
     const searchDialog = document.querySelector('.search-dialog');
     const collectionInput = document.querySelector('#collection-search');
+    const searchTrigger = document.querySelector('[data-open-search]');
+    let searchReturnFocus = searchTrigger;
+    const closeSearch = () => {
+        searchDialog.close();
+        // Explicitly restore a useful target even when the dialog was opened with
+        // a shortcut while <body> held focus. Do not leave focus in its hidden input.
+        (searchReturnFocus.isConnected ? searchReturnFocus : searchTrigger).focus({ preventScroll: true });
+    };
     const results = searchDialog.querySelector('.search-results');
     const resultStatus = searchDialog.querySelector('.search-result-status');
     const index = JSON.parse(document.querySelector('#collection-search-data').textContent);
@@ -1947,7 +1955,7 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
             appendHighlightedText(excerpt, `${start ? '…' : ''}${entry.text.slice(start, start + 170)}${entry.text.length > start + 170 ? '…' : ''}`, terms);
             link.append(label, title, excerpt);
             results.append(link);
-            link.addEventListener('click', () => searchDialog.close());
+            link.addEventListener('click', closeSearch);
         });
         if (!matches.length) {
             const empty = document.createElement('p');
@@ -1955,19 +1963,24 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
             results.append(empty);
         }
     };
-    const openSearch = () => { showResults(); searchDialog.showModal(); collectionInput.focus(); };
-    document.querySelector('[data-open-search]').addEventListener('click', openSearch);
-    document.querySelector('[data-close-search]').addEventListener('click', () => searchDialog.close());
+    const openSearch = () => {
+        searchReturnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : searchTrigger;
+        showResults();
+        searchDialog.showModal();
+        collectionInput.focus();
+    };
+    searchTrigger.addEventListener('click', openSearch);
+    document.querySelector('[data-close-search]').addEventListener('click', closeSearch);
     searchDialog.addEventListener('click', event => {
         const rect = searchDialog.getBoundingClientRect();
         if (event.target === searchDialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom))
-            searchDialog.close();
+            closeSearch();
     });
     searchDialog.addEventListener('keydown', event => {
         // Search inputs may consume Escape to clear text before the native dialog does.
         if (event.key === 'Escape') {
             event.preventDefault();
-            searchDialog.close();
+            closeSearch();
         }
     });
     collectionInput.addEventListener('input', showResults);
@@ -1985,7 +1998,7 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
             event.preventDefault();
             if (searchDialog.open)
-                searchDialog.close();
+                closeSearch();
             else
                 openSearch();
         }

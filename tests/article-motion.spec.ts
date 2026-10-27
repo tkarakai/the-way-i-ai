@@ -51,19 +51,32 @@ for (const width of [1440, 390]) {
         }
       });
     });
+    await page.addInitScript(() => {
+      // Freeze the cohort as soon as the reader starts it, not after page.goto()
+      // has waited for every embedded image to decode on a slower CI runner.
+      new MutationObserver(records => {
+        for (const { target } of records) {
+          if (!(target instanceof HTMLElement) || !target.matches('.article-reveal[data-entrance-delay="true"][data-reveal="entering"]') || target.dataset.testInitialStart !== undefined) continue;
+          const animation = target.getAnimations().find((item): item is CSSAnimation => item instanceof CSSAnimation && item.animationName === 'collection-enter');
+          if (!animation) continue;
+          target.dataset.testInitialStart = String(animation.startTime);
+          animation.pause(); animation.currentTime = 250;
+        }
+      }).observe(document, { subtree: true, attributes: true, attributeFilter: ['data-reveal'] });
+    });
     await page.goto(new URL('../_site/topics/worktrees/index.html', import.meta.url).href);
     const cohort = page.locator('.article-reveal[data-entrance-delay="true"]');
     await expect.poll(() => cohort.count()).toBeGreaterThanOrEqual(3);
     expect(await cohort.locator(':scope > h2,:scope > h3').allTextContents()).toEqual(expect.arrayContaining(['Introduction', 'Overview', 'How it works']));
     const animations = await cohort.evaluateAll(sections => {
       const entrances = sections.map(section => section.getAnimations().find((animation): animation is CSSAnimation => animation instanceof CSSAnimation && animation.animationName === 'collection-enter')!);
-      const starts = entrances.map(animation => animation.startTime);
+      const starts = sections.map(section => (section as HTMLElement).dataset.testInitialStart);
       const delays = entrances.map(animation => animation.effect!.getTiming().delay);
       entrances.forEach(animation => { animation.pause(); animation.currentTime = 250; });
       return { starts, delays };
     });
     expect(new Set(animations.starts).size).toBe(1);
-    expect(animations.starts[0]).not.toBeNull();
+    expect(Number.isFinite(Number(animations.starts[0]))).toBe(true);
     expect(animations.delays.every(delay => delay === 500)).toBe(true);
     expect(await cohort.evaluateAll(sections => sections.every(section => getComputedStyle(section).opacity === '0'))).toBe(true);
     await cohort.evaluateAll(sections => sections.forEach(section => section.getAnimations().forEach(animation => { animation.currentTime = 850; })));

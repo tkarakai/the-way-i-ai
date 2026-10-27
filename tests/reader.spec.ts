@@ -1,10 +1,20 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 
 const root = new URL('../_site/', import.meta.url);
 const registry = JSON.parse(await readFile(new URL('topics/topics.json', root), 'utf8')) as { topics: string[] };
 const topicPath = `topics/${registry.topics[0]}/index.html`;
 const url = (path: string) => new URL(path, root).href;
+const topicsWithHistory = new Set(registry.topics.filter(id => {
+  try {
+    const git = (args: string[]) => execFileSync('git', args, { cwd: new URL('../', import.meta.url), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    const files = git(['ls-files', `topics/${id}`]).split('\n').filter(file => file && !file.endsWith('/index.html'));
+    return files.length > 0 && !!git(['log', '-1', '--format=%aI', '--', ...files]);
+  } catch {
+    return false; // Source archives, like uncommitted topics, have no history-derived dates.
+  }
+}));
 
 for (const width of [1440, 390, 320]) {
   for (const theme of ['light', 'dark'] as const) {
@@ -53,9 +63,10 @@ for (const width of [1440, 390, 320]) {
           await expect(page.locator('.prose').first()).toBeVisible();
           await expect(page.locator('.focus-toggle')).toHaveAccessibleName('Focus on reading');
           await expect(page.locator('.ambient-canvas')).toHaveCount(0);
-          await expect(page.locator('.topic-dates time')).toHaveCount(2);
-          await expect(page.locator('meta[property="article:published_time"]')).toHaveCount(1);
-          await expect(page.locator('meta[property="article:modified_time"]')).toHaveCount(1);
+          const hasDates = topicsWithHistory.has(path.split('/')[1]!);
+          await expect(page.locator('.topic-dates time')).toHaveCount(hasDates ? 2 : 0);
+          await expect(page.locator('meta[property="article:published_time"]')).toHaveCount(hasDates ? 1 : 0);
+          await expect(page.locator('meta[property="article:modified_time"]')).toHaveCount(hasDates ? 1 : 0);
         } else {
           await expect(page.locator('.topic-card')).toHaveCount(registry.topics.length);
           await expect(page.locator('.masthead .brand')).toHaveCount(0);

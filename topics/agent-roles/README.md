@@ -1,3 +1,34 @@
+---
+category: Agentic organizations
+description: >-
+  A professional lens, a concrete operational environment, and a discoverable
+  profile. A framework for making AI roles useful in real organizations.
+thesis: Define the context behind the title.
+cover: assets/cover.svg
+explorer:
+  title: Three parts of an effective role.
+  instruction: Select a layer to explore the framework.
+  diagram: assets/diagram.svg
+  caption: A professional operating context for a generally capable AI.
+  controls: labels
+  panels:
+    - id: lens
+      label: Professional lens
+      source: { document: README.md, excerpt: professional-lens }
+      context: { document: README.md, heading: '2. The First Layer: Generic Professional Knowledge' }
+      highlight: [role-lens]
+    - id: environment
+      label: Local environment
+      source: { document: README.md, excerpt: local-environment }
+      context: { document: README.md, heading: '3. The Second Layer: The Local Agentic Environment' }
+      highlight: [role-environment]
+    - id: profile
+      label: Discoverable profile
+      source: { document: README.md, excerpt: discoverable-profile }
+      context: { document: README.md, heading: 11. Every Agent Should Have a Discoverable Profile }
+      highlight: [role-profile]
+---
+
 # A Framework for Defining AI Agent Roles in an Agentic Organization
 
 ## Introduction
@@ -25,9 +56,7 @@ A concise expression of the framework is:
 
 This document develops that idea in detail.
 
----
-
-# 1. A Role Is a Working Context, Not a Costume
+## 1. A Role Is a Working Context, Not a Costume
 
 A role should not be understood as a theatrical persona.
 
@@ -77,9 +106,7 @@ A software engineering agent may naturally frame problems in terms of:
 
 The role is not merely a communication style. It is an **operating model**.
 
----
-
-# 2. The First Layer: Generic Professional Knowledge
+## 2. The First Layer: Generic Professional Knowledge
 
 Every sufficiently capable AI system begins with broad general knowledge.
 
@@ -111,9 +138,7 @@ The lens answers the question:
 
 The role does not erase the AI's broader knowledge. A software engineering agent is still a general AI system capable of explaining finance, marketing, operations, or design concepts. The role instead establishes which professional frame should be the agent's **default perspective when performing its assigned work**.
 
----
-
-# 3. The Second Layer: The Local Agentic Environment
+## 3. The Second Layer: The Local Agentic Environment
 
 Generic professional competence is not enough.
 
@@ -158,13 +183,11 @@ This distinction is important.
 
 > **The local context of an AI role is not only what the agent has been told. It is also what the agent is equipped to retrieve, remember, inspect, invoke, modify, and act upon.**
 
----
-
-# 4. Proprietary Knowledge as an Operational Environment
+## 4. Proprietary Knowledge as an Operational Environment
 
 The proprietary side of an agent role can be decomposed into several categories.
 
-## 4.1 Retrieval
+### 4.1 Retrieval
 
 Retrieval determines what the agent can look up when needed.
 
@@ -187,9 +210,7 @@ Retrieval is essential because no agent should be expected to permanently carry 
 
 A capable role therefore depends not merely on knowledge, but on **reliable access to the right knowledge when needed**.
 
----
-
-## 4.2 Memory
+### 4.2 Memory
 
 Memory determines what the agent can retain or later recover about its environment.
 
@@ -211,9 +232,7 @@ A memory system gives continuity to the role.
 
 Without memory, an agent may repeatedly rediscover the same information. With appropriate memory, the role can accumulate organizational context over time.
 
----
-
-## 4.3 Tools
+### 4.3 Tools
 
 Tools determine what the agent can actually inspect or change.
 
@@ -235,9 +254,7 @@ The presence or absence of a tool changes the meaning of a role.
 
 Two agents with the same professional title may have very different practical capabilities if one can only provide advice while another can inspect systems, run tests, create tickets, modify artifacts, or deploy changes.
 
----
-
-## 4.4 Skills
+### 4.4 Skills
 
 A skill is a specialized packaged capability or workflow.
 
@@ -255,9 +272,7 @@ Examples:
 
 Skills can represent reusable procedures that are more specific than generic reasoning but more portable than company-specific data.
 
----
-
-## 4.5 Permissions and Access Boundaries
+### 4.5 Permissions and Access Boundaries
 
 A role must also be defined by what it is allowed to access and what it is authorized to do.
 
@@ -278,9 +293,7 @@ A "software engineer" agent may have read-only repository access in one environm
 
 The local environment must make these differences explicit.
 
----
-
-## 4.6 Project Context and Experience
+### 4.6 Project Context and Experience
 
 A role is also shaped by the projects and work history available to the agent.
 
@@ -294,9 +307,7 @@ For example, an agent may know:
 
 This project-specific history can make one agent far more appropriate for a task than another agent with an otherwise similar professional background.
 
----
-
-# 5. A More Precise Definition of an Agent Role
+## 5. A More Precise Definition of an Agent Role
 
 The framework can therefore be represented as:
 
@@ -336,9 +347,7 @@ and
 
 Both are necessary.
 
----
-
-# 6. Generic Practice and Local Practice
+## 6. Generic Practice and Local Practice
 
 The agent must understand the difference between industry-standard practice and organization-specific practice.
 
@@ -369,9 +378,7 @@ A useful behavior is:
 
 This allows generic expertise to remain useful without making the agent blind to organizational reality.
 
----
-
-# 7. Communication Should Adapt Without Changing the Core Role
+## 7. Communication Should Adapt Without Changing the Core Role
 
 A specialized role should not trap an agent inside the vocabulary of its discipline.
 
@@ -393,15 +400,13 @@ A useful principle is:
 
 > **Specialize the reasoning context; adapt the communication interface.**
 
----
-
-# 8. Onboarding an Agent Into a Role
+## 8. Onboarding an Agent Into a Role
 
 An AI agent entering a role should undergo something analogous to onboarding.
 
 A useful onboarding process may include the following.
 
-## 8.1 Define the professional role
+### 8.1 Define the professional role
 
 Specify:
 
@@ -411,7 +416,7 @@ Specify:
 - expected outputs;
 - default professional assumptions.
 
-## 8.2 Connect the operational environment
+### 8.2 Connect the operational environment
 
 Make available:
 
@@ -422,7 +427,7 @@ Make available:
 - internal systems;
 - project data.
 
-## 8.3 Establish access boundaries
+### 8.3 Establish access boundaries
 
 Clarify:
 
@@ -432,7 +437,7 @@ Clarify:
 - what is prohibited;
 - what must be escalated.
 
-## 8.4 Load organizational context
+### 8.4 Load organizational context
 
 Provide access to:
 
@@ -444,7 +449,7 @@ Provide access to:
 - historical decisions;
 - policies.
 
-## 8.5 Establish project history
+### 8.5 Establish project history
 
 Give the role access to:
 
@@ -455,7 +460,7 @@ Give the role access to:
 - unresolved issues;
 - important artifacts.
 
-## 8.6 Define current goals
+### 8.6 Define current goals
 
 The agent should understand:
 
@@ -464,13 +469,11 @@ The agent should understand:
 - what success looks like;
 - what tradeoffs are acceptable.
 
-## 8.7 Define documentation expectations
+### 8.7 Define documentation expectations
 
 The agent should know what it must record so that its work remains inspectable and transferable.
 
----
-
-# 9. Documentation, Auditability, and Continuity
+## 9. Documentation, Auditability, and Continuity
 
 An agent should document its work as part of the role rather than as an optional afterthought.
 
@@ -508,9 +511,7 @@ A useful design principle is:
 
 This creates both **auditability** and **operational continuity**.
 
----
-
-# 10. The Contractor Analogy
+## 10. The Contractor Analogy
 
 A useful mental model is to imagine the agent as a highly capable contractor arriving at an organization.
 
@@ -544,9 +545,7 @@ This analogy also explains why documentation and handoff matter.
 
 A contractor is expected to leave work in a state that another person can understand. The same should be true of an AI agent.
 
----
-
-# 11. Every Agent Should Have a Discoverable Profile
+## 11. Every Agent Should Have a Discoverable Profile
 
 If multiple agents coexist in an organization, role definitions should not remain hidden inside their individual prompts or configurations.
 
@@ -576,9 +575,7 @@ Knowing that someone is "in infrastructure" is useful, but collaboration becomes
 - what access they have;
 - what problems they are equipped to solve.
 
----
-
-# 12. The Purpose of the Agent Profile
+## 12. The Purpose of the Agent Profile
 
 The profile is not merely descriptive metadata.
 
@@ -619,9 +616,7 @@ The important architectural requirement is simply this:
 
 > **Agents should expose enough structured information that another agent or orchestration system can determine whether they are an appropriate destination for work.**
 
----
-
-# 13. Agent Profiles Should Describe Capabilities, Not Just Titles
+## 13. Agent Profiles Should Describe Capabilities, Not Just Titles
 
 A role title alone is too ambiguous for reliable collaboration.
 
@@ -651,9 +646,7 @@ This leads to another useful expression:
 > **Role title tells you how an agent tends to think.  
 > Capability profile tells you what the agent can actually contribute.**
 
----
-
-# 14. Example Agent Profile
+## 14. Example Agent Profile
 
 A profile might look conceptually like this:
 
@@ -746,9 +739,7 @@ The exact schema is not the point.
 
 The important feature is that the profile is **structured, inspectable, and useful for machine reasoning**.
 
----
-
-# 15. Profiles as Organizational Interfaces
+## 15. Profiles as Organizational Interfaces
 
 A mature agentic organization may treat profiles almost like interfaces between roles.
 
@@ -771,9 +762,7 @@ This creates a useful separation between:
 
 In software terms, the internal prompt, memory structure, toolchain, and reasoning process can change without breaking collaboration, as long as the role continues to expose a stable and useful profile.
 
----
-
-# 16. Routing Should Be Capability-Aware
+## 16. Routing Should Be Capability-Aware
 
 Delegation should not be based only on job titles.
 
@@ -800,9 +789,7 @@ may be an operations agent.
 
 Thus routing should ideally be based on **capability fit**, not merely semantic similarity between task names and role titles.
 
----
-
-# 17. Roles Should Be Able to Recognize Their Own Limits
+## 17. Roles Should Be Able to Recognize Their Own Limits
 
 A well-defined role should know not only what it can do, but also what it cannot do effectively.
 
@@ -829,9 +816,7 @@ A useful role behavior is:
 
 This creates a network of cooperating specialized agents rather than isolated bots trying to solve every problem themselves.
 
----
-
-# 18. Handoffs Should Carry Context
+## 18. Handoffs Should Carry Context
 
 Routing a task to another agent should not mean simply forwarding the original request.
 
@@ -854,9 +839,7 @@ The same principle that applies to human teams applies here:
 
 > **Delegation is most effective when responsibility moves together with the information needed to act.**
 
----
-
-# 19. A Role Definition Template
+## 19. A Role Definition Template
 
 A reusable role instruction might look like this:
 
@@ -880,9 +863,7 @@ A reusable role instruction might look like this:
 >
 > When handing off work, include enough context for the receiving party to continue without unnecessary reconstruction.
 
----
-
-# 20. A Minimal Agent Profile Template
+## 20. A Minimal Agent Profile Template
 
 A corresponding generic profile format could be:
 
@@ -945,57 +926,53 @@ Some systems may need additional fields for:
 
 The essential idea is that the profile should be sufficiently structured to support **machine discovery and task routing**.
 
----
-
-# 21. Core Design Principles
+## 21. Core Design Principles
 
 The framework can be summarized in the following principles.
 
-## 1. A role is a context, not a costume
+### 1. A role is a context, not a costume
 
 The purpose of a role is to establish a professional operating model, not to imitate a human personality.
 
-## 2. Generic expertise and local specialization are different things
+### 2. Generic expertise and local specialization are different things
 
 Generic professional knowledge comes from the AI's broad training.
 
 Local specialization comes from the environment in which the agent operates.
 
-## 3. Local specialization is operational
+### 3. Local specialization is operational
 
 Proprietary context includes not only documentation, but retrieval, memory, tools, skills, permissions, project history, and available actions.
 
-## 4. The role should shape reasoning, not just vocabulary
+### 4. The role should shape reasoning, not just vocabulary
 
 The professional frame should influence interpretation, risk detection, methods, outputs, decisions, and definitions of completion.
 
-## 5. Communication should adapt to the audience
+### 5. Communication should adapt to the audience
 
 An agent should preserve its specialized reasoning context while translating its communication into the most useful form for the recipient.
 
-## 6. Profiles should expose capability, not just identity
+### 6. Profiles should expose capability, not just identity
 
 Knowing an agent's title is not enough. Other agents should be able to discover what it actually knows, accesses, and can do.
 
-## 7. Routing should be based on capability fit
+### 7. Routing should be based on capability fit
 
 Delegation should consider tools, permissions, project history, memory, skills, and professional domain—not merely role names.
 
-## 8. Agents should recognize their limits
+### 8. Agents should recognize their limits
 
 A role should be able to identify when it lacks the expertise, access, authority, or context needed to complete a task effectively.
 
-## 9. Handoffs should preserve context
+### 9. Handoffs should preserve context
 
 The receiving agent should get the relevant evidence, assumptions, progress, artifacts, and unresolved questions.
 
-## 10. Work should remain auditable and transferable
+### 10. Work should remain auditable and transferable
 
 A human or another agent should be able to understand what happened and continue from the existing state.
 
----
-
-# 22. The Emerging Organizational Model
+## 22. The Emerging Organizational Model
 
 This framework suggests a broader model for agentic organizations.
 
@@ -1017,9 +994,7 @@ The result resembles an organization not because the agents are pretending to be
 
 Roles become useful abstractions for coordinating that structure.
 
----
-
-# Conclusion
+## Conclusion
 
 Human-style professional roles can be a useful way to organize AI agents, provided the concept of a role is defined operationally rather than anthropomorphically.
 

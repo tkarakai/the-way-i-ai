@@ -195,25 +195,26 @@
   let revealSection = (_target: Element | null) => {};
   let revealAllSections = () => {};
   let revealVisibleSections = () => {};
-  const prose = article.querySelector<HTMLElement>('.article-presentation .prose');
-  if (prose) {
+  const proses = [...article.querySelectorAll<HTMLElement>('.prose')];
+  if (proses.length) {
     const hero = document.querySelector<HTMLElement>('.article-hero');
-    const enteredAt = performance.now();
     const finishHero = () => { if (hero) hero.dataset.reveal = 'shown'; };
     hero?.addEventListener('animationend', event => {
       if (event.target === hero && event.animationName === 'collection-enter') finishHero();
     });
     const groups: HTMLElement[] = [];
-    let group: HTMLElement | undefined;
-    for (const node of [...prose.childNodes]) {
-      if (node instanceof HTMLElement && node.matches('h2,h3')) {
-        group = document.createElement('section');
-        group.className = 'article-reveal';
-        group.setAttribute('aria-labelledby', node.id);
-        prose.insertBefore(group, node);
-        groups.push(group);
+    for (const prose of proses) {
+      let group: HTMLElement | undefined;
+      for (const node of [...prose.childNodes]) {
+        if (node instanceof HTMLElement && node.matches('h2,h3')) {
+          group = document.createElement('section');
+          group.className = 'article-reveal';
+          group.setAttribute('aria-labelledby', node.id);
+          prose.insertBefore(group, node);
+          groups.push(group);
+        }
+        group?.append(node);
       }
-      group?.append(node);
     }
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     let observer: IntersectionObserver | undefined;
@@ -232,14 +233,34 @@
       if (box.top < innerHeight && box.bottom > 0) finish(section);
     });
     if (!motion.matches && typeof IntersectionObserver === 'function') {
-      observer = new IntersectionObserver(entries => entries.forEach(entry => {
-        const section = entry.target as HTMLElement;
-        if (entry.isIntersecting && section.dataset.reveal === 'pending') {
-          if (section === groups[0] && !location.hash && scrollY < 16 && performance.now() - enteredAt < 500) section.dataset.entranceDelay = 'true';
-          section.dataset.reveal = 'entering';
-          observer!.unobserve(section);
+      let initialObservation = true;
+      const enter = (section: HTMLElement, startTime?: number) => {
+        if (section.dataset.reveal !== 'pending') return;
+        if (startTime !== undefined) section.dataset.entranceDelay = 'true';
+        section.dataset.reveal = 'entering';
+        if (startTime !== undefined) {
+          const animation = section.getAnimations().find(item => item instanceof CSSAnimation && item.animationName === 'collection-enter');
+          if (animation) animation.startTime = startTime;
         }
-      }), { rootMargin: '0px 0px -48px 0px', threshold: 0 });
+        observer!.unobserve(section);
+      };
+      observer = new IntersectionObserver(entries => {
+        if (initialObservation) {
+          initialObservation = false;
+          if (!location.hash && scrollY < 16) {
+            // Snapshot before starting any transforms, including the viewport's
+            // bottom edge that the normal scroll observer deliberately defers.
+            const visible = groups.filter(section => {
+              const box = section.getBoundingClientRect();
+              return box.top < innerHeight && box.bottom > 0;
+            });
+            const heroAnimation = hero?.getAnimations().find(item => item instanceof CSSAnimation && item.animationName === 'collection-enter');
+            const startTime = typeof heroAnimation?.startTime === 'number' ? heroAnimation.startTime : Number(document.timeline.currentTime ?? performance.now());
+            visible.forEach(section => enter(section, startTime));
+          }
+        }
+        entries.forEach(entry => { if (entry.isIntersecting) enter(entry.target as HTMLElement); });
+      }, { rootMargin: '0px 0px -48px 0px', threshold: 0 });
       groups.forEach(section => {
         section.dataset.reveal = 'pending';
         section.addEventListener('animationend', event => {
@@ -424,8 +445,6 @@
     else if (scrollY < 16) root.classList.remove('is-scrolled');
     let active = -1;
     headings.forEach((heading, index) => { if (heading.getBoundingClientRect().top < innerHeight * .35) active = index; });
-    // Legacy outlines hide subsections; article outlines expose them as nested links.
-    while (active > 0 && links[active].parentElement!.dataset.subsection === 'true' && !links[active].closest('.toc-article')) active--;
     links.forEach((link, index) => {
       if (index === active) link.setAttribute('aria-current', 'location');
       else link.removeAttribute('aria-current');

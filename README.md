@@ -27,14 +27,14 @@ Each topic has authoritative source documents and assets, plus a complete, inter
 
 | Topic | Idea | Markdown | Interactive edition |
 | --- | --- | --- | --- |
-| **01 · Worktree-based development** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Read online](https://thewayiai.com/topics/worktrees/index.html) |
-| **02 · Defining AI agent roles** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Read online](https://thewayiai.com/topics/agent-roles/index.html) |
+| **01 · Git Worktrees for Claude Code** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Read online](https://thewayiai.com/topics/worktrees/index.html) |
+| **02 · A Framework for Defining AI Agent Roles in an Agentic Organization** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Read online](https://thewayiai.com/topics/agent-roles/index.html) |
 | **03 · A web app starter kit built for the long run** | Architect the starter to stay useful when downstream applications replace its design, without making future improvements undo their product choices. | [The architecture](topics/web-app-starter-kit/README.md) · [Original notes](topics/web-app-starter-kit/web_app_starter_upgrade_notes.md) | [Read online](https://thewayiai.com/topics/web-app-starter-kit/index.html) |
 | **04 · Just Enough Context (JEC)** | Give specialist agents focused context and humans small, timely decisions, backed by reusable project knowledge. | [The concept](topics/just-enough-context/README.md) | [Read online](https://thewayiai.com/topics/just-enough-context/index.html) |
 
 ## Sources and presentation
 
-This repository is a small static-site generator. Its source of truth is **Markdown + topic metadata + authored assets**. HTML is generated from those sources; it contains no independently maintained ideas.
+This repository is a small static-site generator. Its source of truth is **Markdown (including YAML front matter) + authored assets**. HTML is generated from those sources; it contains no independently maintained ideas.
 
 ```text
 AGENTS.md                      Primary guide for maintaining content and presentation
@@ -46,26 +46,23 @@ package-lock.json              Pinned dependency tree
 topics/
   topics.json                  Collection copy and ordered list of topic IDs
   worktrees/
-    README.md                  Tools, installation, and commands
+    README.md                  Topic metadata, document order, tools, and setup
     WORKFLOW.md                Development and review workflow
-    topic.json                 Metadata, document order, and visual-guide bindings
     assets/                    Authored SVG diagrams and cover illustration
     worktree-new.sh             wwt tool
     worktree-done.sh            wwtd tool
     index.html                 Generated edition of both documents
   agent-roles/
-    README.md                  Complete role framework, including named excerpts
-    topic.json                 Metadata and visual-guide bindings
+    README.md                  Topic metadata, complete role framework, and excerpts
     assets/                    Authored SVG diagrams and cover illustration
     index.html                 Generated edition
   web-app-starter-kit/
-    README.md                  Starter architecture for long-lived downstream applications
+    README.md                  Topic metadata and long-lived starter architecture
     web_app_starter_upgrade_notes.md  Original notes, preserved unchanged
-    topic.json                 Metadata and visual-guide bindings
     assets/                    Architecture diagram and replaceable-UI cover illustration
     index.html                 Generated edition of the complete article
   just-enough-context/
-    README.md                  JEC article and YAML front matter (single-file topic trial)
+    README.md                  Topic metadata and complete JEC article
     assets/cover.svg           Focused context, project knowledge, and human decisions
     index.html                 Generated edition
 design-system/                Shared visual language and generic reader components
@@ -74,7 +71,7 @@ scripts/                       Generator and contract checks
 _site/                         Generated publication bundle (ignored by Git)
 ```
 
-Diagrams are content: their SVG sources live with their topic, where their labels and relationships can be reviewed. Interactive panels reuse sections or named excerpts from Markdown. Short labels and bindings live in the topic's `topic.json`. Shared components arrange these sources without knowing which topic they represent.
+Diagrams are content: their SVG sources live with their topic, where their labels and relationships can be reviewed. Interactive panels reuse sections or named excerpts from Markdown. Short labels and bindings live in the main README's YAML front matter. Shared components arrange these sources without knowing which topic they represent.
 
 ## Reading locally
 
@@ -113,8 +110,8 @@ These tests build `_site/` and exercise standalone offline pages, narrow layouts
 
 To add a topic:
 
-1. Create `topics/<id>/README.md` and a `topic.json` describing its title, introduction, and documents.
-2. Add the folder ID to the `topics` array in `topics/topics.json`.
+1. Create `topics/<id>/README.md` with YAML front matter (`category`, `description`, `thesis`) followed by a single `#` title. Use `##` chapters and `###` subsections. For multiple documents, list their paths under `documents`, beginning with `README.md`.
+2. Append the folder ID to the `topics` array in `topics/topics.json`. The homepage displays newest-added topics first; numbering and reader navigation retain canonical order.
 3. Add optional diagrams/images in `assets/`. Bind a visual explorer to Markdown sections or named excerpts when useful.
 4. Run the commands above, inspect the generated pages, and update this README's topic list.
 

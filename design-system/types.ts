@@ -14,7 +14,7 @@ export interface Collection {
   ambientIntensity?: number;
   topics: string[];
 }
-export interface SourceDocument { file: string; label?: string; headingOffset?: number }
+export interface SourceDocument { file: string }
 export interface HeadingReference { document: string; heading: string }
 export type SourceReference = HeadingReference | { document: string; excerpt: string };
 export interface ExplorerPanel {
@@ -25,9 +25,6 @@ export interface ExplorerPanel {
   highlight?: string[];
 }
 export interface Topic {
-  /** The opt-in article presentation derives its title and outline from one Markdown document. */
-  presentation?: 'article';
-  title?: string;
   category: string;
   description: string;
   thesis: string;

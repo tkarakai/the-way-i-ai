@@ -213,13 +213,13 @@ body[data-page='collection'] .masthead { width: calc(100% - 120px); max-width: 1
 .search-wrap input:focus-visible { outline-offset: -2px; }
 .search-wrap kbd { position: absolute; right: 10px; top: 10px; color: var(--muted); font-size: 12px; }
 .search-status { color: var(--muted); font-size: 10px; margin-bottom: 20px; }
-.toc-group { margin: 23px 0 10px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+.toc-document + .toc-document { margin-top: 32px; }
+.toc-document-title { display: block; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); color: var(--article-title-ink); font-size: 12px; font-weight: 550; line-height: 1.5; text-decoration: none; }
 .toc-list { list-style: none; padding: 0; margin: 0; }
 .toc-list li { margin: 2px 0; }
 .toc-link { display: block; padding: 7px 6px 7px 12px; border-left: 1px solid var(--line); text-decoration: none; color: var(--muted); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
 .toc-link:hover, .toc-link[aria-current='location'] { border-left-color: var(--accent); color: var(--accent); background: var(--tint); }
-.toc-link.subsection { padding-left: 22px; }
-/* Opt-in article outline: authored chapters replace synthetic document labels. */
+/* Authored chapters and subsections define the outline for every topic. */
 .toc-article > .toc-list > .toc-chapter { margin: 22px 0 0; }
 .toc-article > .toc-list > .toc-chapter:first-child { margin-top: 0; }
 .toc-article > .toc-list > .toc-chapter:not(:has(> .toc-list)) + .toc-chapter:not(:has(> .toc-list)) { margin-top: 8px; }
@@ -230,9 +230,8 @@ body[data-page='collection'] .masthead { width: calc(100% - 120px); max-width: 1
 .article { min-width: 0; padding-top: 10px; }
 .source-document { margin-bottom: 75px; }
 .article-presentation .source-document { margin-bottom: 45px; }
-.source-heading { margin-bottom: 35px; }
-.source-heading .eyebrow { margin-bottom: 15px; }
-.source-title { font: 450 29px/1.2 var(--serif); letter-spacing: -.025em; margin: 0; }
+.document-heading { margin-bottom: 28px; padding-top: 26px; border-top: 1px solid var(--line); }
+.document-title { font: 450 36px/1.15 var(--serif); color: var(--article-title-ink); letter-spacing: -.025em; margin: 0; }
 .prose { font: 400 18px/1.7 var(--serif); color: var(--ink); }
 .prose > p, .article-reveal > p { margin-bottom: 22px; }
 .prose img { max-width: 100%; height: auto; }
@@ -298,7 +297,6 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 .js-only { display: none; }
 .js .js-only { display: inline-flex; }
 .js .search-wrap { display: block; }
-.js .toc-list li[data-subsection='true']:not(.search-match) { display: none; }
 @keyframes arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 /* Reference-inspired entrance: fade + zoom from 90% + slide from above.
    Keep the two sections intact, and leave no transform/layer after the entrance. */
@@ -403,7 +401,7 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
   .explorer-head, .explorer-detail { padding: 20px; }
   .explorer-head h2 { font-size: 26px; }
   .explorer-figure { padding: 20px; }
-  .source-title { font-size: 27px; }
+  .document-title { font-size: 30px; }
   .prose { font-size: 17px; }
   .prose h2 { font-size: 30px; }
   .prose h3 { font-size: 25px; }
@@ -428,7 +426,7 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
   .article-presentation :is(.prose, .article-reveal) > :is(h2, h3) { color: var(--ink); }
   .explorer-figure { display: none; }
   .explorer-panel, .explorer-panel[hidden] { display: block !important; margin-bottom: 22px; }
-  .prose h2, .prose h3, .source-heading { break-after: avoid; }
+  .prose h2, .prose h3, .document-heading { break-after: avoid; }
   .prose p, .prose li { orphans: 3; widows: 3; }
   .prose blockquote, .topic-card { break-inside: avoid; }
   a { text-decoration: none; }

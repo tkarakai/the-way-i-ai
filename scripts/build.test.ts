@@ -7,7 +7,9 @@ import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn, spawnSync } from 'node:child_process';
-import { articleSource } from './markdown-source.ts';
+import { topicSource, splitFrontMatter } from './markdown-source.ts';
+import { stringify } from 'yaml';
+import type { Topic } from '../design-system/types.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 async function fixture(t: TestContext) {
@@ -25,6 +27,12 @@ async function fixture(t: TestContext) {
   };
 }
 function passed(result: SpawnSyncReturns<string>) { assert.equal(result.status, 0, result.stderr || result.stdout); }
+async function updateMetadata(f: Awaited<ReturnType<typeof fixture>>, id: string, update: (metadata: Record<string, unknown>) => void) {
+  const file = `topics/${id}/README.md`;
+  const { metadata, body } = splitFrontMatter(await f.read(file), file);
+  update(metadata!);
+  await f.write(file, `---\n${stringify(metadata)}---\n${body}`);
+}
 
 test('an ordinary new topic builds without renderer changes; its image is embedded and navigation is relative', async t => {
   const f = await fixture(t);
@@ -32,10 +40,9 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   registry.topics.push('new-idea');
   await f.write('topics/topics.json', JSON.stringify(registry));
   await mkdir(resolve(f.path, 'topics/new-idea/assets'), { recursive: true });
-  await f.write('topics/new-idea/topic.json', JSON.stringify({ title: 'A new idea', category: 'Practice', description: 'A new source bundle.', thesis: 'New ideas stand alone.', documents: [{ file: 'README.md', label: 'The idea' }] }));
   const diagram = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><title>A source-owned image</title><circle cx="5" cy="5" r="3"/></svg>';
   await f.write('topics/new-idea/assets/example.svg', diagram);
-  await f.write('topics/new-idea/README.md', '# A new idea\n\n## The premise\n\nThis complete paragraph belongs to the source.\n\n![The example](assets/example.svg)\n');
+  await f.write('topics/new-idea/README.md', '---\ncategory: Practice\ndescription: A new source bundle.\nthesis: New ideas stand alone.\n---\n\n# A new idea\n\n## The premise\n\nThis complete paragraph belongs to the source.\n\n![The example](assets/example.svg)\n');
   passed(f.build());
   const index = await f.read('index.html');
   const html = await f.read('topics/new-idea/index.html');
@@ -59,13 +66,11 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   passed(f.build('--check'));
 });
 
-test('opt-in articles derive their title and nested outline from Markdown without affecting legacy topics', async t => {
+test('all topics derive titles and nested outlines from Markdown, preserving authored numbering', async t => {
   const f = await fixture(t);
-  const metadata = 'topics/just-enough-context/topic.json';
-  const { topic } = articleSource(await f.read('topics/just-enough-context/README.md'), 'README.md');
-  topic.description = 'One article description.';
-  await f.write(metadata, JSON.stringify(topic));
-  await f.write('topics/just-enough-context/README.md', '# A source-owned title\n\nOpening prose for collection search.\n\n## 07. Authored chapter\n\nChapter text.\n\n### Introduction\n\nNested prose.\n\n### Another authored heading\n\nMore prose.\n\n## Unnumbered chapter\n\nFinal prose.\n\n```text\n# This is code, not a second title\n```\n');
+  const file = 'topics/just-enough-context/README.md';
+  const preamble = '---\ncategory: Practice\ndescription: One article description.\nthesis: A useful takeaway.\n---\n\n';
+  await f.write(file, `${preamble}# A source-owned title\n\nOpening prose for collection search.\n\n## 07. Authored chapter\n\nChapter text.\n\n### Introduction\n\nNested prose.\n\n### Another authored heading\n\nMore prose.\n\n## Unnumbered chapter\n\nFinal prose.\n\n\`\`\`text\n# This is code, not a second title\n\`\`\`\n`);
   passed(f.build());
   const html = await f.read('topics/just-enough-context/index.html');
   assert.match(html, /<title>A source-owned title · The Way I AI<\/title>/);
@@ -79,23 +84,25 @@ test('opt-in articles derive their title and nested outline from Markdown withou
   assert.match(html, /<h2 id="just-enough-context-doc-1-unnumbered-chapter">/);
   const index = await f.read('index.html');
   assert.match(index, /id="topic-just-enough-context-title">A source-owned title<\/h3>/);
-  assert.ok((await f.read('topics/worktrees/index.html')).includes('class="source-heading"'));
+  const multipart = await f.read('topics/worktrees/index.html');
+  assert.ok(!multipart.includes('class="source-heading"'));
+  assert.equal((multipart.match(/class="toc-document-title"/g) ?? []).length, 2);
+  assert.equal((multipart.match(/class="document-title"/g) ?? []).length, 1, 'Only companion documents need an additional title boundary');
   const entries = JSON.parse(html.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { title: string; text: string; href: string }[];
   assert.ok(entries.some(entry => entry.title === 'A source-owned title' && entry.text.includes('Opening prose') && entry.href.endsWith('#just-enough-context-doc-1-title')));
   passed(f.build('--check'));
 
-  const original = await f.read('topics/just-enough-context/README.md');
+  const original = await f.read(file);
   const failures = [
-    { markdown: `${original}\n# Another title\n`, metadata: topic, error: /exactly one level-one title/ },
-    { markdown: '## No document title\n', metadata: topic, error: /must start with a level-one title/ },
-    { markdown: original, metadata: { ...topic, title: 'A competing title' }, error: /title comes from Markdown/ },
-    { markdown: original, metadata: { ...topic, documents: [...topic.documents, ...topic.documents] }, error: /requires one document/ },
-    { markdown: original, metadata: { ...topic, documents: [{ file: 'README.md', headingOffset: 1 }] }, error: /headingOffset 0/ },
-    { markdown: '# Title\n\n### Orphaned subsection\n', metadata: topic, error: /preceding level-two chapter/ },
+    { markdown: `${original}\n# Another title\n`, error: /exactly one level-one title/ },
+    { markdown: `${preamble}## No document title\n`, error: /must start with a level-one title/ },
+    { markdown: original.replace('category: Practice', 'title: A competing title\ncategory: Practice'), error: /title comes from/ },
+    { markdown: original.replace('category: Practice', 'documents: [README.md, README.md]\ncategory: Practice'), error: /documents must be unique/ },
+    { markdown: original.replace('category: Practice', 'documents: [README.md, ../outside.md]\ncategory: Practice'), error: /documents must be unique local/ },
+    { markdown: `${preamble}# Title\n\n### Orphaned subsection\n`, error: /must not skip levels/ },
   ];
   for (const failure of failures) {
-    await f.write(metadata, JSON.stringify(failure.metadata));
-    await f.write('topics/just-enough-context/README.md', failure.markdown);
+    await f.write(file, failure.markdown);
     const result = f.build();
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, failure.error);
@@ -123,10 +130,10 @@ test('a single README supplies article metadata without topic.json and keeps blo
   await assert.rejects(access(resolve(f.path, '_site/topics/just-enough-context/topic.json')));
   passed(f.build('--check'));
 
-  await f.write('topics/just-enough-context/topic.json', JSON.stringify(articleSource(source, file).topic));
+  await f.write('topics/just-enough-context/topic.json', JSON.stringify(topicSource(source, file).topic));
   const conflict = f.build();
   assert.notEqual(conflict.status, 0);
-  assert.match(conflict.stderr, /front matter or topic.json, not both/);
+  assert.match(conflict.stderr, /topic.json is no longer supported/);
   assert.equal(await f.read('topics/just-enough-context/index.html'), html);
   await rm(resolve(f.path, 'topics/just-enough-context/topic.json'));
   await f.write(file, source.replace('thesis: A reusable takeaway.\n', ''));
@@ -312,9 +319,10 @@ test('broken explorer references fail before any generated file is overwritten',
   const f = await fixture(t);
   passed(f.build());
   const before = await f.read('index.html');
-  const topic = JSON.parse(await f.read('topics/worktrees/topic.json'));
-  topic.explorer.panels[0].source.heading = 'A heading that does not exist';
-  await f.write('topics/worktrees/topic.json', JSON.stringify(topic));
+  await updateMetadata(f, 'worktrees', metadata => {
+    const explorer = metadata.explorer as NonNullable<Topic['explorer']>;
+    explorer.panels[0].source = { document: 'WORKFLOW.md', heading: 'A heading that does not exist' };
+  });
   const result = f.build();
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /heading must match exactly once/);
@@ -323,9 +331,10 @@ test('broken explorer references fail before any generated file is overwritten',
 
 test('a missing SVG highlight target fails instead of silently losing the explanation', async t => {
   const f = await fixture(t);
-  const topic = JSON.parse(await f.read('topics/agent-roles/topic.json'));
-  topic.explorer.panels[0].highlight = ['missing-node'];
-  await f.write('topics/agent-roles/topic.json', JSON.stringify(topic));
+  await updateMetadata(f, 'agent-roles', metadata => {
+    const explorer = metadata.explorer as NonNullable<Topic['explorer']>;
+    explorer.panels[0].highlight = ['missing-node'];
+  });
   const result = f.build();
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /missing SVG node/);

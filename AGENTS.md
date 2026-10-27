@@ -12,10 +12,10 @@ The same generated HTML works as downloaded standalone files and as a GitHub Pag
 
 | Source | Owns |
 | --- | --- |
-| `topics/topics.json` | Collection copy and topic order; IDs correspond to folders. |
+| `topics/topics.json` | Collection copy and canonical topic order; IDs correspond to folders. The homepage displays this order in reverse. |
 | `topics/assets/` | Authored collection visuals, including the optional title background. |
-| `topics/<id>/README.md` and other Markdown | The full argument, explanations, examples, and named excerpts. |
-| `topics/<id>/topic.json` | Topic metadata, document order, and optional visual explorer bindings. |
+| `topics/<id>/README.md` | YAML front matter owns topic metadata, optional document order, cover, and explorer bindings. Its single `#` heading owns the topic title. The body owns the argument and named excerpts. |
+| Other topic Markdown | Companion documents or supporting notes. Listed documents are rendered in full, in reading order. |
 | `topics/<id>/assets/` | Authored diagrams, images, data, and other topic-specific visual content. |
 | Topic-local scripts and examples | Supporting tools that belong to the idea. |
 | `design-system/` | Shared visual language, generic components, layout, and browser behavior. |
@@ -27,7 +27,7 @@ Diagrams communicate content through their labels and relationships. Keep their 
 
 ## Maintaining existing topics
 
-1. Read the topic's Markdown, `topic.json`, and relevant assets before changing it.
+1. Read the main README's front matter, all listed Markdown documents, and relevant assets before changing a topic.
 2. Preserve the author's meaning, qualifications, examples, and context. Do not silently summarize the HTML edition or introduce new claims only in a diagram.
 3. Make substantive edits in Markdown or topic-local assets. Change shared styling and interaction behavior in `design-system/`.
 4. If a visual excerpt already exists in Markdown, reference it; do not maintain a second prose copy in JSON or JavaScript.
@@ -38,25 +38,48 @@ The existing worktree shell tools now live in `topics/worktrees/`. Installation 
 
 ## Adding a topic
 
-Create `topics/<descriptive-kebab-case-id>/` with a `README.md` beginning with one `#` title. Use `##` for chapters and `###` for subsections when authoring new documents.
+Create `topics/<descriptive-kebab-case-id>/README.md`. Every topic uses the same Markdown-and-front-matter format; there are no special presentation modes or separate `topic.json` files:
 
-Add a `topic.json` alongside it:
+```md
+---
+category: A relevant category
+description: >-
+  A concise description for the collection card, page header, and search metadata.
+thesis: The central idea in one sentence.
+---
 
-```json
-{
-  "title": "A useful new idea",
-  "category": "A relevant category",
-  "description": "A short introduction for the contents page and topic header.",
-  "thesis": "The central idea in one sentence.",
-  "documents": [
-    { "file": "README.md", "label": "The idea", "headingOffset": 0 }
-  ]
-}
+# A useful new idea
+
+## Introduction
+
+Establish the subject, the problem, and why the idea matters.
+
+## A substantive chapter
+
+The full argument belongs here.
+
+### A subsection
+
+Supporting explanation, evidence, or examples.
 ```
 
-Add the folder ID to the `topics` array in `topics/topics.json`, in the desired order. Numbers are derived from order; do not hardcode them in topic metadata. Multiple documents can be listed in reading order. `headingOffset: 1` supports existing documents whose chapters use `#`; new documents should use ordinary nested headings with offset `0`.
+Required front-matter fields are nonempty `category`, `description`, and `thesis` strings. Optional fields are `cover`, `explorer`, and `documents`. Unknown fields fail validation. Do not put `title`, `presentation`, document labels, heading offsets, or duplicate metadata in another file. A blockquote is ordinary content, never a special description source.
 
-A plain Markdown topic is enough to build. Do not edit the generator or shared templates to register it. Add optional `cover` and `explorer` sources only when they help explain the idea. Update the root README's human-readable topic list.
+The main README must begin with YAML front matter. After that, its first content must be its one nonempty `#` title. Every companion document also starts with exactly one nonempty `#` title, but topic metadata belongs only in the main README. Use `##` for chapters and `###` for subsections; do not skip heading levels. Numbering and wording belong to the author: never add, strip, shorten, or rename headings merely to improve the sidebar. Ordered instructions and phased workflows are content, not generated chapter numbering.
+
+A single-document topic needs nothing else. For multiple documents, add a list of unique local Markdown paths to the main README's front matter, beginning with `README.md`:
+
+```yaml
+documents:
+  - README.md
+  - WORKFLOW.md
+```
+
+Omitting `documents` means only `README.md` is rendered. Do not list archival notes unless they should be part of the complete reader. Each listed document is rendered in full; meaningful companion document titles provide boundaries and TOC grouping, without repeating the main topic title or adding generic labels such as “The concept.”
+
+Append the folder ID to the `topics` array in `topics/topics.json` for a new topic. This canonical order determines topic numbers, collection-side navigation, and next-topic links. The homepage presents the reverse order, newest-added first, without renumbering. Do not hardcode topic numbers in metadata.
+
+Do not edit the generator or templates to register a topic. Add optional authored visuals only when they help explain the idea, and update the root README's human-readable topic list.
 
 Then run:
 
@@ -72,6 +95,18 @@ npm run test:browser # Offline, responsive, keyboard, and interaction checks
 
 Open `index.html` and the new topic's `index.html` directly in a browser. Check the title, full text, navigation, code examples, keyboard interaction, narrow layout, and offline behavior.
 
+## Editorial structure and shared presentation
+
+- **One title, one description.** The main README's `#` title is used on the page, collection card, search results, and navigation. Its title appears once in the reader; the front-matter description appears once beneath it. Do not repeat a subtitle as a chapter heading.
+- **An actual opening.** Give the introduction its own `##` heading and establish enough context for the reader to understand the argument. Preserve the author's voice; do not add personal framing, generic filler, or a rewrite merely for visual polish.
+- **No manuscript furniture.** Remove revision/version notices, working-draft labels, duplicated date lines, and editorial status footers from a published article when preparing it for publication. Preserve substantive uncertainty, illustrative-example qualifications, historical context, and limitations. A proposal must not become a claimed proven result.
+- **Dates have one home.** The generator derives source-history dates from Git; do not manually duplicate them in prose or call them publication dates. Same-day creation/update dates appear only once. Historical dates that are part of the argument remain content.
+- **The TOC is derived, not separately written.** Authored `##` headings become clickable chapter groups and `###` headings become visible nested links. Preserve exact text and numbering. Single-document topics have no document-label wrapper. Multipart topics group by actual document titles. Consecutive chapters without subsections have tighter spacing; do not change their text to fit the sidebar.
+- **Shared visual hierarchy.** Topic titles are plum, chapters teal, and subsections copper, with accessible light/dark variants. Chapter dividers are full-width one-pixel rules that fade from left to right; subsection marks are shorter. The first body heading has a compact gap below the metadata and no divider. Keep these rules in `design-system/`, never in topic-specific markup or styles.
+- **Shared, progressive motion.** The topic title, description, and dates reveal together using the homepage's fade/zoom/downward arrival. All chapters and subsections visible in the initial viewport reveal together on one shared timeline, delayed 500ms after the topic header starts. Later chapters and subsections reveal independently on scroll, once per page visit. Motion must not hide content for direct links, keyboard focus, search/browser find, printing, reduced-motion users, restored reading positions, or browsers without JavaScript/IntersectionObserver. Do not add per-topic motion scripts.
+
+Build validation must fail before replacing output for missing/ambiguous source references, invalid front matter, duplicate/missing top-level titles, skipped heading levels, missing assets, or broken links. Maintain tests for single-document and multipart topics, authored heading fidelity, full content, offline behavior, accessibility, themes, motion fallbacks, and narrow layouts.
+
 ## Authoring visual sources
 
 Use plain Markdown plus ordinary asset files rather than embedding an application framework in the documents. A topic remains readable and editable on GitHub without running the generator.
@@ -79,8 +114,8 @@ Use plain Markdown plus ordinary asset files rather than embedding an applicatio
 - **Images:** put the file in `assets/` and reference it with standard Markdown, for example `![A description](assets/diagram.svg)`. Local images are embedded in the HTML at build time. Download remote images first; do not introduce runtime network dependencies.
 - **Diagrams:** author standalone SVG in `assets/`. Include a `viewBox`, accessible title/description, stable node IDs, and local styles with fallback colors. Shared CSS variables can theme the inline version. Keep scripts and external references out of SVG files.
 - **Structured data:** use JSON or CSV in `assets/` when the data itself is the source. The current generator supports images and the explorer component; additional visual forms need a generic renderer before use. Do not imply arbitrary assets automatically become interactive.
-- **Cover:** set `"cover": "assets/cover.svg"` in `topic.json`. It is optional.
-- **Explorer:** configure `explorer` in `topic.json`. This uses a generic SVG-and-panels component; it is not topic-specific JavaScript. See the existing topics for full examples.
+- **Cover:** set `cover: assets/cover.svg` in the main README's front matter. It is optional and supplies the collection-card illustration. Keep it legible at thumbnail sizes and accessible, themed, and offline.
+- **Explorer:** configure `explorer` in that same YAML front matter. This uses a generic SVG-and-panels component; it is not topic-specific JavaScript. See the existing topics for complete YAML examples. The reference objects below use JSON notation for clarity; write their equivalent mappings under `explorer.panels` in YAML.
 
 An explorer has `title`, `instruction`, `diagram`, `caption`, `controls` (`"labels"` or `"numbered"`), and a nonempty `panels` array. Each panel has a stable `id`, a `source` reference, and optional SVG node IDs in `highlight`. A section reference is:
 

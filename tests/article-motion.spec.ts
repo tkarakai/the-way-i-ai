@@ -41,6 +41,41 @@ for (const width of [1440, 390]) {
     await expect(introduction).toHaveCSS('animation-name', 'none');
   });
 
+  test(`all initially visible chapters share the delayed opening timeline at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1500 });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.addInitScript(() => {
+      document.addEventListener('animationstart', event => {
+        if (event.target instanceof Element && event.target.matches('.article-hero')) {
+          event.target.getAnimations().forEach(animation => { animation.pause(); animation.currentTime = 0; });
+        }
+      });
+    });
+    await page.goto(new URL('../_site/topics/worktrees/index.html', import.meta.url).href);
+    const cohort = page.locator('.article-reveal[data-entrance-delay="true"]');
+    await expect.poll(() => cohort.count()).toBeGreaterThanOrEqual(3);
+    expect(await cohort.locator(':scope > h2,:scope > h3').allTextContents()).toEqual(expect.arrayContaining(['Introduction', 'Overview', 'How it works']));
+    const animations = await cohort.evaluateAll(sections => {
+      const entrances = sections.map(section => section.getAnimations().find((animation): animation is CSSAnimation => animation instanceof CSSAnimation && animation.animationName === 'collection-enter')!);
+      const starts = entrances.map(animation => animation.startTime);
+      const delays = entrances.map(animation => animation.effect!.getTiming().delay);
+      entrances.forEach(animation => { animation.pause(); animation.currentTime = 250; });
+      return { starts, delays };
+    });
+    expect(new Set(animations.starts).size).toBe(1);
+    expect(animations.starts[0]).not.toBeNull();
+    expect(animations.delays.every(delay => delay === 500)).toBe(true);
+    expect(await cohort.evaluateAll(sections => sections.every(section => getComputedStyle(section).opacity === '0'))).toBe(true);
+    await cohort.evaluateAll(sections => sections.forEach(section => section.getAnimations().forEach(animation => { animation.currentTime = 850; })));
+    const opacities = await cohort.evaluateAll(sections => sections.map(section => Number(getComputedStyle(section).opacity)));
+    expect(Math.max(...opacities) - Math.min(...opacities)).toBeLessThan(.001);
+    expect(opacities[0]).toBeGreaterThan(.5);
+    expect(opacities[0]).toBeLessThan(1);
+    await page.screenshot({ path: `test-results/article-initial-cohort-${width}.png` });
+    await cohort.evaluateAll(sections => sections.forEach(section => section.getAnimations().forEach(animation => animation.finish())));
+    await expect(page.locator('.article-reveal[data-reveal="pending"]').first()).toHaveCSS('opacity', '0');
+  });
+
   test(`article chapters and subsections reveal independently, once, at ${width}px`, async ({ page, context }) => {
     await context.setOffline(true);
     await page.setViewportSize({ width, height: 900 });
@@ -59,7 +94,7 @@ for (const width of [1440, 390]) {
       entrance.pause(); entrance.currentTime = 0;
       return entrance;
     });
-    expect(await animation.evaluate(item => ({ duration: item.effect!.getTiming().duration, easing: (item.effect as KeyframeEffect).getKeyframes()[0].easing }))).toEqual({ duration: 800, easing: 'ease' });
+    expect(await animation.evaluate(item => ({ duration: item.effect!.getTiming().duration, delay: item.effect!.getTiming().delay, easing: (item.effect as KeyframeEffect).getKeyframes()[0].easing }))).toEqual({ duration: 800, delay: 0, easing: 'ease' });
     const start = await chapter.evaluate(section => {
       const style = getComputedStyle(section), matrix = new DOMMatrix(style.transform);
       return { opacity: style.opacity, scale: matrix.a, y: matrix.f, top: (section as HTMLElement).offsetTop, height: (section as HTMLElement).offsetHeight };

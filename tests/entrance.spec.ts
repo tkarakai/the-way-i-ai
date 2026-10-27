@@ -95,7 +95,8 @@ test('keyboard focus finishes the entrance immediately and never restarts it on 
   await page.locator('.theme-toggle').focus();
   expect(await entranceCount(page)).toBe(0);
   await page.goto(topic);
-  expect(await page.evaluate(() => document.getAnimations().some(animation => animation instanceof CSSAnimation && animation.animationName === 'collection-enter'))).toBe(false);
+  await expect(page.locator('.collection-hero,.collection-list')).toHaveCount(0);
+  await expect(page.locator('.article-hero')).toHaveCount(1);
 });
 
 for (const mode of ['reduced motion', 'print'] as const) {

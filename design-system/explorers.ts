@@ -1,7 +1,7 @@
 import type { RenderedTopic, RenderedDocument, SourceReference, HeadingReference } from './types.ts';
 import { escape } from './layout.ts';
 
-// Topic-specific content belongs to topic.json, Markdown, and SVG sources.
+// Topic-specific content belongs to Markdown front matter, prose, and SVG sources.
 // This renderer only binds those sources to shared presentation components.
 export function explorerFor(topic: RenderedTopic, documents: RenderedDocument[]) {
   const config = topic.explorer;

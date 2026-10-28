@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.ts';
 
 const home = new URL('../_site/index.html', import.meta.url).href;
 const topic = new URL('../_site/topics/worktrees/index.html', import.meta.url).href;

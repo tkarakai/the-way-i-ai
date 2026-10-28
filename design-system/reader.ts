@@ -4,6 +4,117 @@
   const storagePrefix = 'the-way-i-ai-';
   const readPreference = (key: string) => { try { return localStorage.getItem(storagePrefix + key); } catch { return null; } };
   const writePreference = (key: string, value: string) => { try { localStorage.setItem(storagePrefix + key, value); } catch { /* Preferences remain available for this page. */ } };
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  // Cross-fade whole-page changes (theme, design) where View Transitions are available.
+  const transitionPage = (update: () => void) => {
+    const start = (document as Document & { startViewTransition?: (callback: () => void) => unknown }).startViewTransition;
+    if (start && !reducedMotion.matches && !document.hidden) start.call(document, update);
+    else update();
+  };
+  (window as Window & { transitionPage?: typeof transitionPage }).transitionPage = transitionPage;
+  // Disclosures open and close by animating their height, so readers see where content goes.
+  const animateDisclosure = (details: HTMLDetailsElement, enabled: () => boolean = () => true) => {
+    const summary = details.querySelector<HTMLElement>(':scope > summary');
+    if (!summary) return;
+    let running: Animation | undefined;
+    summary.addEventListener('click', event => {
+      if (reducedMotion.matches || !enabled() || getComputedStyle(summary).display === 'none') return;
+      event.preventDefault();
+      running?.cancel();
+      const style = getComputedStyle(details);
+      const closedHeight = summary.offsetHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+      const startHeight = details.offsetHeight;
+      const closing = details.open;
+      if (!closing) details.open = true;
+      const endHeight = closing ? closedHeight : details.offsetHeight;
+      details.style.overflow = 'hidden';
+      running = details.animate({ height: [`${startHeight}px`, `${endHeight}px`] }, { duration: 260, easing: 'cubic-bezier(.2, .7, .2, 1)' });
+      running.onfinish = () => {
+        if (closing) details.open = false;
+        details.style.overflow = '';
+        running = undefined;
+      };
+    });
+  };
+  document.querySelectorAll<HTMLDetailsElement>('.visual-guide').forEach(details => animateDisclosure(details));
+  // Rotating phrases: each slides up and out as the next slides up into its place, in order, looping.
+  // Each phrase stays 3s; hovering pauses. The window eases to each phrase's width, and a phrase
+  // too long for the rest of its line shrinks its font to fit, so the line never wraps. If the longest
+  // phrase would drop below 60% there, the phrases move to a line of their own (stable for all phrases).
+  document.querySelectorAll<HTMLElement>('.rotator-window').forEach(frame => {
+    const items = [...frame.querySelectorAll<HTMLElement>('.rotator-item')];
+    if (items.length < 2) return;
+    let index = 0, paused = false, timer: ReturnType<typeof setTimeout> | undefined;
+    const measure = document.createElement('canvas').getContext('2d')!;
+    const holder = frame.closest<HTMLElement>('p, h2') ?? frame.parentElement!;
+    const rotator = frame.closest<HTMLElement>('.rotator') ?? frame;
+    // The full stop notices the new phrase a beat late, swells, then hurries after its new end,
+    // overshooting a little and squashing as it lands, like a cartoon character catching up.
+    const tail = rotator.nextElementSibling?.matches('.rotator-tail') ? rotator.nextElementSibling as HTMLElement : undefined;
+    let chaseFrame = 0;
+    const chase = (from: number) => {
+      if (!tail) return;
+      cancelAnimationFrame(chaseFrame);
+      tail.style.transform = '';
+      const start = performance.now(), target = frame.getBoundingClientRect().left + parseFloat(frame.style.width);
+      const notice = 120, travel = 420, land = 160;
+      const overshoot = (p: number) => 1 + 2.2 * (p - 1) ** 3 + 1.2 * (p - 1) ** 2;
+      const tick = (now: number) => {
+        const t = now - start, p = Math.min(1, Math.max(0, (t - notice) / travel));
+        const x = from + (target - from) * overshoot(p) - frame.getBoundingClientRect().right;
+        let scaleX = 1, scaleY = 1;
+        if (t < notice) scaleX = scaleY = 1 + .45 * t / notice;
+        else if (p < 1) scaleX = scaleY = 1.45 - .45 * p;
+        else { const q = Math.min(1, (t - notice - travel) / land); scaleX = 1 + .25 * Math.sin(Math.PI * q); scaleY = 1 - .2 * Math.sin(Math.PI * q); }
+        tail.style.transform = `translateX(${x}px) scale(${scaleX}, ${scaleY})`;
+        if (t < notice + travel + land) chaseFrame = requestAnimationFrame(tick);
+        else tail.style.transform = '';
+      };
+      chaseFrame = requestAnimationFrame(tick);
+    };
+    const fit = () => {
+      const style = getComputedStyle(holder);
+      measure.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const textWidth = (text: string) => measure.measureText(text).width + 1;
+      const natural = textWidth(items[index].textContent ?? '');
+      const longest = Math.max(...items.map(item => textWidth(item.textContent ?? '')));
+      // Punctuation right after the phrase must fit on the line too.
+      const trailing = textWidth(/^\S*/.exec(rotator.nextSibling?.textContent ?? '')?.[0] ?? '');
+      const end = holder.getBoundingClientRect().right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth);
+      // Measure where the phrase starts with no width of its own, so it cannot have wrapped.
+      const width = frame.style.width;
+      frame.style.transition = 'none';
+      const room = () => { frame.style.width = '0px'; return end - frame.getBoundingClientRect().left - trailing; };
+      rotator.classList.remove('own-line');
+      let available = room();
+      if (available / longest < .6) { rotator.classList.add('own-line'); available = room(); }
+      frame.style.width = width;
+      void frame.offsetWidth;
+      frame.style.transition = '';
+      const scale = Math.min(1, available / natural);
+      frame.style.fontSize = scale < 1 ? `${scale}em` : '';
+      frame.style.width = `${natural * scale}px`;
+    };
+    const schedule = () => { clearTimeout(timer); timer = setTimeout(step, 3000); };
+    function step() {
+      if (paused || document.hidden || reducedMotion.matches) { schedule(); return; }
+      const leaving = items[index];
+      const from = tail?.getBoundingClientRect().left ?? 0;
+      index = (index + 1) % items.length;
+      leaving.classList.replace('is-current', 'is-leaving');
+      items[index].classList.add('is-current');
+      fit();
+      chase(from);
+      setTimeout(() => leaving.classList.remove('is-leaving'), 500);
+      schedule();
+    }
+    holder.addEventListener('pointerenter', () => { paused = true; });
+    holder.addEventListener('pointerleave', () => { paused = false; });
+    document.fonts.ready.then(fit);
+    addEventListener('resize', fit);
+    document.addEventListener('design-change', () => requestAnimationFrame(fit));
+    schedule();
+  });
   const themeToggle = document.querySelector<HTMLButtonElement>('.theme-toggle')!;
   const oppositeTheme = () => root.dataset.theme === 'dark' ? 'light' : 'dark';
   const syncTheme = () => {
@@ -14,10 +125,10 @@
   };
   syncTheme();
   document.addEventListener('theme-change', syncTheme);
-  themeToggle.addEventListener('click', () => {
+  themeToggle.addEventListener('click', () => transitionPage(() => {
     root.dataset.themePreference = oppositeTheme();
     document.dispatchEvent(new Event('theme-preference-change'));
-  });
+  }));
   // Do not make keyboard users wait for the homepage's delayed entrance.
   const collectionPage = document.querySelector('.collection-page');
   collectionPage?.addEventListener('focusin', () => {
@@ -37,10 +148,19 @@
   const searchTrigger = document.querySelector<HTMLButtonElement>('[data-open-search]')!;
   let searchReturnFocus: HTMLElement = searchTrigger;
   const closeSearch = () => {
-    searchDialog.close();
-    // Explicitly restore a useful target even when the dialog was opened with
-    // a shortcut while <body> held focus. Do not leave focus in its hidden input.
-    (searchReturnFocus.isConnected ? searchReturnFocus : searchTrigger).focus({ preventScroll: true });
+    if (!searchDialog.open || searchDialog.classList.contains('is-closing')) return;
+    const close = () => {
+      searchDialog.close();
+      // Explicitly restore a useful target even when the dialog was opened with
+      // a shortcut while <body> held focus. Do not leave focus in its hidden input.
+      (searchReturnFocus.isConnected ? searchReturnFocus : searchTrigger).focus({ preventScroll: true });
+    };
+    if (reducedMotion.matches) { close(); return; }
+    // Play the closing animation, then close; a stale timer cannot close a reopened dialog.
+    searchDialog.classList.add('is-closing');
+    const finish = () => { if (searchDialog.classList.contains('is-closing')) { searchDialog.classList.remove('is-closing'); close(); } };
+    searchDialog.addEventListener('animationend', finish, { once: true });
+    setTimeout(finish, 260);
   };
   const results = searchDialog.querySelector<HTMLElement>('.search-results')!;
   const resultStatus = searchDialog.querySelector<HTMLElement>('.search-result-status')!;
@@ -85,7 +205,8 @@
   };
   const openSearch = () => {
     searchReturnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : searchTrigger;
-    showResults(); searchDialog.showModal(); collectionInput.focus();
+    searchDialog.classList.remove('is-closing');
+    showResults(); if (!searchDialog.open) searchDialog.showModal(); collectionInput.focus();
   };
   searchTrigger.addEventListener('click', openSearch);
   document.querySelector('[data-close-search]')!.addEventListener('click', closeSearch);
@@ -149,7 +270,12 @@
     toast.textContent = message;
     toast.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toast.hidden = true; }, 2600);
+    toast.classList.remove('is-leaving');
+    toastTimer = setTimeout(() => {
+      // Fade out before hiding; a new message cancels the exit.
+      toast.classList.add('is-leaving');
+      toastTimer = setTimeout(() => { toast.hidden = true; toast.classList.remove('is-leaving'); }, reducedMotion.matches ? 0 : 200);
+    }, 2600);
   };
   document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach(button => {
     button.addEventListener('click', async () => {
@@ -299,6 +425,9 @@
   }
   const contents = document.querySelector<HTMLDetailsElement>('.contents')!;
   const mobile = matchMedia('(max-width: 980px)');
+  animateDisclosure(contents, () => mobile.matches);
+  // On phones the collection sidebar is a disclosure too; on desktop its column animates instead.
+  animateDisclosure(document.querySelector<HTMLDetailsElement>('.collection-contents')!, () => matchMedia('(max-width: 760px)').matches);
   const collectionContents = document.querySelector<HTMLDetailsElement>('.collection-contents')!;
   const collectionSummary = collectionContents.querySelector('summary')!;
   collectionContents.open = readPreference('collection-open') === 'true';
@@ -413,6 +542,8 @@
     });
   };
   search.addEventListener('input', () => {
+    // Matching entries fade in as the outline filters.
+    document.querySelector('.contents nav')?.classList.add('is-filtering');
     const words = termsOf(search.value);
     if (words.length) revealAllSections();
     let count = 0;

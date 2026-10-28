@@ -15,7 +15,9 @@
     ctx.lineCap = 'round';
     window.drawMurmuration(ctx, w, h, time, document.documentElement.dataset.theme === 'dark');
   };
-  const canAnimate = () => !reduced.matches && !document.hidden && !printing && !suspended;
+  // Murmuration belongs to Folio; the Field Atlas keeps its paper quiet.
+  const folio = () => document.documentElement.dataset.design === 'folio';
+  const canAnimate = () => folio() && !reduced.matches && !document.hidden && !printing && !suspended;
   const tick = (now: number) => {
     frame = 0;
     if (!canAnimate()) { last = 0; return; }
@@ -29,7 +31,7 @@
   const sync = () => {
     cancelAnimationFrame(frame); frame = 0; last = 0;
     // A still frame remains available when motion is reduced.
-    if (!document.hidden && !suspended) paint();
+    if (folio() && !document.hidden && !suspended) paint();
     if (canAnimate()) frame = requestAnimationFrame(tick);
   };
   new ResizeObserver(() => {
@@ -42,6 +44,7 @@
   }).observe(canvas);
   reduced.addEventListener('change', sync);
   document.addEventListener('theme-change', sync);
+  document.addEventListener('design-change', sync);
   document.addEventListener('visibilitychange', sync);
   addEventListener('pagehide', () => { suspended = true; sync(); });
   addEventListener('pageshow', () => { suspended = false; sync(); });

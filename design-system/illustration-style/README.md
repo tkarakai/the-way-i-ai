@@ -51,6 +51,17 @@ node scripts/prepare-fox-paper.ts
 
 This maintenance script requires Playwright Chromium and reads the light-theme color from shared CSS. Provenance is recorded in the topic's `image-plan.md`; the original references remain unchanged.
 
+## Matching delivered paper
+
+Deliveries whose clear paper drifts from `#F8F5EE` show as visible boxes on the page and in Field Atlas mounts. Match a topic's delivered images in place, and optionally centre an off-centre portrait horizontally:
+
+```sh
+node scripts/prepare-paper.ts web-app-starter-kit agent-roles
+node scripts/prepare-paper.ts worktrees --center-hero
+```
+
+Only edge-connected pale paper changes; ink and coloured watercolour stay untouched. The worktrees, agent-roles and web-app-starter-kit artwork was matched this way, and the squirrel portrait was centred.
+
 ## Verification
 
 ```sh

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.ts';
 
 const previewURL = new URL('../previews/backgrounds.html', import.meta.url).href;
 

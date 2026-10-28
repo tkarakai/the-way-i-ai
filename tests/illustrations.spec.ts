@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.ts';
 import { mkdtemp, cp, symlink, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
@@ -50,7 +50,7 @@ test('delivered artwork renders offline in both themes, with exact chapter ancho
         const hero = page.locator('.editorial-hero');
         await expect(hero).toBeVisible();
         await expect(hero).toHaveAttribute('src', sharedSource!);
-        await expect(page.locator('.topic-hero + .editorial-hero')).toHaveCount(1);
+        await expect(page.locator('.topic-hero + .plate-mount > .editorial-hero')).toHaveCount(1);
         const chapter = page.locator('#worktrees-doc-2-working-on-a-task + .editorial-chapter');
         await chapter.scrollIntoViewIfNeeded();
         await expect(chapter).toHaveAccessibleName(images[1].alt);

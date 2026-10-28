@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.ts';
 import { readFile } from 'node:fs/promises';
 import { Lexer, type Tokens } from 'marked';
 import { splitFrontMatter } from '../scripts/markdown-source.ts';

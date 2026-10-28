@@ -212,7 +212,8 @@ test('the shared wordmark embeds its background once per page and missing assets
     assert.ok(!index.includes(removed), `The collection omits removed copy: ${removed}`);
   }
   assert.ok(index.includes('id="topics-heading">The collection'));
-  assert.ok(index.includes('One way. Mine. Still being worked out.'));
+  assert.match(index, /<span class="rotator-item is-current">snacks<\/span><span class="rotator-item">tokens<\/span>/);
+  assert.match(index, /<span class="sr-only">snacks, tokens, subsidized subs,/);
   assert.ok(index.includes('<span class="intro-accent">practice</span>'));
   assert.ok(!index.includes('Explore the collection'));
   assert.ok(index.includes('data-ambient="F"'));

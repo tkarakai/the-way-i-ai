@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { Marked, Renderer } from 'marked';
 import { preloadFile } from '@pierre/diffs/ssr';
-import { shell, collectionBody, readerBody, escape } from '../design-system/layout.ts';
+import { shell, collectionBody, readerBody, indexBody, escape } from '../design-system/layout.ts';
 import { explorerFor } from '../design-system/explorers.ts';
 import { parseWavePosition, wordmarkStyles } from '../design-system/wordmark.ts';
 import { collectionSearch } from '../design-system/search.ts';
@@ -21,19 +21,33 @@ if (check && site) throw new Error('Use --check and --site separately.');
 const read = (path: string) => readFile(resolve(root, path), 'utf8');
 const compile = (path: string) => read(path).then(source => ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.None } }).outputText);
 const [registry, css, js, themeJS] = await Promise.all([
-  read('topics/topics.json').then(text => JSON.parse(text) as Collection), read('design-system/theme.css'), compile('design-system/reader.ts'), compile('design-system/theme.ts')
+  read('topics/topics.json').then(text => JSON.parse(text) as Collection),
+  // Folio is the base stylesheet; the Field Atlas (default) is scoped to :root[data-design="atlas"].
+  Promise.all([read('design-system/theme.css'), read('design-system/atlas.css')]).then(sheets => sheets.join('\n')),
+  Promise.all([compile('design-system/reader.ts'), compile('design-system/atlas.ts'), compile('design-system/logo.ts')]).then(scripts => scripts.join('\n')),
+  Promise.all([compile('design-system/design.ts'), compile('design-system/theme.ts')]).then(scripts => scripts.join('\n'))
 ]);
 if (registry.ambientBackground !== undefined && registry.ambientBackground !== 'F') throw new Error('Unsupported ambientBackground: expected F.');
 if (registry.ambientIntensity !== undefined && (!Number.isFinite(registry.ambientIntensity) || registry.ambientIntensity < 0 || registry.ambientIntensity > 1)) throw new Error('ambientIntensity must be a number between 0 and 1.');
 const ambientJS = registry.ambientBackground === 'F'
   ? (await Promise.all(['design-system/murmuration.ts', 'design-system/ambient.ts'].map(compile))).join('\n')
   : '';
-const fontLicenses = await Promise.all(['newsreader-OFL.txt', 'dm-sans-OFL.txt', 'pierre-diffs-Apache-2.0.txt', 'octicons-MIT.txt'].map(file => read(`design-system/licenses/${file}`)));
-const fonts = `/* Embedded font, icon, and code-renderer licenses:\n${fontLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/\n` + (await Promise.all([
-  ['Newsreader', 'newsreader'], ['DM Sans', 'dm-sans']
-].map(async ([name, file]) => {
-  const data = await readFile(resolve(root, `node_modules/@fontsource-variable/${file}/files/${file}-latin-wght-normal.woff2`));
-  return `@font-face{font-family:'${name}';font-style:normal;font-weight:100 900;font-display:swap;src:url(data:font/woff2;base64,${data.toString('base64')}) format('woff2');}`;
+const fontLicenses = await Promise.all(['newsreader-OFL.txt', 'dm-sans-OFL.txt', 'cormorant-garamond-OFL.txt', 'spectral-OFL.txt', 'ibm-plex-mono-OFL.txt', 'pierre-diffs-Apache-2.0.txt', 'octicons-MIT.txt'].map(file => read(`design-system/licenses/${file}`)));
+// Folio: Newsreader + DM Sans. Field Atlas: Cormorant Garamond, Spectral and IBM Plex Mono (Newsreader stays for the wordmark).
+const fontFaces: [name: string, path: string, style: string, weight: string][] = [
+  ['Newsreader', '@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2', 'normal', '100 900'],
+  ['DM Sans', '@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2', 'normal', '100 900'],
+  ['Cormorant Garamond', '@fontsource-variable/cormorant-garamond/files/cormorant-garamond-latin-wght-normal.woff2', 'normal', '300 700'],
+  ['Cormorant Garamond', '@fontsource-variable/cormorant-garamond/files/cormorant-garamond-latin-wght-italic.woff2', 'italic', '300 700'],
+  ['Spectral', '@fontsource/spectral/files/spectral-latin-400-normal.woff2', 'normal', '400'],
+  ['Spectral', '@fontsource/spectral/files/spectral-latin-400-italic.woff2', 'italic', '400'],
+  ['Spectral', '@fontsource/spectral/files/spectral-latin-600-normal.woff2', 'normal', '600'],
+  ['IBM Plex Mono', '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2', 'normal', '400'],
+  ['IBM Plex Mono', '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2', 'normal', '500'],
+];
+const fonts = `/* Embedded font, icon, and code-renderer licenses:\n${fontLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/\n` + (await Promise.all(fontFaces.map(async ([name, path, style, weight]) => {
+  const data = await readFile(resolve(root, `node_modules/${path}`));
+  return `@font-face{font-family:'${name}';font-style:${style};font-weight:${weight};font-display:swap;src:url(data:font/woff2;base64,${data.toString('base64')}) format('woff2');}`;
 }))).join('\n');
 
 const slug = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').trim().replace(/\s+/g, '-');
@@ -173,10 +187,11 @@ if (wavePosition && resolve(root, wavePosition.source) !== titleBackgroundPath) 
 const pageCSS = `${css}\n${wordmarkStyles(titleBackground, wavePosition)}`;
 const wordmarkBackground = Boolean(titleBackground);
 const search = collectionSearch(topics);
-outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, wordmarkBackground }));
+outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, topics, wordmarkBackground }));
+outputs.set('general-index/index.html', shell({ title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, body: indexBody(topics), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../', page: 'index', wordmarkBackground }));
 for (const topic of topics) {
   const fingerprints = `<!-- Markdown sources: ${topic.rendered.map(doc => `${doc.file} sha256:${doc.sha256}`).join('; ')} -->\n`;
-  outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered)), css: pageCSS, js, themeJS, search, fonts, collection: registry, prefix: '../../', page: topic.id, wordmarkBackground, created: topic.created, updated: topic.updated }));
+  outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered), registry), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../../', page: topic.id, wordmarkBackground, created: topic.created, updated: topic.updated }));
 }
 
 // Validate output before writing: navigation, ids, and offline render dependencies.

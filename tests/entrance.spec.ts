@@ -8,12 +8,19 @@ const entranceCount = (page: Page) => page.locator('.collection-page').evaluate(
 
 async function pauseEntrance(page: Page) {
   await page.addInitScript(() => {
+    // The page is large; on a slow machine the 800ms intro could end before DOMContentLoaded.
+    // Hold the entrances from the first frame, then hand them to explicit pauses. An adopted
+    // sheet works before the document has an element to attach a <style> to.
+    const hold = new CSSStyleSheet();
+    hold.replaceSync('.collection-page * { animation-play-state: paused !important; }');
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, hold];
     document.addEventListener('DOMContentLoaded', () => {
       document.querySelector('.collection-page')?.getAnimations({ subtree: true }).forEach(animation => {
         if (animation instanceof CSSAnimation && animation.animationName === 'collection-enter') {
           animation.pause(); animation.currentTime = 0;
         }
       });
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(sheet => sheet !== hold);
     });
   });
   await page.goto(home);

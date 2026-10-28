@@ -3,9 +3,9 @@
    Everything is scoped to :root[data-design='atlas'], so Folio (theme.css) is unchanged.
    The approved wordmark keeps its Newsreader lettering and wave; only its ink colours change. */
 :root[data-design='atlas'] {
-  --paper: #e5e9e1; --surface: #eef1ea; --ink: #1d2620; --muted: #56635a;
-  --line: #b9c2b5; --accent: #9b3d22; --tint: #dde2d8; --accent-ink: #f6f2ea;
-  --ochre: #85561a; --code: #dde3d7; --search-hit: #ecd18e;
+  --paper: #e7e9e3; --surface: #eff0eb; --ink: #1d2620; --muted: #56635a;
+  --line: #bec2ba; --accent: #9b3d22; --tint: #e0e2dc; --accent-ink: #f6f2ea;
+  --ochre: #85561a; --code: #e0e3dc; --search-hit: #ecd18e;
   --title-ink: #1d2620; --title-accent: #1f6b66;
   --article-title-ink: #1d2620; --chapter-ink: #2b5a45; --subchapter-ink: #85561a;
   --mount: #f8f5ee; --mount-ink: #1d2620; --shadow: rgba(29, 38, 32, .16);
@@ -14,31 +14,33 @@
   --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
   --wordmark-font: 'Newsreader', Georgia, serif;
   --atlas-ease: cubic-bezier(.2, .7, .2, 1);
-  --atlas-inset: 60px;
   font-family: var(--serif);
   scroll-padding-top: calc(var(--header-height) + 56px);
 }
 /* Dark: a herbarium at night. Plates stay mounted on warm card and artwork is never inverted. */
 :root[data-design='atlas'][data-theme='dark'] {
   color-scheme: dark;
-  --paper: #111612; --surface: #182019; --ink: #e2e7de; --muted: #9ba79d;
-  --line: #334036; --accent: #e7926c; --tint: #1c241d; --accent-ink: #111612;
-  --ochre: #dcaa64; --code: #1a221b; --search-hit: #6b5a2a;
+  --paper: #16201a; --surface: #1d2921; --ink: #e2e7de; --muted: #a0ada2;
+  --line: #36473b; --accent: #e7926c; --tint: #1b261f; --accent-ink: #16201a;
+  --ochre: #dcaa64; --code: #1b2620; --search-hit: #6b5a2a;
   --title-ink: #e2e7de; --title-accent: #7cc4b8;
   --article-title-ink: #e2e7de; --chapter-ink: #94c9ad; --subchapter-ink: #dcaa64; --shadow: rgba(0, 0, 0, .5);
+  --sidebar: var(--surface);
 }
 @media (prefers-color-scheme: dark) {
   :root[data-design='atlas']:not([data-theme]) {
     color-scheme: dark;
-    --paper: #111612; --surface: #182019; --ink: #e2e7de; --muted: #9ba79d;
-    --line: #334036; --accent: #e7926c; --tint: #1c241d; --accent-ink: #111612;
-    --ochre: #dcaa64; --code: #1a221b; --search-hit: #6b5a2a;
+    --paper: #16201a; --surface: #1d2921; --ink: #e2e7de; --muted: #a0ada2;
+    --line: #36473b; --accent: #e7926c; --tint: #1b261f; --accent-ink: #16201a;
+    --ochre: #dcaa64; --code: #1b2620; --search-hit: #6b5a2a;
     --title-ink: #e2e7de; --title-accent: #7cc4b8;
     --article-title-ink: #e2e7de; --chapter-ink: #94c9ad; --subchapter-ink: #dcaa64; --shadow: rgba(0, 0, 0, .5);
+    --sidebar: var(--surface);
   }
 }
 [data-design='atlas'] .wordmark { font-family: var(--wordmark-font); }
-[data-design='atlas'] .site-shell { overflow-x: clip; }
+/* Atlas pages share the masthead's inset and width, so the logo, the content and the GitHub icon line up at every size. */
+[data-design='atlas'] .site-shell { overflow-x: clip; --atlas-inset: var(--header-inset); }
 [data-design='atlas'] .sidebar-resizer, [data-design='atlas'] .collection-nav,
 [data-design='atlas'] .breadcrumbs, [data-design='atlas'] .ambient-canvas { display: none !important; }
 .plate-tag { display: block; font: 500 10.5px/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
@@ -94,7 +96,7 @@
 [data-design='atlas'] .collection-page { overflow-x: clip; }
 [data-design='atlas'] .collection-hero { position: relative; isolation: isolate; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-areas: 'wordmark intro'; align-items: center; gap: 24px 64px; padding: 44px 0 40px; border-bottom: 1px solid var(--ink); }
 [data-design='atlas'] .hero-wordmark { grid-area: wordmark; }
-[data-design='atlas'] .collection-intro { grid-area: intro; padding: 24px 28px; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 55%, transparent); }
+[data-design='atlas'] .collection-intro { grid-area: intro; padding: 24px 28px; }
 [data-design='atlas'] .collection-intro h2 { font: italic 500 clamp(28px, 3vw, 38px)/1.15 var(--display); letter-spacing: 0; margin-bottom: 10px; }
 [data-design='atlas'] .intro-accent { color: var(--accent); }
 [data-design='atlas'] .rotator-window { color: var(--title-accent); }
@@ -182,20 +184,23 @@
 
 /* Topic: frontispiece, outline, prose and margin on one grid. */
 [data-design='atlas'] .workspace { display: block; }
-[data-design='atlas'] .reading-layout { --atlas-toc: 230px; display: grid; grid-template-columns: var(--atlas-toc) minmax(0, 720px) minmax(210px, 1fr); --atlas-measure: 100%; --atlas-gap: 52px; transition: --atlas-toc .32s ease, --atlas-measure .32s ease; grid-template-areas: 'front front front' 'rule rule rule' 'toc guide margin' 'toc article margin' 'end end end'; column-gap: var(--atlas-gap); max-width: 1440px; margin-inline: auto; padding: 32px var(--atlas-inset) 0; }
+[data-design='atlas'] .reading-layout { --atlas-toc: 230px; display: grid; grid-template-columns: var(--atlas-toc) minmax(0, 720px) minmax(210px, 1fr); --atlas-measure: 100%; --atlas-gap: 52px; transition: --atlas-toc .32s ease, --atlas-measure .32s ease, row-gap .28s ease; grid-template-areas: 'front front front' 'rule rule rule' 'toc guide margin' 'toc article margin' 'end end end'; column-gap: var(--atlas-gap); margin-inline: auto; padding: 32px var(--atlas-inset) 0; }
 [data-design='atlas'] .reading-layout::after { content: ''; grid-area: rule; height: 0; margin-bottom: 34px; border-top: 1px solid var(--ink); }
 [data-design='atlas'] .reading-main { display: contents; }
 [data-design='atlas'] .frontis { grid-area: front; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr); gap: 36px; align-items: end; padding-bottom: 40px; }
 [data-design='atlas'] .frontis .plate-mount { order: -1; }
 [data-design='atlas'] .frontis:not(:has(.plate-mount)) { grid-template-columns: minmax(0, 760px); }
 [data-design='atlas'] .on-page { grid-area: toc; }
+/* The outline is a framed panel on the sidebar shade; it bleeds into the margin so its text keeps the content edge. */
+@media (min-width: 981px) {
+  [data-design='atlas'] .on-page { margin-inline: -22px; padding: 26px 22px 32px; border: 1px solid var(--line); background: var(--sidebar); }
+}
 [data-design='atlas'] .visual-guide { grid-area: guide; }
 [data-design='atlas'] .article { grid-area: article; padding-top: 0; }
 .plate-margin { grid-area: margin; position: sticky; top: calc(var(--header-height) + 60px); align-self: start; display: grid; gap: 18px; min-width: 0; max-width: 260px; transition: opacity .2s ease, transform .28s ease, visibility 0s; font: 400 12px/1.5 var(--mono); color: var(--muted); }
 .plate-margin > div { padding-top: 10px; border-top: 1px solid var(--line); }
 .plate-margin p { margin: 4px 0 0; }
 .plate-margin .plate-species { font-size: 17px; color: var(--ink); }
-:root:not(.js) .margin-current { display: none; }
 .plate-end { grid-area: end; position: relative; isolation: isolate; overflow: clip; margin-top: 40px; padding: 28px 0 80px; border-top: 1px solid var(--ink); }
 .plate-turn { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .turn-card { display: grid; grid-template-columns: 132px minmax(0, 1fr); column-gap: 18px; row-gap: 4px; align-items: center; align-content: center; padding: 14px; border: 1px solid var(--line); background: var(--surface); text-decoration: none; transition: transform .4s var(--atlas-ease), border-color .3s; }
@@ -221,7 +226,7 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
 /* Running head: plate and current chapter, as printed atlases repeat them. */
 .running-head { position: fixed; z-index: 15; left: 0; right: 0; top: var(--header-height); border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px); opacity: 0; transform: translateY(-110%); pointer-events: none; transition: transform .35s var(--atlas-ease), opacity .25s; }
 .running-head.is-on { opacity: 1; transform: none; pointer-events: auto; }
-.running-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1440px; height: 40px; margin-inline: auto; padding: 0 var(--atlas-inset); font: 400 12px/1 var(--mono); letter-spacing: .04em; color: var(--muted); }
+.running-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1600px; height: 40px; margin-inline: auto; padding: 0 var(--atlas-inset); font: 400 12px/1 var(--mono); letter-spacing: .04em; color: var(--muted); }
 .running-plate { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .running-plate b { font-weight: 500; color: var(--accent); }
 .running-chapter { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -234,6 +239,7 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
 [data-design='atlas'] .search-wrap input { border-radius: 6px; font-size: 13px; }
 [data-design='atlas'] .search-status { font-family: var(--mono); }
 [data-design='atlas'] .toc-document-title { border: 0; padding-bottom: 0; margin-bottom: 8px; font: italic 600 16px/1.25 var(--display); color: var(--muted); }
+[data-design='atlas'] .contents { margin-left: -3px; padding-left: 3px; } /* Room for the enlarged current-chapter dot inside the scrolling outline. */
 [data-design='atlas'] .toc-link { position: relative; display: block; padding: 4px 0 4px 20px; border-left: 0; background: none; color: var(--ink); font-size: 14px; line-height: 1.3; }
 [data-design='atlas'] .toc-link::before { content: ''; position: absolute; left: 0; top: calc(4px + .65em - 4px); width: 7px; height: 7px; border: 1px solid var(--chapter-ink); border-radius: 50%; transition: background-color .3s, transform .3s var(--atlas-ease); }
 [data-design='atlas'] .toc-link:hover { background: none; color: var(--chapter-ink); }
@@ -269,7 +275,9 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
 [data-design='atlas'] .visual-guide { border-radius: 0; }
 [data-design='atlas'] .visual-guide > summary { font: 500 11.5px/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
 [data-design='atlas'] .explorer-head h2, [data-design='atlas'] .explorer-panel h3 { font-family: var(--display); font-weight: 600; }
-[data-design='atlas'] .search-dialog { border-radius: 0; }
+[data-design='atlas'] :is(.search-dialog, .shortcuts-dialog, .share-dialog) { border-radius: 0; }
+[data-design='atlas'] :is(.sharing-card, .share-link input) { border-radius: 0; }
+[data-design='atlas'] :is(.share-targets, .share-end, .share-link) .small-button { border-radius: 999px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; }
 [data-design='atlas'] .dialog-head h2 { font: italic 600 24px/1 var(--display); }
 [data-design='atlas'] .search-result small { font-family: var(--mono); letter-spacing: .06em; }
 
@@ -320,12 +328,9 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
 [data-design='atlas'] .on-page { transition: opacity .2s ease, transform .28s ease, visibility 0s; }
 [data-design='atlas'] .focus-mode :is(.on-page, .plate-margin) { opacity: 0; transform: translateX(-18px); visibility: hidden; pointer-events: none; transition-delay: 0s, 0s, .28s; }
 [data-design='atlas'] .focus-mode .plate-margin { transform: translateX(18px); }
-[data-design='atlas'] .focus-mode :is(.running-head, .plate-bar) { opacity: 0; transform: translateY(-110%); pointer-events: none; }
-[data-design='atlas'] .focus-mode .plate-bar { transform: translateY(110%); }
-.plate-bar { transition: transform .28s ease, opacity .2s ease; }
+[data-design='atlas'] .focus-mode .running-head { opacity: 0; transform: translateY(-110%); pointer-events: none; }
+[data-design='atlas'] .plate-bar { font: 500 12px/1 var(--mono); letter-spacing: .04em; }
 
-/* Mobile plate bar. */
-.plate-bar { display: none; }
 
 @media screen and (prefers-reduced-motion: no-preference) {
   body[data-page='collection'] .atlas-spread-wrap { --entrance-y: -48px; transform-origin: 50% 0; animation: collection-enter 1s ease .5s backwards; }
@@ -334,24 +339,20 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
   [data-design='atlas'] .reading-layout { --atlas-toc: 210px; grid-template-columns: var(--atlas-toc) minmax(0, 1fr); grid-template-areas: 'front front' 'rule rule' 'toc guide' 'toc article' 'end end'; --atlas-gap: 40px; }
   [data-design='atlas'] .plate-margin { display: none !important; }
 }
-@media (max-width: 1180px) {
-  :root[data-design='atlas'] { --atlas-inset: 35px; }
-}
 @media (max-width: 980px) {
-  [data-design='atlas'] .reading-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'front' 'rule' 'toc' 'guide' 'article' 'end'; padding: 20px 30px 0; }
+  [data-design='atlas'] .reading-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'front' 'rule' 'toc' 'guide' 'article' 'end'; padding: 20px var(--atlas-inset) 0; }
   [data-design='atlas'] .frontis { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-bottom: 28px; }
   [data-design='atlas'] .reading-layout::after { margin-bottom: 18px; }
   [data-design='atlas'] .on-page { margin-bottom: 18px; }
   [data-design='atlas'] .collection-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'wordmark' 'intro'; }
-  [data-design='atlas'] .collection-intro { padding: 18px 20px; }
+  [data-design='atlas'] .collection-intro { padding: 8px 0; }
   .atlas-spread { grid-template-columns: minmax(0, 1fr); }
   .spread-verso::after { display: none; }
 }
 @media (max-width: 760px) {
-  :root[data-design='atlas'] { --atlas-inset: 22px; }
   [data-design='atlas'] .plates-trigger { width: 36px; height: 36px; padding: 0; justify-content: center; }
   [data-design='atlas'] .plates-trigger span { display: none; }
-  [data-design='atlas'] .reading-layout { padding: 16px 22px 0; }
+  [data-design='atlas'] .reading-layout { padding: 16px var(--atlas-inset) 0; }
   [data-design='atlas'] .topic-hero { padding: 16px; }
   [data-design='atlas'] .topic-hero h1 { font-size: 34px; }
   [data-design='atlas'] .topic-card { grid-template-columns: 104px minmax(0, 1fr); gap: 6px 16px; align-items: start; }
@@ -372,11 +373,6 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
   .running-title { display: none; }
   .running-chapter em { max-width: none; font-size: 14px; }
   .stamp-hero { --stamp: 380px; right: -150px; top: -60px; }
-  [data-design='atlas'] .plate-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; position: fixed; z-index: 25; left: 0; right: 0; bottom: 0; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--surface); font: 500 12px/1 var(--mono); letter-spacing: .04em; }
-  [data-design='atlas'] .plate-bar a { padding: 8px 4px; text-decoration: none; }
-  [data-design='atlas'] .plate-bar .plate-bar-next { text-align: right; }
-  [data-design='atlas'] .plate-bar button { padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: transparent; font: inherit; }
-  [data-design='atlas'] body:has(.plate-bar) .site-shell { padding-bottom: 60px; }
 }
 /* Phones: the header keeps Folio's exact layout. Topic pages reach other topics through the bottom bar. */
 @media (max-width: 480px) {

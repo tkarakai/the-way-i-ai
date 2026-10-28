@@ -75,7 +75,8 @@ export interface RenderedPage { id: string; title: string; description: string; 
 export interface PageLink { id: string; title: string; description: string }
 export interface SearchEntry { title: string; topic: string; href: string; text: string }
 export interface ShellOptions {
-  title: string; description: string; body: string; css: string; js: string;
+  /** Page title; omitted on the home page, whose title is the collection name alone. */
+  title?: string; description: string; body: string; css: string; js: string;
   themeJS: string; search: SearchEntry[];
   fonts: string; collection: Collection; topics: RenderedTopic[]; prefix?: string; page?: string;
   wordmarkBackground?: boolean; created?: string; updated?: string;

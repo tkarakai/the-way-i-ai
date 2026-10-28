@@ -135,6 +135,20 @@ for (const design of ['atlas', 'folio'] as const) {
   });
 }
 
+test('focus mode still animates after switching designs', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url(`topics/${registry.topics[0]}/index.html`));
+  await page.evaluate(() => document.fonts.ready);
+  for (const design of ['folio', 'atlas'] as const) {
+    await page.locator(`[data-design-choice="${design}"]`).click();
+    await expect(page.locator('html')).toHaveAttribute('data-design', design);
+    await expect(page.locator('html')).not.toHaveClass(/design-switching/);
+    await page.locator('[data-focus]').click();
+    expect(await page.evaluate(() => document.getAnimations().filter(animation => animation instanceof CSSTransition).length), design).toBeGreaterThan(0);
+    await page.keyboard.press('Escape');
+  }
+});
+
 test('the topic list drawer slides closed and the browse picture opens its topic', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(url('general-index/index.html'));
@@ -279,4 +293,277 @@ test('secret: triple-click plays the next trick; typing “ai” opens a menu th
   await expect(picker).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(picker).toHaveCount(0);
+});
+
+for (const design of ['atlas', 'folio'] as const) {
+  test(`${design}: F turns focus mode on and off, and is ignored while typing`, async ({ page, context }) => {
+    await context.addInitScript(choice => localStorage.setItem('the-way-i-ai-design', choice), design);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+    await page.locator('body').press('f');
+    await expect(page.locator('body')).toHaveClass(/focus-mode/);
+    await page.locator('body').press('f');
+    await expect(page.locator('body')).not.toHaveClass(/focus-mode/);
+    await page.locator('#section-search').fill('f');
+    await expect(page.locator('body')).not.toHaveClass(/focus-mode/);
+  });
+}
+
+for (const design of ['atlas', 'folio'] as const) {
+  test(`${design}: reading shortcuts move between chapters and topics, share, copy, and switch theme and design`, async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await context.addInitScript(choice => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('the-way-i-ai-design', choice); } }, design);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+    const chapters = page.locator('.toc-chapter > .toc-link');
+    const body = page.locator('body');
+    await body.press('j');
+    await expect(page).toHaveURL(new RegExp(`${await chapters.nth(0).getAttribute('href')}$`));
+    await body.press('j');
+    await expect(page).toHaveURL(new RegExp(`${await chapters.nth(1).getAttribute('href')}$`));
+    await expect(chapters.nth(1)).toHaveAttribute('aria-current', 'location');
+    await body.press('k');
+    await expect(page).toHaveURL(new RegExp(`${await chapters.nth(0).getAttribute('href')}$`));
+    await expect(chapters.nth(0)).toHaveAttribute('aria-current', 'location');
+    await body.press('c');
+    await expect(page.locator('.toast')).toContainText('copied');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`https://thewayiai.com/topics/${registry.topics[1]}/index.html${await chapters.nth(0).getAttribute('href')}`);
+    await body.press('s');
+    await expect(page.locator('.share-dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.share-dialog')).toBeHidden();
+    const theme = await page.locator('html').getAttribute('data-theme');
+    await body.press('t');
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', theme ?? '');
+    await body.press('d');
+    await expect(page.locator('html')).toHaveAttribute('data-design', design === 'atlas' ? 'folio' : 'atlas');
+    await body.press('d');
+    await expect(page.locator('html')).toHaveAttribute('data-design', design);
+    await body.press(']');
+    await expect(page).toHaveURL(new RegExp(`topics/${registry.topics[2]}/index.html`));
+    await page.locator('body').press('[');
+    await expect(page).toHaveURL(new RegExp(`topics/${registry.topics[1]}/index.html`));
+    await page.locator('body').press('g');
+    await page.locator('body').press('i');
+    await expect(page).toHaveURL(/general-index\/index\.html$/);
+    await page.locator('body').press('g');
+    await page.locator('body').press('h');
+    await expect(page).toHaveURL(/\/index\.html$/);
+    await expect(page.locator('body')).toHaveAttribute('data-page', 'collection');
+  });
+}
+
+test('← → browse the topics on the home page without selecting the spread first', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url('index.html'));
+  const title = page.locator('.spread-recto h3');
+  const first = await title.innerText();
+  await page.locator('body').press('ArrowRight');
+  await expect(title).not.toHaveText(first);
+  await page.locator('body').press('ArrowLeft');
+  await expect(title).toHaveText(first);
+});
+
+test('home: J/K select topics in the list, the spread follows, and Enter opens the selection', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url('index.html'));
+  const cards = page.locator('.topic-card');
+  await page.locator('body').press('j');
+  await expect(cards.nth(0)).toBeFocused();
+  await page.keyboard.press('j');
+  await expect(cards.nth(1)).toBeFocused();
+  await expect(page.locator('[data-atlas-spread]')).toHaveAttribute('data-href', (await cards.nth(1).getAttribute('href'))!);
+  await page.keyboard.press('End');
+  await expect(cards.last()).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(cards.first()).toBeFocused();
+  await page.keyboard.press('j');
+  const href = (await cards.nth(1).getAttribute('href'))!;
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new RegExp(href.replace(/\./g, '\\.') + '$'));
+});
+
+test('home: the spread is one Tab stop; arrows select a topic and Enter opens it', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url('index.html'));
+  const spread = page.locator('[data-atlas-spread]');
+  await expect(spread.locator('a:not([tabindex="-1"]), button:not([tabindex="-1"])')).toHaveCount(0);
+  await page.locator('body').press('ArrowRight');
+  await expect(spread).toBeFocused();
+  const href = (await spread.getAttribute('data-href'))!;
+  expect(href).toBe(`topics/${registry.topics.at(-2)}/index.html`);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new RegExp(href.replace(/\./g, '\\.') + '$'));
+});
+
+for (const design of ['atlas', 'folio'] as const) {
+  test(`${design}: skip links reach the text or the outline, J moves focus to the chapter, and G T shows all topics`, async ({ page, context }) => {
+    await context.addInitScript(choice => localStorage.setItem('the-way-i-ai-design', choice), design);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.skip-link').first()).toHaveText('Skip to the text');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => Boolean(document.activeElement?.closest('#text')))).toBe(true);
+    await page.locator('body').press('j');
+    const first = await page.locator('.toc-chapter > .toc-link').first().getAttribute('href');
+    await expect(page.locator(first!)).toBeFocused();
+    await page.keyboard.press('g');
+    await page.keyboard.press('t');
+    if (design === 'atlas') await expect(page.locator('.plates-menu')).toHaveAttribute('open', '');
+    else await expect(page.locator('.collection-contents')).toHaveAttribute('open', '');
+    await expect(page.locator(design === 'atlas' ? '.drawer-plate[aria-current="page"]' : '.nav-topic[aria-current="page"]')).toBeFocused();
+  });
+}
+
+test('the A–Z index steps through letters with J/K, and G A opens About', async ({ page }) => {
+  await page.goto(url('general-index/index.html'));
+  const letters = page.locator('.index-columns h2');
+  await page.locator('body').press('j');
+  await expect(letters.nth(0)).toBeFocused();
+  await page.keyboard.press('j');
+  await expect(letters.nth(1)).toBeFocused();
+  await page.keyboard.press('g');
+  await page.keyboard.press('a');
+  await expect(page).toHaveURL(/about\/index\.html$/);
+});
+
+for (const design of ['atlas', 'folio'] as const) {
+  test(`${design}: keys that need navigation leave focus mode; the others keep it`, async ({ page, context }) => {
+    await context.addInitScript(choice => localStorage.setItem('the-way-i-ai-design', choice), design);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+    const body = page.locator('body');
+    const focusMode = async () => { await body.press('f'); await expect(body).toHaveClass(/focus-mode/); };
+    await focusMode();
+    await body.press('j');
+    await expect(body).toHaveClass(/focus-mode/);
+    await page.keyboard.press('/');
+    await expect(body).not.toHaveClass(/focus-mode/);
+    await expect(page.locator('#section-search')).toBeFocused();
+    await expect(page.locator('#section-search')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await focusMode();
+    await page.keyboard.press('g');
+    await page.keyboard.press('t');
+    await expect(body).not.toHaveClass(/focus-mode/);
+    await expect(page.locator(design === 'atlas' ? '.plates-drawer' : '.collection-contents nav')).toBeVisible();
+  });
+}
+
+test('modals keep the page behind them still while their own content scrolls', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 560 });
+  await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+  const openers: [string, () => Promise<void>][] = [
+    ['shortcuts', () => page.locator('body').press('?')],
+    ['share', () => page.locator('body').press('s')],
+    ['drawer', async () => { await page.locator('body').press('g'); await page.keyboard.press('t'); }],
+  ];
+  for (const [name, open] of openers) {
+    await page.evaluate(() => scrollTo({ top: 3000, behavior: 'instant' }));
+    // The header compacts after a jump and the page settles; measure once it has stopped moving.
+    let before = -1;
+    await expect.poll(async () => { const now = await page.evaluate(() => scrollY); const settled = now === before; before = now; return settled; }, { intervals: [150] }).toBe(true);
+    await open();
+    await expect(page.locator('dialog[open], .plates-menu[open]')).toHaveCount(1);
+    for (let press = 0; press < 8; press++) await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('PageDown');
+    expect(await page.evaluate(() => scrollY), name).toBe(before);
+    if (name === 'shortcuts') expect(await page.locator('.shortcuts-dialog').evaluate(dialog => dialog.scrollTop)).toBeGreaterThan(0);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('dialog[open], .plates-menu[open]')).toHaveCount(0);
+    expect(await page.evaluate(() => scrollY), name).toBe(before);
+  }
+});
+
+test('“?” lists this page’s keyboard shortcuts and Esc closes them without leaving focus mode', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+  await page.locator('[data-focus]').click();
+  await page.locator('body').press('?');
+  const dialog = page.locator('.shortcuts-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Find on this page');
+  await expect(dialog).toContainText('Previous or next topic');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('body')).toHaveClass(/focus-mode/);
+  // The home page lists only the keys it understands.
+  await page.goto(url('index.html'));
+  await page.locator('.footer-shortcuts').click();
+  await expect(page.locator('.shortcuts-dialog')).toContainText('Browse the topics');
+  await expect(page.locator('.shortcuts-dialog')).not.toContainText('Find on this page');
+});
+
+test('the share button shows the page’s own card and copies its canonical link', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url(`topics/${registry.topics[0]}/index.html`));
+  await page.locator('.masthead [data-open-share]').click();
+  const dialog = page.locator('.share-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading')).toHaveText('Share this topic');
+  const image = dialog.locator('.sharing-card img');
+  await expect(image).toHaveAttribute('src', /^\.\.\/\.\.\/assets\/sharing\/.+\.jpg$/);
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(1200);
+  await expect(dialog.locator('.sharing-title')).toHaveText(await page.locator('h1').innerText());
+  const link = `https://thewayiai.com/topics/${registry.topics[0]}/index.html`;
+  await expect(dialog.locator('#share-url')).toHaveValue(link);
+  await expect(dialog.locator('[data-share-target="linkedin"]')).toHaveAttribute('href', `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`);
+  await dialog.locator('[data-copy-link]').click();
+  await expect(dialog.locator('[data-copy-link]')).toHaveText('Copied ✓');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  // Phone topic pages have no room in the masthead; the topic ends with its own share button.
+  await page.setViewportSize({ width: 390, height: 800 });
+  await expect(page.locator('.masthead [data-open-share]')).toBeHidden();
+  await page.locator('.share-end button').click();
+  await expect(dialog).toBeVisible();
+});
+
+test('the Atlas logo, content and GitHub icon share both edges at every width', async ({ page }) => {
+  for (const width of [390, 900, 1180, 1440, 1728, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+    const edges = await page.evaluate(() => {
+      const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+      return [Math.round(box('.brand .wordmark').left) - Math.round(box('.frontis').left), Math.round(box('.repo-link').right) - Math.round(box('.frontis').right)];
+    });
+    expect(edges, `${width}px`).toEqual([0, 0]);
+  }
+});
+
+test('dates read as how long ago, with the exact date on hover, and the A–Z index is in every footer', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-28T12:00:00'));
+  await page.goto(url('topics/worktrees/index.html'));
+  // Let the header's arrival finish, so the pointer stays over the date.
+  await page.evaluate(() => document.getAnimations().forEach(animation => animation.finish()));
+  const created = page.locator('.topic-dates time').first();
+  await expect(created).toHaveAttribute('datetime', '2026-02-16');
+  await expect(created.locator('.date-relative')).toHaveText('8 months ago');
+  await expect(created.locator('.date-exact')).toHaveText('Feb 16, 2026');
+  await expect(created.locator('.date-exact')).toHaveCSS('opacity', '0');
+  await created.hover();
+  await expect(created.locator('.date-exact')).toHaveCSS('opacity', '1');
+  await page.locator('.footer-links').getByRole('link', { name: 'A–Z index' }).click();
+  await expect(page).toHaveURL(/general-index\/index\.html$/);
+});
+
+for (const design of ['atlas', 'folio'] as const) {
+  test(`${design}: the phone bottom bar shows the neighbouring animals`, async ({ page, context }) => {
+    await context.addInitScript(choice => localStorage.setItem('the-way-i-ai-design', choice), design);
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+    await expect(page.locator('.plate-bar')).toBeVisible();
+    await expect(page.locator('.plate-bar .bar-portrait')).toHaveCount(2);
+    await expect(page.locator('.plate-bar a').first()).toHaveAccessibleName(/previous topic/);
+  });
+}
+
+test('topics close with their own animal', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+  await expect(page.locator('[data-tailpiece] img')).toHaveCount(1);
 });

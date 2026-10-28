@@ -4,7 +4,7 @@ created: 2026-09-27
 updated: 2026-10-26
 description: >-
   The application can replace the starter's entire design. How should the starter
-  be architected to remain useful and keep delivering improvements to that different product?
+  be built to stay useful and keep improving that different product?
 thesis: Let the application become its own product.
 ---
 

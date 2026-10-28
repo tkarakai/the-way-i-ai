@@ -34,7 +34,7 @@ for (const width of [1440, 390, 320]) {
       expect(await page.locator('.toc-chapter > .toc-link').allTextContents()).toEqual(chapters.map(heading => heading.text));
       expect(await page.locator('.toc-chapter > ol > li > .toc-link').allTextContents()).toEqual(subsections.map(heading => heading.text));
       expect(await page.locator('.toc-chapter').evaluateAll(items => items.slice(0, 4).map(item => getComputedStyle(item).marginTop)))
-        .toEqual(['0px', '8px', '8px', '22px']);
+        .toEqual(['0px', '8px', '8px', '8px']);
       const rhythm = await page.evaluate(() => {
         const first = document.querySelector<HTMLElement>('.prose h2')!;
         const chapter = document.querySelectorAll<HTMLElement>('.prose h2')[1];

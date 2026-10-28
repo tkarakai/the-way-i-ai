@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://github.com/tkarakai/the-way-i-ai/actions/workflows/pages.yml"><img alt="Build, test, and publish status" src="https://github.com/tkarakai/the-way-i-ai/actions/workflows/pages.yml/badge.svg?branch=main"></a>
   <a href="https://thewayiai.com/"><img alt="Live site status" src="https://img.shields.io/website?url=https%3A%2F%2Fthewayiai.com%2F&amp;label=live%20site"></a>
-  <a href="#editing-and-adding-topics"><img alt="Node.js 24 or newer" src="https://img.shields.io/badge/Node.js-24%2B-5FA04E?logo=nodedotjs&amp;logoColor=white"></a>
+  <a href="#editing-and-adding-topics-notes-to-self"><img alt="Node.js 24 or newer" src="https://img.shields.io/badge/Node.js-24%2B-5FA04E?logo=nodedotjs&amp;logoColor=white"></a>
 </p>
 
 <p align="center"><strong><a href="https://thewayiai.com/">Explore the interactive collection →</a></strong></p>
@@ -34,14 +34,24 @@ Each topic has authoritative source documents and assets, plus a complete, inter
 | **03 · A web app starter kit built for the long run** | Architect the starter to stay useful when downstream applications replace its design, without making future improvements undo their product choices. | [The architecture](topics/web-app-starter-kit/README.md) · [Original notes](topics/web-app-starter-kit/web_app_starter_upgrade_notes.md) | [Read online](https://thewayiai.com/topics/web-app-starter-kit/index.html) |
 | **04 · Just Enough Context (JEC)** | Give specialist agents focused context and humans small, timely decisions, backed by reusable project knowledge. | [The concept](topics/just-enough-context/README.md) | [Read online](https://thewayiai.com/topics/just-enough-context/index.html) |
 
+## About this repository
+
+This is a personal publication, not a template or a product. I keep the repository public so the ideas and the way they are presented can be seen together: the Markdown sources, the small generator that turns them into the site, and the design system behind both designs are all here to read.
+
+It is not meant to be cloned or forked and run as-is. The generator, checks, and design system are shaped around this one collection: its two designs, its artwork, its domain, and whatever I changed my mind about last week. If you want to build something similar, start a new repository of your own and borrow only the ideas that help, such as Markdown as the single source of truth, self-contained pages that also work offline, or sharing cards generated from the same sources.
+
+Everything below about building, checking, previewing, and publishing is a set of notes to myself, and to the AI agents that help me maintain the site. The notes are accurate for my setup, but they are not a supported way for anyone else to run it.
+
+Reuse terms are on the [licensing page](https://thewayiai.com/licensing/index.html): the articles are CC BY-NC 4.0, the code is MIT, and the illustrations and branding are not offered for reuse.
+
 ## Sources and presentation
 
-This repository is a small static-site generator. Its source of truth is **Markdown (including YAML front matter) + authored assets**. HTML is generated from those sources; it contains no independently maintained ideas.
+*Notes to self from here on.* This repository is a small static-site generator. Its source of truth is **Markdown (including YAML front matter) + authored assets**. HTML is generated from those sources; it contains no independently maintained ideas.
 
 ```text
 AGENTS.md                      Primary guide for maintaining content and presentation
 CLAUDE.md                      Points to AGENTS.md
-README.md                      Collection overview and build/publishing instructions
+README.md                      Collection overview and maintenance notes
 index.html                     Generated contents page
 package.json                   Build commands and development dependencies
 package-lock.json              Pinned dependency tree
@@ -77,19 +87,21 @@ Topic illustration folders are optional and may not exist until artwork is deliv
 
 Diagrams, when authored, are content: their SVG sources live with their topic, where their labels and relationships can be reviewed. Interactive panels reuse sections or named excerpts from Markdown. Short labels and bindings live in the main README's YAML front matter. Shared components arrange these sources without knowing which topic they represent.
 
-## Reading locally
+## Reading offline
 
-Download or clone the repository and open `index.html` in a modern browser. Every HTML file embeds its styles, scripts, fonts, diagrams, and complete text. Cards, contents links, and next-topic links use relative paths with explicit `index.html` filenames, so navigation works through `file://` when the folder structure is kept intact. An individual topic HTML file also works offline when copied on its own, but links to other pages need those files alongside it in their original locations.
+Read the collection on the [live site](https://thewayiai.com/). Every generated HTML file embeds its styles, scripts, fonts, diagrams, and complete text. Cards, contents links, and next-topic links use relative paths with explicit `index.html` filenames, so navigation works through `file://` when the folder structure is kept intact. An individual topic HTML file also works offline when copied on its own, but links to other pages need those files alongside it in their original locations.
 
 GitHub's repository file viewer shows HTML source; the [live site](https://thewayiai.com/) serves the interactive edition. Documentation links lead to that live site, while navigation inside the generated HTML stays relative for both hosted and local reading. The rendered pages contain no links to raw Markdown; source documents remain available in the repository.
 
-The site has two designs, switched with Atlas/Folio at the top right. **Field Atlas**, the default, presents each topic with its wildlife portrait mounted like a naturalist's illustration: browse the topics on the home page with the arrows or ← →, open “All topics” from the header, follow the running head as you read, and go to the previous or next topic with `[` and `]`. An A–Z index lists every chapter. Your choice is remembered, and switching keeps your place.
+The site has two designs, switched with Atlas/Folio at the top right. **Field Atlas**, the default, presents each topic with its wildlife portrait mounted like a naturalist's illustration: browse the topics on the home page with the arrows or ← →, open “All topics” from the header, follow the running head as you read, and go to the previous or next topic with `[` and `]`. An A–Z index, linked from every footer, lists every chapter. Your choice is remembered, and switching keeps your place.
 
 The Folio edition includes local collection-wide search (⌘/Ctrl+K), section search (`/`), an expandable collection sidebar, and optional visual guides. Topic headers compact while you scroll. Use the header’s “Focus on reading” icon to hide navigation, then “Show navigation” or Escape to restore it. On desktop, drag the column boundaries or focus their resize handles and use Left/Right arrows to adjust the navigation and reading widths. When browser storage is available, the site remembers those widths, focus mode, and whether you opened the initially collapsed collection sidebar. It also restores each topic’s reading position unless you follow a link to a specific section.
 
 The icon next to GitHub switches directly to the opposite theme: a moon for Dark, a sun for Light. System is the default and follows device changes; a manual choice resets to System after two hours without scrolling, typing, or navigation. All text is readable without JavaScript.
 
-## Editing and adding topics
+In both designs, the header’s share icon (on phones, the button at the end of a topic) shows the page’s sharing card with its link to copy, the device’s share sheet where there is one, and email and social links. Dates read as how long ago, to the month; hover or tap one for the exact date. Press `?` for the keyboard shortcuts.
+
+## Editing and adding topics (notes to self)
 
 Use Node.js 24 or newer for building. Node.js and npm are not needed for reading.
 
@@ -125,7 +137,7 @@ See [AGENTS.md](AGENTS.md) for the complete authoring contract, examples, and ve
 
 Worktree installation paths changed when the topic moved. Existing shell functions should now source `topics/worktrees/worktree-new.sh` and `topics/worktrees/worktree-done.sh`; the topic's installation examples show the full commands.
 
-## Previewing an in-progress branch
+## Previewing an in-progress branch (notes to self)
 
 ```sh
 npm run preview
@@ -141,9 +153,9 @@ For the draggable wave editor, open `previews/title-wave-editor.html`; regenerat
 
 Every pull request also produces a **site-preview-pr-N** artifact in its **Publish collection** workflow run. Follow the download link in the run summary, unzip the artifact, and open `index.html`. The artifact includes the complete offline site and supporting source files, expires after 14 days, and does not change the public Pages site.
 
-## GitHub Pages
+## Publishing to GitHub Pages (notes to self)
 
-The collection is published at **[thewayiai.com](https://thewayiai.com/)**. GitHub Pages is configured to deploy through GitHub Actions. The [included workflow](.github/workflows/pages.yml) runs the checks described in [Editing and adding topics](#editing-and-adding-topics), including browser acceptance tests, before deploying the clean `_site/` bundle. It does not publish the repository root or build dependencies.
+The collection is published at **[thewayiai.com](https://thewayiai.com/)**. GitHub Pages is configured to deploy through GitHub Actions. The [included workflow](.github/workflows/pages.yml) runs the checks described in [Editing and adding topics](#editing-and-adding-topics-notes-to-self), including browser acceptance tests, before deploying the clean `_site/` bundle. It does not publish the repository root or build dependencies.
 
 To prepare the publication bundle locally:
 
@@ -155,6 +167,6 @@ This recreates `_site/` from the same sources, including supporting topic files.
 
 Pull requests run the same checks and build, without deployment. Pushes to `main` and manual runs of **Publish collection** from `main` deploy after checks pass. Local builds and branch previews do not publish the current branch.
 
-See [Reading locally](#reading-locally) for navigation behavior and [AGENTS.md](AGENTS.md#building-and-publishing) for the link-authoring contract.
+See [Reading offline](#reading-offline) for navigation behavior and [AGENTS.md](AGENTS.md#building-and-publishing) for the link-authoring contract.
 
 Reference: [GitHub's custom Pages workflow guide](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).

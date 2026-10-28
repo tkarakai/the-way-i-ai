@@ -15,6 +15,8 @@ export function splitFrontMatter(source: string, file: string): { metadata?: Rec
   return { metadata: metadata as Record<string, unknown>, body: rest.slice(closing.index + closing[0].length) };
 }
 
+export const maxDescriptionLength = 155;
+
 /** The main README owns topic metadata; document titles and headings remain Markdown. */
 export function topicSource(source: string, file: string): { topic: Topic; body: string } {
   const { metadata, body } = splitFrontMatter(source, file);
@@ -32,6 +34,8 @@ export function topicSource(source: string, file: string): { topic: Topic; body:
     category: text('category'), description: text('description'), thesis: text('thesis'),
     documents: [{ file: 'README.md' }],
   };
+  // Collection lists show the description in two lines; longer copy would be cut off.
+  if (topic.description.length > maxDescriptionLength) throw new Error(`${file}: front matter "description" has ${topic.description.length} characters; keep it to ${maxDescriptionLength} or fewer.`);
   for (const key of ['created', 'updated'] as const) {
     if (metadata[key] === undefined) continue;
     const value = text(key);

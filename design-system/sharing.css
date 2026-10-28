@@ -1,7 +1,7 @@
 /* The approved static 1200 × 630 Atlas sharing-card layout. */
 * { box-sizing: border-box; animation: none !important; transition: none !important; }
 html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
-body { background: #e5e9e1; color: #1d2620; }
+body { background: #e7e9e3; color: #1d2620; }
 .share-card { position: relative; width: 1200px; height: 630px; overflow: hidden; padding: 48px 56px; isolation: isolate; }
 .share-card::after { content: ''; position: absolute; inset: 20px; border: 1px solid #aebaaa; pointer-events: none; }
 .share-kicker, .share-foot, .share-category { font-family: 'IBM Plex Mono'; font-size: 16px; line-height: 1.4; letter-spacing: .05em; }

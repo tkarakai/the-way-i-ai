@@ -30,6 +30,7 @@ test('front matter rejects ambiguous, mistyped, or malformed metadata', () => {
     [`---\n${metadata}presentation: article\n---\n${body}`, /unsupported front matter field/],
     [`---\n${metadata.replace('category: Agentic software development', 'category: 42')}---\n${body}`, /category.*nonempty string/],
     [`---\n${metadata.replace('description: >-\n  One description,\n  folded across lines.\n', '')}---\n${body}`, /description.*nonempty string/],
+    [`---\n${metadata.replace('One description,\n  folded across lines.', 'x'.repeat(156))}---\n${body}`, /description.*156 characters.*155 or fewer/],
     [`---\n${metadata.replace('thesis: "Knowledge: available when needed."', 'thesis: ""')}---\n${body}`, /thesis.*nonempty string/],
     [`---\n- not a mapping\n---\n${body}`, /must be a mapping/],
     [`---\n${metadata}cover: 42\n---\n${body}`, /cover.*nonempty string/],

@@ -20,7 +20,7 @@ test('scrolling, typing, and navigation extend the override rather than its orig
   await expect.poll(() => page.locator('.contents').evaluate(node => node.scrollTop)).toBeGreaterThan(0);
   await page.clock.fastForward(hour + hour / 4);
   await expect(page.locator('html')).toHaveAttribute('data-theme-preference', 'dark');
-  await page.getByRole('searchbox', { name: 'Search this page', exact: true }).fill('worktree');
+  await page.getByRole('searchbox', { name: 'Find on this page', exact: true }).fill('worktree');
   await page.clock.fastForward(hour + hour / 4);
   await expect(page.locator('html')).toHaveAttribute('data-theme-preference', 'dark');
   await page.locator('.brand').click();

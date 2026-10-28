@@ -42,6 +42,7 @@ const fontLicenses = await Promise.all(['newsreader-OFL.txt', 'dm-sans-OFL.txt',
 // Folio: Newsreader + DM Sans. Field Atlas: Cormorant Garamond, Spectral and IBM Plex Mono (Newsreader stays for the wordmark).
 const fontFaces: [name: string, path: string, style: string, weight: string][] = [
   ['Newsreader', '@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2', 'normal', '100 900'],
+  ['Newsreader', '@fontsource-variable/newsreader/files/newsreader-latin-wght-italic.woff2', 'italic', '100 900'],
   ['DM Sans', '@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2', 'normal', '100 900'],
   ['Cormorant Garamond', '@fontsource-variable/cormorant-garamond/files/cormorant-garamond-latin-wght-normal.woff2', 'normal', '300 700'],
   ['Cormorant Garamond', '@fontsource-variable/cormorant-garamond/files/cormorant-garamond-latin-wght-italic.woff2', 'italic', '300 700'],
@@ -259,7 +260,7 @@ const metadataFor = (path: string) => {
   if (!page) throw new Error(`Missing publication metadata: ${path}`);
   return pageMetadata(registry, page) + iconMetadata(publicIcons, path) + feedLink(registry);
 };
-outputs.set('index.html', shell({ headMetadata: metadataFor('index.html'), title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, topics, wordmarkBackground, sitePages: pageLinks }));
+outputs.set('index.html', shell({ headMetadata: metadataFor('index.html'), description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, topics, wordmarkBackground, sitePages: pageLinks }));
 outputs.set('general-index/index.html', shell({ headMetadata: metadataFor('general-index/index.html'), title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, body: indexBody(topics), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../', page: 'index', wordmarkBackground, sitePages: pageLinks }));
 for (const topic of topics) {
   const fingerprints = `<!-- Markdown sources: ${topic.rendered.map(doc => `${doc.file} sha256:${doc.sha256}`).join('; ')} -->\n`;

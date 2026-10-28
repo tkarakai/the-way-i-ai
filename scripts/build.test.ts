@@ -170,8 +170,8 @@ test('front-matter dates work without Git and omit redundant same-day updates', 
     assert.equal((dates.match(/<time /g) ?? []).length, count);
     assert.match(html, /article:published_time" content="2024-01-02"/);
     assert.ok(html.includes(`article:modified_time" content="${date}"`));
-    assert.match(dates, /Created<\/dt><dd><time datetime="2024-01-02">Jan 2, 2024<\/time>/);
-    if (count === 2) assert.match(dates, /Last Updated<\/dt><dd><time datetime="2025-03-04">Mar 4, 2025<\/time>/);
+    assert.match(dates, /Created<\/dt><dd><time datetime="2024-01-02" data-age>Jan 2, 2024<\/time>/);
+    if (count === 2) assert.match(dates, /<dt>Updated<\/dt><dd><time datetime="2025-03-04" data-age>Mar 4, 2025<\/time>/);
   }
 });
 

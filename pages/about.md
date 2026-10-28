@@ -22,6 +22,10 @@ The ideas originate with me. AI contributes heavily to developing and expressing
 
 The words get help. The judgment, and responsibility for what I publish, stays with me.
 
+## What’s up with the animals?
+
+No particular reason. Sometimes I need to remind myself that nature is out there, beyond the screen and the terminal. And I like this style of wildlife illustration.
+
 ## Say hello (or point out a mistake)
 
 You can find me on [GitHub as tkarakai](https://github.com/tkarakai). If something here sparks an idea, seems wrong, or could be clearer, that’s the place to start.

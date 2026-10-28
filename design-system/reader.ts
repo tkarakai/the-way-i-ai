@@ -12,6 +12,36 @@
     else update();
   };
   (window as Window & { transitionPage?: typeof transitionPage }).transitionPage = transitionPage;
+  /**
+   * Dates read as how long ago, to the month (“8 months ago”, “last month”); the exact date appears on hover,
+   * and on a tap outside links. This runs in the browser, so generated HTML never depends on the build date;
+   * without JavaScript the exact date shows. Screen readers always get the exact date.
+   */
+  const age = (iso: string, now = new Date()) => {
+    const [year, month, day] = iso.split('-').map(Number);
+    let months = (now.getFullYear() - year) * 12 + now.getMonth() + 1 - month;
+    if (now.getDate() < day) months -= 1;
+    if (months <= 0) return now.getFullYear() === year && now.getMonth() + 1 === month ? 'this month' : 'last month';
+    if (months < 12) return months === 1 ? 'a month ago' : `${months} months ago`;
+    const years = Math.floor(months / 12), rest = months % 12;
+    return `${years === 1 ? 'a year' : `${years} years`}${rest ? ` and ${rest === 1 ? 'a month' : `${rest} months`}` : ''} ago`;
+  };
+  const ageDates = (scope: ParentNode = document) => scope.querySelectorAll<HTMLTimeElement>('time[data-age]:not(.has-age)').forEach(time => {
+    if (!/^\d{4}-\d{2}-\d{2}/.test(time.dateTime)) return;
+    const exact = document.createElement('span');
+    exact.className = 'date-face date-exact';
+    exact.textContent = time.textContent;
+    const relative = document.createElement('span');
+    relative.className = 'date-face date-relative';
+    relative.ariaHidden = 'true';
+    relative.textContent = age(time.dateTime.slice(0, 10));
+    time.replaceChildren(relative, exact);
+    time.classList.add('has-age');
+    // A tap shows the exact date; dates are not Tab stops, since screen readers already get the exact date.
+    if (!time.closest('a')) time.addEventListener('click', () => time.classList.toggle('is-exact'));
+  });
+  (window as Window & { ageDates?: typeof ageDates }).ageDates = ageDates;
+  ageDates();
   // Disclosures open and close by animating their height, so readers see where content goes.
   const animateDisclosure = (details: HTMLDetailsElement, enabled: () => boolean = () => true) => {
     const summary = details.querySelector<HTMLElement>(':scope > summary');
@@ -121,7 +151,7 @@
     const action = `Switch to ${oppositeTheme()} theme`;
     const current = root.dataset.themePreference === 'system' ? `System (${root.dataset.theme})` : root.dataset.theme;
     themeToggle.setAttribute('aria-label', action);
-    themeToggle.title = `${action}. Current: ${current}. Resets to System after 2 hours of inactivity.`;
+    themeToggle.title = `${action} (T). Current: ${current}. Resets to System after 2 hours of inactivity.`;
   };
   syncTheme();
   document.addEventListener('theme-change', syncTheme);
@@ -228,6 +258,106 @@
       event.preventDefault(); if (searchDialog.open) closeSearch(); else openSearch();
     }
   });
+  /** Modal dialogs that scale in and out, close on Escape or a backdrop click, and return focus where it was. */
+  const modal = (dialog: HTMLDialogElement) => {
+    let returnFocus: Element | null = null;
+    const open = () => {
+      if (dialog.open) return;
+      returnFocus = document.activeElement;
+      dialog.showModal();
+    };
+    const close = () => {
+      if (!dialog.open || dialog.classList.contains('is-closing')) return;
+      const finish = () => {
+        dialog.classList.remove('is-closing');
+        dialog.close();
+        if (returnFocus instanceof HTMLElement && returnFocus.isConnected) returnFocus.focus({ preventScroll: true });
+      };
+      if (reducedMotion.matches) { finish(); return; }
+      dialog.classList.add('is-closing');
+      dialog.addEventListener('animationend', finish, { once: true });
+    };
+    dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
+    // A click on the backdrop lands on the dialog itself, outside its box.
+    dialog.addEventListener('click', event => {
+      const box = dialog.getBoundingClientRect();
+      if (event.target === dialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) close();
+    });
+    dialog.querySelector('[data-close-dialog]')?.addEventListener('click', close);
+    return { open, close };
+  };
+  const typing = (event: KeyboardEvent) => event.metaKey || event.ctrlKey || event.altKey || (event.target instanceof Element && Boolean(event.target.closest('input,textarea,[contenteditable]')));
+
+  // Keyboard shortcuts: “?” (or the footer button) opens a short list of the keys this page understands.
+  const shortcutsDialog = document.querySelector<HTMLDialogElement>('.shortcuts-dialog');
+  if (shortcutsDialog) {
+    const shortcuts = modal(shortcutsDialog);
+    document.querySelectorAll('[data-open-shortcuts]').forEach(button => button.addEventListener('click', shortcuts.open));
+    document.addEventListener('keydown', event => {
+      if (event.key !== '?' || typing(event) || searchDialog.open || shareDialog?.open) return;
+      event.preventDefault();
+      if (shortcutsDialog.open) shortcuts.close(); else shortcuts.open();
+    });
+  }
+
+  // Sharing: the page's own Open Graph card, its canonical link to copy, the device's share sheet where there is one,
+  // and plain links to email and social sites (nothing loads from them until the reader follows one).
+  // Built bundles hold the card image beside the page; standalone files fall back to the published copy.
+  const meta = (name: string) => document.querySelector<HTMLMetaElement>(`meta[property="${name}"], meta[name="${name}"]`)?.content ?? '';
+  const shareDialog = document.querySelector<HTMLDialogElement>('.share-dialog');
+  if (shareDialog) {
+    const share = modal(shareDialog);
+    const url = meta('og:url') || location.href;
+    const title = meta('og:title') || document.title;
+    const description = meta('og:description');
+    const image = meta('og:image');
+    const card = shareDialog.querySelector<HTMLElement>('[data-share-card]')!;
+    card.querySelector('.sharing-site')!.textContent = new URL(url).hostname;
+    card.querySelector('.sharing-title')!.textContent = title;
+    card.querySelector('.sharing-description')!.textContent = description;
+    const picture = card.querySelector('img')!;
+    if (image) {
+      const base = image.slice(0, image.indexOf('assets/sharing/'));
+      const local = '../'.repeat(url.slice(base.length).split('/').length - 1) + image.slice(base.length);
+      picture.alt = meta('og:image:alt');
+      picture.addEventListener('error', () => { if (picture.getAttribute('src') !== image) picture.src = image; else card.classList.add('no-image'); });
+      // The image loads only when the dialog first opens.
+      shareDialog.addEventListener('share-open', () => { if (!picture.getAttribute('src')) picture.src = local; });
+    } else card.classList.add('no-image');
+    const field = shareDialog.querySelector<HTMLInputElement>('#share-url')!;
+    field.value = url;
+    field.addEventListener('focus', () => field.select());
+    const encoded = encodeURIComponent(url);
+    const targets: Record<string, string> = {
+      email: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`${description}\n\n${url}`)}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`,
+      bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${title} ${url}`)}`,
+      x: `https://x.com/intent/post?url=${encoded}&text=${encodeURIComponent(title)}`,
+    };
+    shareDialog.querySelectorAll<HTMLAnchorElement>('[data-share-target]').forEach(link => { link.href = targets[link.dataset.shareTarget!]; });
+    const copy = shareDialog.querySelector<HTMLButtonElement>('[data-copy-link]')!;
+    let copiedTimer: ReturnType<typeof setTimeout>;
+    copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(url); } catch { field.focus(); field.select(); document.execCommand('copy'); }
+      copy.textContent = 'Copied ✓';
+      clearTimeout(copiedTimer);
+      copiedTimer = setTimeout(() => { copy.textContent = 'Copy link'; }, 2000);
+    });
+    const native = shareDialog.querySelector<HTMLButtonElement>('[data-share-native]')!;
+    if (typeof navigator.share === 'function') {
+      native.hidden = false;
+      native.addEventListener('click', () => { navigator.share({ title, text: description, url }).catch(() => {}); });
+    }
+    document.querySelectorAll('[data-open-share]').forEach(button => button.addEventListener('click', () => { shareDialog.dispatchEvent(new Event('share-open')); share.open(); }));
+  }
+  // A tailpiece closes the topic with its own animal, reusing the topic list's thumbnail rather than embedding it twice.
+  const tailpiece = document.querySelector<HTMLElement>('[data-tailpiece]');
+  const ownPortrait = document.querySelector<HTMLImageElement>('.drawer-plate[aria-current="page"] img');
+  if (tailpiece && ownPortrait) {
+    const image = document.createElement('img');
+    image.src = ownPortrait.src; image.alt = ''; image.decoding = 'async';
+    tailpiece.append(image);
+  }
   const focusButton = document.querySelector<HTMLButtonElement>('[data-focus]');
   const setFocusMode = (focused: boolean, animate = true, persist = true) => {
     if (!focusButton || document.body.classList.contains('focus-mode') === focused) return;
@@ -237,7 +367,7 @@
     focusButton.setAttribute('aria-pressed', String(focused));
     const label = focused ? 'Show navigation' : 'Focus on reading';
     focusButton.setAttribute('aria-label', label);
-    focusButton.title = focused ? 'Show navigation (Esc)' : label;
+    focusButton.title = focused ? 'Show navigation (F or Esc)' : `${label} (F)`;
     const after = focusButton.getBoundingClientRect();
     if (animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       focusButton.animate([
@@ -251,10 +381,140 @@
   if (focusButton && readPreference('focus-mode') === 'true') setFocusMode(true, false, false);
   focusButton?.addEventListener('click', () => setFocusMode(!document.body.classList.contains('focus-mode')));
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape' || !document.body.classList.contains('focus-mode') || !focusButton) return;
+    if (event.key !== 'Escape' || !document.body.classList.contains('focus-mode') || !focusButton || document.querySelector('dialog[open], .plates-menu[open]')) return;
     event.preventDefault();
     setFocusMode(false);
     focusButton.focus({ preventScroll: true });
+  });
+  /*
+   * Keyboard model, listed by “?”, the same in both designs. None of these act while typing or with a dialog open.
+   * Move: J/K go to the next or previous item on any page (topics on the home page, chapters, letters, sections),
+   *   moving real focus so Enter, Tab and screen readers follow. Home/End jump to the first or last topic.
+   * Open: Enter opens the selected topic (it is a focused link, or the focused spread).
+   * Go: G then H home, I A–Z index, T all topics, A About; [ and ] previous or next topic.
+   * Change: T theme, D design, F focus mode, S share, C copies a link to the current section.
+   */
+  const page = document.body.dataset.page ?? '';
+  // Keys that need navigation (find on page, all topics, the outline skip link) leave focus mode first;
+  // keys that work without it (chapters, topics, search, share, theme, design) keep it.
+  const showNavigation = () => { if (document.body.classList.contains('focus-mode')) setFocusMode(false); };
+  document.querySelectorAll<HTMLAnchorElement>('.skip-link').forEach(link => { if (link.hash === '#outline') link.addEventListener('click', showNavigation); });
+  const smooth = (): ScrollBehavior => reducedMotion.matches ? 'instant' : 'smooth';
+  const chapterLinks = [...document.querySelectorAll<HTMLAnchorElement>('.toc-chapter > .toc-link')];
+  const currentLink = () => document.querySelector<HTMLAnchorElement>('.toc-link[aria-current="location"]');
+  const copyText = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); return; } catch { /* Fall back below. */ }
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.append(field);
+    field.select();
+    document.execCommand('copy');
+    field.remove();
+  };
+  // Topic pages step through authored chapters; the A–Z index through letters; site pages through their sections.
+  const sectionHeadings = chapterLinks.length
+    ? chapterLinks.map(link => document.getElementById(decodeURIComponent(link.hash.slice(1)))).filter((heading): heading is HTMLElement => Boolean(heading))
+    : [...document.querySelectorAll<HTMLElement>('.index-columns h2, .info-body .prose h2')];
+  // A press during a jump's smooth scroll counts from where that jump is heading, not from the scroll position.
+  let lastJump = { index: -1, at: -Infinity };
+  const moveSection = (step: 1 | -1) => {
+    if (!sectionHeadings.length) return false;
+    const offset = (parseFloat(getComputedStyle(root).scrollPaddingTop) || 0) + 8;
+    let index = sectionHeadings.findLastIndex(heading => heading.getBoundingClientRect().top <= offset);
+    if (performance.now() - lastJump.at < 900) index = lastJump.index;
+    // Inside a section, K first returns to its start; at its start, to the previous one.
+    else if (step < 0 && index >= 0 && sectionHeadings[index].getBoundingClientRect().top < offset - 16) index += 1;
+    const target = Math.max(0, Math.min(sectionHeadings.length - 1, index + step));
+    lastJump = { index: target, at: performance.now() };
+    const heading = sectionHeadings[target];
+    // Outline links also update the address and reveal the section; other pages scroll directly.
+    const link = chapterLinks[target];
+    if (link) link.click();
+    else heading.scrollIntoView({ behavior: smooth(), block: 'start' });
+    if (!heading.hasAttribute('tabindex')) heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+    return true;
+  };
+  // The home page steps through its topic list; the Field Atlas spread follows the selected topic.
+  const spread = document.querySelector<HTMLElement>('[data-atlas-spread]');
+  const topicCards = () => [...document.querySelectorAll<HTMLAnchorElement>('.topic-card')].filter(card => !card.hidden && card.offsetParent !== null);
+  const selectTopic = (card: HTMLAnchorElement) => {
+    card.focus({ preventScroll: true });
+    card.scrollIntoView({ behavior: smooth(), block: 'center' });
+    document.dispatchEvent(new CustomEvent('topic-select', { detail: card.getAttribute('href') }));
+  };
+  const moveTopic = (to: 1 | -1 | 'first' | 'last') => {
+    const cards = topicCards();
+    if (!cards.length) return false;
+    const active = document.activeElement;
+    let index = active instanceof Element ? cards.indexOf(active.closest<HTMLAnchorElement>('.topic-card')!) : -1;
+    if (index < 0 && spread && spread.contains(active)) index = cards.findIndex(card => card.getAttribute('href') === spread.dataset.href);
+    const target = to === 'first' ? 0 : to === 'last' ? cards.length - 1 : index < 0 ? 0 : Math.max(0, Math.min(cards.length - 1, index + to));
+    selectTopic(cards[target]);
+    return true;
+  };
+  const footerLink = (path: string) => document.querySelector<HTMLAnchorElement>(`.footer-links a[href$="${path}"]`)?.href;
+  const homeHref = () => footerLink('general-index/index.html')?.replace(/general-index\/index\.html$/, 'index.html');
+  const showAllTopics = () => {
+    const drawer = document.querySelector<HTMLDetailsElement>('.plates-menu');
+    if (drawer && drawer.offsetParent !== null) { drawer.open = true; return true; }
+    const sidebar = document.querySelector<HTMLDetailsElement>('.collection-contents');
+    if (sidebar && sidebar.offsetParent !== null) {
+      sidebar.open = true;
+      requestAnimationFrame(() => (sidebar.querySelector<HTMLElement>('[aria-current="page"]') ?? sidebar.querySelector<HTMLElement>('.nav-topic'))?.focus());
+      return true;
+    }
+    if (page === 'collection') return moveTopic('first');
+    const home = homeHref();
+    if (home) location.href = `${home}#topics-heading`;
+    return Boolean(home);
+  };
+  let pressedG = 0;
+  document.addEventListener('keydown', event => {
+    if (event.shiftKey || typing(event) || document.querySelector('dialog[open]')) return;
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    const go = (href?: string) => { if (href) { event.preventDefault(); location.href = href; } };
+    if (performance.now() - pressedG < 1200 && ['h', 'i', 't', 'a'].includes(key)) {
+      pressedG = 0;
+      event.preventDefault();
+      if (key === 'h') go(homeHref());
+      else if (key === 'i') go(footerLink('general-index/index.html'));
+      else if (key === 'a') go(footerLink('about/index.html'));
+      else { showNavigation(); showAllTopics(); }
+      return;
+    }
+    pressedG = key === 'g' ? performance.now() : 0;
+    const onCard = document.activeElement instanceof Element && Boolean(document.activeElement.closest('.topic-card'));
+    if (key === 'j' || key === 'k') {
+      const step = key === 'j' ? 1 : -1;
+      if (page === 'collection' ? moveTopic(step) : moveSection(step)) event.preventDefault();
+    } else if ((key === 'Home' || key === 'End') && onCard) {
+      event.preventDefault();
+      moveTopic(key === 'Home' ? 'first' : 'last');
+    } else if (key === '[' || key === ']') {
+      go(document.querySelector<HTMLAnchorElement>(key === '[' ? '[data-plate-previous]' : '[data-plate-next]')?.href);
+    } else if (key === 's') {
+      const share = document.querySelector<HTMLElement>('[data-open-share]');
+      if (share) { event.preventDefault(); share.click(); }
+    } else if (key === 'c' && chapterLinks.length) {
+      event.preventDefault();
+      const link = currentLink();
+      const address = meta('og:url') || location.href.split('#')[0];
+      copyText(link ? address + link.hash : address).then(() => announce(link ? `Link to “${link.textContent}” copied` : 'Link to this topic copied'));
+    } else if (key === 't') {
+      event.preventDefault();
+      themeToggle.click();
+    } else if (key === 'd') {
+      const other = document.querySelector<HTMLButtonElement>('[data-design-choice][aria-pressed="false"]');
+      if (other) { event.preventDefault(); other.click(); }
+    }
+  });
+  // F turns focus mode on and off; Ctrl/⌘+F stays the browser's find.
+  document.addEventListener('keydown', event => {
+    if (event.key.toLowerCase() !== 'f' || event.shiftKey || !focusButton || typing(event) || document.querySelector('dialog[open], .plates-menu[open]')) return;
+    event.preventDefault();
+    setFocusMode(!document.body.classList.contains('focus-mode'));
   });
 
   // Declarative shadow DOM is static and requires no library at runtime.
@@ -426,6 +686,16 @@
   const contents = document.querySelector<HTMLDetailsElement>('.contents')!;
   const mobile = matchMedia('(max-width: 980px)');
   animateDisclosure(contents, () => mobile.matches);
+  // A soft fade shows that the outline continues beyond the sidebar's scrolling edges.
+  const markOverflow = () => {
+    contents.toggleAttribute('data-more-below', contents.scrollHeight - contents.clientHeight - contents.scrollTop > 2);
+    contents.toggleAttribute('data-more-above', contents.scrollTop > 2);
+  };
+  contents.addEventListener('scroll', markOverflow, { passive: true });
+  const outlineSize = new ResizeObserver(markOverflow);
+  outlineSize.observe(contents);
+  const outlineNav = contents.querySelector('nav');
+  if (outlineNav) outlineSize.observe(outlineNav);
   // On phones the collection sidebar is a disclosure too; on desktop its column animates instead.
   animateDisclosure(document.querySelector<HTMLDetailsElement>('.collection-contents')!, () => matchMedia('(max-width: 760px)').matches);
   const collectionContents = document.querySelector<HTMLDetailsElement>('.collection-contents')!;
@@ -556,7 +826,7 @@
     });
     document.querySelectorAll<HTMLElement>('.toc-document').forEach(group => { group.hidden = ![...group.querySelectorAll('li')].some(item => !item.hidden); });
     highlightLocal(words);
-    searchStatus.textContent = words.length ? `${count} matching section${count === 1 ? '' : 's'}` : 'Search headings and full text';
+    searchStatus.textContent = words.length ? `${count} matching section${count === 1 ? '' : 's'}` : 'Headings and text in this topic';
     const url = new URL(location.href);
     if (search.value.trim()) url.searchParams.set('q', search.value.trim());
     else url.searchParams.delete('q');
@@ -570,7 +840,7 @@
   }
   document.addEventListener('keydown', event => {
     if (event.key === '/' && !searchDialog.open && !event.metaKey && !event.ctrlKey && !event.altKey && !(event.target instanceof Element && event.target.closest('input,textarea,[contenteditable]'))) {
-      event.preventDefault(); contents.open = true; search.focus();
+      event.preventDefault(); showNavigation(); contents.open = true; search.focus();
     }
     if (event.key === 'Escape' && document.activeElement === search) {
       search.value = ''; search.dispatchEvent(new Event('input')); search.blur();

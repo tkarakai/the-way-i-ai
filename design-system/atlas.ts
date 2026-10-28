@@ -19,6 +19,18 @@
     const element = candidates.find(candidate => candidate.getBoundingClientRect().bottom > top);
     return element ? { element, offset: element.getBoundingClientRect().top } : undefined;
   };
+  /** A gentle tilt that follows the pointer over `area`, as if lifting `plate` towards the reader (CSS reads --tilt-x/y). */
+  const followPointer = (area: HTMLElement, plate: HTMLElement) => {
+    area.addEventListener('pointermove', event => {
+      if (reducedMotion.matches || event.pointerType === 'touch') return;
+      const box = plate.getBoundingClientRect();
+      const clamp = (value: number) => Math.max(-.5, Math.min(.5, value));
+      area.style.setProperty('--tilt-x', `${clamp((event.clientX - box.left) / box.width - .5) * 7}deg`);
+      area.style.setProperty('--tilt-y', `${clamp(.5 - (event.clientY - box.top) / box.height) * 7}deg`);
+    });
+    area.addEventListener('pointerleave', () => { area.style.removeProperty('--tilt-x'); area.style.removeProperty('--tilt-y'); });
+  };
+  const ageDates = (window as Window & { ageDates?: (scope: ParentNode) => void }).ageDates ?? (() => {});
   const transitionPage = (window as Window & { transitionPage?: (update: () => void) => void }).transitionPage ?? ((update: () => void) => update());
   const applyDesign = (next: Design, persist: boolean) => {
     if (next === design()) return;
@@ -33,12 +45,13 @@
       syncChoices();
       document.dispatchEvent(new Event('design-change'));
       restore();
+      // Fonts are preloaded, but a late font would reflow the page once more. Scheduled from the swap itself:
+      // a View Transition runs it asynchronously, and an earlier removal would leave transitions disabled.
+      document.fonts.ready.then(() => requestAnimationFrame(() => { restore(); root.classList.remove('design-switching'); }));
     };
     // The home page replays its arrival, as after a reload; other pages cross-fade.
     if (document.body.dataset.page === 'collection') { swap(); replayEntrance(); }
     else transitionPage(swap);
-    // Fonts are preloaded, but a late font would reflow the page once more.
-    document.fonts.ready.then(() => requestAnimationFrame(() => { restore(); root.classList.remove('design-switching'); }));
   };
   function replayEntrance() {
     if (reducedMotion.matches) return;
@@ -85,7 +98,7 @@
   }
 
   /* Home: the paged spread, newest plate first. Images are the cards' own images. */
-  type Plate = { href: string; plate: string; title: string; habitat: string; thesis: string; latin?: string; common?: string; chapters: number; revised?: string };
+  type Plate = { href: string; plate: string; title: string; habitat: string; thesis: string; latin?: string; common?: string; chapters: number; revised?: string; revisedOn?: string };
   const spread = document.querySelector<HTMLElement>('[data-atlas-spread]');
   const plateData = document.getElementById('atlas-plates');
   if (spread && plateData) {
@@ -120,14 +133,7 @@
       const picture = image(plate);
       if (picture) mount.append(picture);
       plateLink.append(mount);
-      // A gentle tilt that follows the pointer, as if lifting the plate towards the reader.
-      plateLink.addEventListener('pointermove', event => {
-        if (reducedMotion.matches || event.pointerType === 'touch') return;
-        const box = plateLink.getBoundingClientRect();
-        plateLink.style.setProperty('--tilt-x', `${(((event.clientX - box.left) / box.width) - .5) * 7}deg`);
-        plateLink.style.setProperty('--tilt-y', `${(.5 - ((event.clientY - box.top) / box.height)) * 7}deg`);
-      });
-      plateLink.addEventListener('pointerleave', () => { plateLink.style.removeProperty('--tilt-x'); plateLink.style.removeProperty('--tilt-y'); });
+      followPointer(plateLink, plateLink);
       verso.append(plateLink);
       const recto = element('div', 'spread-recto');
       const heading = element('h3');
@@ -140,7 +146,14 @@
         latin.lang = 'la';
         species.append(latin, plate.common ? ` · ${plate.common}` : '');
       }
-      const facts = element('p', 'spread-facts', `${plate.chapters} chapters${plate.revised ? ` · Revised ${plate.revised}` : ''}`);
+      const facts = element('p', 'spread-facts', `${plate.chapters} chapters${plate.revised ? ' · Revised ' : ''}`);
+      if (plate.revised && plate.revisedOn) {
+        const revised = element('time', undefined, plate.revised);
+        revised.dateTime = plate.revisedOn;
+        revised.dataset.age = '';
+        facts.append(revised);
+        ageDates(facts);
+      }
       const open = element('a', 'spread-open', `Open topic ${plate.plate} `);
       open.href = plate.href;
       open.append(Object.assign(element('span', undefined, '→'), { ariaHidden: 'true' }));
@@ -170,20 +183,45 @@
       });
       pager.append(arrow(-1, 'Newer topic', '‹'), film, element('span', 'spread-folio', `${current + 1} of ${plates.length}`), arrow(1, 'Older topic', '›'));
       spread.append(verso, recto, pager);
+      // The spread is one Tab stop: arrows turn it, Enter opens its topic. Its links and buttons stay for pointers.
+      spread.querySelectorAll<HTMLElement>('a, button').forEach(control => { control.tabIndex = -1; });
+      spread.dataset.href = plate.href;
       if (direction && status) status.textContent = `Topic ${plate.plate}, ${plate.title}`;
       // Centre the current thumbnail by scrolling the strip only, never the page.
       const selected = film.querySelector<HTMLElement>('[aria-current="true"]');
       if (selected) film.scrollTo({ left: selected.offsetLeft - film.offsetLeft - (film.clientWidth - selected.offsetWidth) / 2, behavior: 'instant' });
     };
-    const turn = (step: number) => {
-      const next = current + step;
-      if (next < 0 || next >= plates.length) return;
-      current = next;
+    const show = (index: number) => {
+      if (index < 0 || index >= plates.length || index === current) return;
+      const step = index - current;
+      current = index;
       render(step);
     };
+    const turn = (step: number) => show(current + step);
+    // ← → (and Home/End) select a topic whenever the spread is on screen, moving focus to it, so Enter then opens it.
+    const keys: Record<string, () => number> = { ArrowRight: () => current + 1, ArrowLeft: () => current - 1, Home: () => 0, End: () => plates.length - 1 };
+    document.addEventListener('keydown', event => {
+      if (design() !== 'atlas' || !keys[event.key] || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable],dialog,.logo-picker')) return;
+      // Home/End belong to the spread only while it has focus; elsewhere they scroll the page.
+      if ((event.key === 'Home' || event.key === 'End') && document.activeElement !== spread) return;
+      const box = spread.getBoundingClientRect();
+      if (box.bottom < 0 || box.top > innerHeight) return;
+      event.preventDefault();
+      show(keys[event.key]());
+      if (document.activeElement !== spread) spread.focus({ preventScroll: true });
+    });
     spread.addEventListener('keydown', event => {
-      if (event.key === 'ArrowRight') { event.preventDefault(); turn(1); }
-      if (event.key === 'ArrowLeft') { event.preventDefault(); turn(-1); }
+      if (event.key !== 'Enter' || event.target !== spread) return;
+      event.preventDefault();
+      // Like a link: ⌘/Ctrl+Enter opens a new tab.
+      if (event.metaKey || event.ctrlKey) open(plates[current].href, '_blank', 'noopener');
+      else location.href = plates[current].href;
+    });
+    // A topic chosen in the list (J/K in reader.ts) turns the spread to the same topic.
+    document.addEventListener('topic-select', event => {
+      const href = (event as CustomEvent<string>).detail;
+      show(plates.findIndex(plate => plate.href === href));
     });
     let touchX: number | undefined;
     spread.addEventListener('touchstart', event => { touchX = event.touches[0].clientX; }, { passive: true });
@@ -207,12 +245,11 @@
   filterButtons.forEach(button => button.addEventListener('click', () => filter(button.dataset.habitat ?? '')));
   document.addEventListener('design-change', () => { if (design() === 'folio') filter(''); });
 
-  /* Plate pages: running head, margin note, chapter stepping and plate turning. */
+  /* Plate pages: running head, chapter stepping and plate turning. */
   const runningHead = document.querySelector<HTMLElement>('.running-head');
   const hero = document.querySelector<HTMLElement>('.topic-hero');
   if (runningHead && hero) {
     const chapterLabel = runningHead.querySelector<HTMLElement>('[data-running-chapter]')!;
-    const marginLabel = document.querySelector<HTMLElement>('[data-plate-current]');
     const chapterLinks = [...document.querySelectorAll<HTMLAnchorElement>('.toc-chapter > .toc-link')];
     const activeChapter = () => {
       const link = document.querySelector<HTMLAnchorElement>('.toc-link[aria-current="location"]');
@@ -225,9 +262,7 @@
       const headerHeight = parseFloat(getComputedStyle(root).getPropertyValue('--header-height')) || 0;
       runningHead.classList.toggle('is-on', hero.getBoundingClientRect().bottom < headerHeight);
       const chapter = activeChapter();
-      const current = document.querySelector<HTMLAnchorElement>('.toc-link[aria-current="location"]');
       if (chapter) chapterLabel.textContent = chapter.textContent;
-      if (current && marginLabel) marginLabel.textContent = current.textContent;
     };
     const queue = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
     addEventListener('scroll', queue, { passive: true });
@@ -240,10 +275,13 @@
       chapterLinks[Math.max(0, Math.min(chapterLinks.length - 1, index + Number(button.dataset.chapterStep)))]?.click();
     }));
   }
-  document.addEventListener('keydown', event => {
-    if (design() !== 'atlas' || event.metaKey || event.ctrlKey || event.altKey || (event.target instanceof Element && event.target.closest('input,textarea,[contenteditable],dialog'))) return;
-    const link = document.querySelector<HTMLAnchorElement>(event.key === '[' ? '[data-plate-previous]' : event.key === ']' ? '[data-plate-next]' : ':not(*)');
-    if (link) { event.preventDefault(); location.href = link.href; }
+  // The bottom bar shows the neighbouring animals, reusing the topic cards' thumbnails instead of embedding them again.
+  document.querySelectorAll<HTMLAnchorElement>('[data-bar-turn]').forEach(link => {
+    const source = document.querySelector<HTMLImageElement>(`[data-plate-${link.dataset.barTurn}] img`);
+    if (!source) return;
+    const thumb = document.createElement('img');
+    thumb.className = 'bar-portrait'; thumb.src = source.src; thumb.alt = ''; thumb.decoding = 'async';
+    if (link.dataset.barTurn === 'next') link.insertBefore(thumb, link.lastElementChild); else link.insertBefore(thumb, link.firstElementChild!.nextSibling);
   });
   document.querySelector('[data-plate-contents]')?.addEventListener('click', () => {
     const contents = document.querySelector<HTMLDetailsElement>('.contents');

@@ -77,7 +77,8 @@ body[data-page='collection'] .masthead { width: calc(100% - 120px); max-width: 1
 .focus-mode .focus-toggle .focus-exit { display: block; }
 .focus-mode .masthead { height: 0; border-color: transparent; background: transparent; pointer-events: none; }
 .search-trigger, .theme-toggle, .repo-link { transition: opacity .2s ease, transform .24s ease, visibility 0s; }
-.focus-mode .brand, .focus-mode .search-trigger, .focus-mode .theme-toggle, .focus-mode .repo-link { opacity: 0; transform: translateY(-8px); visibility: hidden; pointer-events: none; transition-delay: 0s, 0s, .2s; }
+.design-switch, .plates-menu { transition: opacity .2s ease, transform .24s ease, visibility 0s; }
+.focus-mode .brand, .focus-mode .search-trigger, .focus-mode .theme-toggle, .focus-mode .repo-link, .focus-mode .design-switch, .focus-mode .plates-menu { opacity: 0; transform: translateY(-8px); visibility: hidden; pointer-events: none; transition-delay: 0s, 0s, .2s; }
 .icon-button:hover, .repo-link:hover { color: var(--ink); background: var(--tint); }
 .icon-button svg, .repo-link svg { width: 20px; height: 20px; }
 .repo-link svg { width: 22px; height: 22px; }
@@ -106,11 +107,56 @@ body[data-page='collection'] .masthead { width: calc(100% - 120px); max-width: 1
 .collection-hero { display: grid; grid-template-columns: 1fr 1.1fr; align-items: center; gap: 90px; padding: 42px 0 36px; }
 .hero-wordmark { padding: 24px 0 24px 10px; }
 .collection-hero .wordmark { --wordmark-size: clamp(96px, 12vw, 166px); }
+/* Folio: the wordmark’s ink sits high in its box; shift it so its visual centre matches the introduction’s. */
+@media (min-width: 761px) { :root:not([data-design='atlas']) .collection-hero .wordmark { translate: 0 .1em; } }
 .collection-intro { padding-block: 8px; }
-.collection-intro h2 { font: 450 clamp(42px, 5vw, 72px)/1.06 var(--serif); letter-spacing: -.035em; margin-bottom: 24px; }
+/* Sized so the introduction never grows taller than the wordmark beside it. */
+.collection-intro h2 { font: 450 clamp(30px, 3vw, 48px)/1.06 var(--serif); letter-spacing: -.03em; margin-bottom: 16px; }
 .intro-line { display: block; }
 .intro-accent { color: var(--title-accent); }
+/* Rotating phrases from [a|b|c] collection copy. Without JavaScript only the first phrase shows. */
+/* The phrases use the secondary highlight colour; the heading accent stays distinct. */
+.rotator-window { position: relative; display: inline-block; vertical-align: bottom; white-space: nowrap; overflow: hidden; padding-bottom: .14em; margin-bottom: -.14em; color: var(--ochre); transition: width .45s cubic-bezier(.2, .7, .2, 1), font-size .45s cubic-bezier(.2, .7, .2, 1); }
+.rotator.own-line::before { content: ''; display: block; }
+.rotator-tail { display: inline-block; transform-origin: 50% 80%; }
+/* Spell-check squiggle for the logo's swap trick. */
+.logo-squiggle { position: absolute; pointer-events: none; color: #c2410c; }
+.logo-squiggle svg { display: block; width: 100%; height: 100%; overflow: visible; }
+:root[data-theme='dark'] .logo-squiggle { color: #f0835a; }
+/* The butterfly trick: positioned along a motion path, its legs at the landing point. */
+.logo-butterfly { position: absolute; z-index: 2; left: 0; top: 0; pointer-events: none; offset-anchor: 50% 92%; offset-rotate: 0deg; }
+.logo-butterfly svg { display: block; width: 100%; height: auto; overflow: visible; }
+.logo-butterfly .wing { transform-box: view-box; transform-origin: 30px 24px; }
+/* The time-travel trick draws arcs, flashes, fire and smoke on a temporary canvas. */
+.logo-effects { position: absolute; z-index: 3; pointer-events: none; }
+.hero-wordmark { position: relative; }
+/* Temporary elements the logo tricks add; all are removed when a trick ends. */
+.logo-temp { position: absolute; z-index: 2; pointer-events: none; letter-spacing: 0; }
+.logo-temp svg { display: block; width: 100%; height: auto; overflow: visible; }
+.logo-clone { left: 0; top: 0; width: 100%; z-index: 1; letter-spacing: inherit; }
+.logo-clone, .logo-clone * { animation: none !important; }
+.logo-plane { left: 0; top: 0; z-index: 3; offset-rotate: auto; offset-anchor: 50% 50%; }
+.logo-nosignal { z-index: 3; display: grid; place-items: center; background: #121212 repeating-linear-gradient(0deg, rgba(255, 255, 255, .06) 0 2px, transparent 2px 4px); color: #e8e8e8; font-family: 'IBM Plex Mono', ui-monospace, monospace; letter-spacing: .3em; }
+/* The secret trick picker (type “ai”). */
+.logo-picker { position: fixed; z-index: 60; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: min(340px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow-y: auto; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); box-shadow: 0 20px 50px -20px #0006; animation: dialog-in .24s cubic-bezier(.2, .7, .2, 1); }
+.logo-picker-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
+.logo-picker button { font: inherit; color: inherit; cursor: pointer; }
+.logo-picker-close { border: 0; background: none; font-size: 20px; line-height: 1; padding: 2px 6px; }
+.logo-picker-surprise { width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid var(--ink); border-radius: 999px; background: var(--ink); color: var(--paper) !important; font-size: 12px; }
+.logo-picker ol { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0; padding: 0; list-style: none; counter-reset: trick; }
+.logo-picker li { counter-increment: trick; }
+.logo-picker li button { width: 100%; padding: 7px 8px; border: 1px solid var(--line); border-radius: 6px; background: transparent; font-size: 12px; text-align: left; }
+.logo-picker li button::before { content: counter(trick) ". "; color: var(--muted); }
+.logo-picker li button:hover, .logo-picker li button:focus-visible { border-color: var(--ink); outline: none; }
+.rotator-item { display: inline-block; }
+:root:not(.js) .rotator-item:not(.is-current) { display: none; }
+.js .rotator-item { opacity: 0; transform: translateY(105%); transition: transform .45s cubic-bezier(.2, .7, .2, 1), opacity .3s ease; }
+.js .rotator-item:not(.is-current) { position: absolute; left: 0; top: 0; }
+.js .rotator-item.is-current { opacity: 1; transform: none; }
+.js .rotator-item.is-leaving { opacity: 0; transform: translateY(-105%); }
+.js .rotator-item:not(.is-current, .is-leaving) { transition: none; }
 .collection-intro p { font-size: 17px; line-height: 1.6; margin-bottom: 12px; }
+.collection-intro p:last-child { margin-bottom: 0; }
 .collection-intro p + p { font-size: 14px; color: var(--muted); max-width: 42ch; line-height: 1.8; }
 .text-link { color: var(--accent); font: 500 12px/1.6 var(--sans); text-decoration: none; }
 .section-label { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; border-top: 1px solid var(--ink); padding: 25px 0; }
@@ -127,6 +173,8 @@ body[data-page='collection'] .masthead { width: calc(100% - 120px); max-width: 1
 .editorial-homepage { aspect-ratio: 16 / 9; object-fit: cover; object-position: center; }
 .editorial-hero, .prose .editorial-chapter { aspect-ratio: 4 / 1; object-fit: cover; object-position: center; }
 .editorial-hero { margin: 0 0 32px; }
+/* Folio ignores the Field Atlas frontispiece and plate wrappers. */
+:root:not([data-design='atlas']) :is(.frontis, .plate-mount) { display: contents; }
 .editorial-hero.editorial-portrait { aspect-ratio: 16 / 9; object-fit: contain; }
 .prose .editorial-chapter { margin: 20px 0 28px; }
 @media print { .editorial-image { break-inside: avoid; } }
@@ -249,7 +297,7 @@ body[data-page='collection'] .masthead { width: calc(100% - 120px); max-width: 1
 /* Article rhythm: dissolving chapter rules and smaller, fading copper sectional marks.
    Decoration belongs to the heading box, so it follows anchors and print pagination. */
 .article-presentation { padding-top: 4px; }
-.reading-main:has(> .article-presentation) > .topic-hero h1 { color: var(--article-title-ink); }
+.reading-main:has(> .article-presentation) .topic-hero h1 { color: var(--article-title-ink); }
 .article-presentation :is(.prose, .article-reveal) > h2 { position: relative; color: var(--chapter-ink); margin-block: clamp(36px, 5vw, 52px) 22px; padding-top: 22px; }
 .article-presentation :is(.prose, .article-reveal) > h2::before { content: ''; position: absolute; inset-inline: 0; top: 0; height: 1px; background: linear-gradient(to right, var(--line), transparent); pointer-events: none; print-color-adjust: exact; }
 .article-presentation :is(.prose, .article-reveal) > h3 { position: relative; color: var(--subchapter-ink); margin-block: 36px 18px; padding-top: 16px; }
@@ -286,11 +334,33 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 .prose th { background: var(--tint); font-weight: 550; }
 .prose td:first-child { min-width: 110px; }
 .next-topic { border-top: 1px solid var(--ink); padding: 30px 0; }
+.next-topic:has(.next-topic-portrait) { display: grid; grid-template-columns: 180px minmax(0, 1fr); column-gap: 28px; align-items: center; }
+.next-topic-portrait { grid-row: 1 / span 3; display: block; overflow: hidden; border-radius: 3px; background: var(--tint); }
+.next-portrait { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; transition: transform .6s cubic-bezier(.2, .7, .2, 1); }
+.next-topic:hover .next-portrait { transform: scale(1.06); }
+@media (max-width: 560px) { .next-topic:has(.next-topic-portrait) { grid-template-columns: minmax(0, 1fr); } .next-topic-portrait { grid-row: auto; margin-bottom: 16px; } }
 .next-topic h2 { font: 450 32px/1.15 var(--serif); margin: 12px 0; }
 .next-topic a { text-decoration: none; }
 .next-topic p { font-size: 14px; color: var(--muted); }
 .search-dialog { color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 25px; width: min(620px, calc(100% - 32px)); max-height: 80dvh; box-shadow: 0 25px 90px #0004; }
 .search-dialog::backdrop { background: #201c1980; backdrop-filter: blur(4px); }
+/* Motion that shows where things come from and go: dialogs scale in and out, panels fade in, and whole-page changes cross-fade. */
+.search-dialog[open] { animation: dialog-in .24s cubic-bezier(.2, .7, .2, 1); }
+.search-dialog[open]::backdrop { animation: backdrop-in .24s ease; }
+.search-dialog.is-closing { animation: dialog-out .2s ease forwards; }
+.search-dialog.is-closing::backdrop { animation: backdrop-out .2s ease forwards; }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(-10px) scale(.97); } }
+@keyframes dialog-out { to { opacity: 0; transform: translateY(-8px) scale(.97); } }
+@keyframes backdrop-in { from { opacity: 0; } }
+@keyframes backdrop-out { to { opacity: 0; } }
+.explorer-panel:not([hidden]) { animation: arrive .26s ease; }
+.toast:not([hidden]) { animation: toast-in .24s cubic-bezier(.2, .7, .2, 1); }
+.toast.is-leaving { animation: toast-out .2s ease forwards; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 12px); } }
+@keyframes toast-out { to { opacity: 0; transform: translate(-50%, 8px); } }
+.search-result { animation: backdrop-in .18s ease backwards; }
+.contents nav.is-filtering li:not([hidden]) { animation: arrive .2s ease; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .2s; animation-timing-function: ease; }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
 .dialog-head h2 { font: 500 17px var(--sans); margin: 0; }
 #collection-search { width: 100%; background: none; color: var(--ink); padding: 13px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; font: 400 23px var(--serif); }
@@ -305,7 +375,45 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 .js-only { display: none; }
 .js .js-only { display: inline-flex; }
 .js .search-wrap { display: block; }
+/* Two designs share one page. Each design's extra parts stay in the DOM, so switching keeps content and position. */
+:root:not([data-design='atlas']) .atlas-only, :root[data-design='atlas'] .folio-only { display: none !important; }
+.design-switching *, .design-switching *::before, .design-switching *::after { transition: none !important; }
+.design-switch { gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 999px; flex-shrink: 0; }
+.design-switch button { border: 0; border-radius: 999px; background: transparent; color: var(--muted); padding: 6px 11px; font: 500 10.5px/1.2 'IBM Plex Mono', ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.design-switch button:hover { color: var(--ink); }
+.design-switch button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+/* The generated General index works in both designs. */
+.index-page { max-width: 1200px; margin-inline: auto; padding: 0 60px 60px; }
+.index-head { display: grid; gap: 14px; padding: 48px 0 24px; border-bottom: 1px solid var(--ink); }
+.index-head h1 { font: 450 clamp(40px, 5vw, 64px)/1 var(--serif); letter-spacing: -.03em; margin: 0; }
+.index-head > p { max-width: 62ch; margin: 0; color: var(--muted); }
+.index-letters { display: flex; flex-wrap: wrap; gap: 2px; }
+.index-letters a { padding: 7px 8px; border-radius: 4px; font: 500 13px/1 var(--mono); color: var(--accent); text-decoration: none; }
+.index-letters a:hover { background: var(--tint); }
+.index-columns { columns: 3 280px; column-gap: 48px; padding-top: 30px; }
+.index-columns section { break-inside: avoid; margin-bottom: 24px; }
+.index-columns h2 { font: 450 34px/1 var(--serif); color: var(--accent); margin: 0 0 8px; scroll-margin-top: calc(var(--header-height) + 16px); }
+.index-columns ul { list-style: none; margin: 0; padding: 0; }
+.index-entry { padding: 5px 0; break-inside: avoid; }
+.index-entry a { display: flex; align-items: baseline; gap: 8px; font-size: 15px; line-height: 1.35; text-decoration: none; }
+.index-text { min-width: 0; }
+.index-leader { flex: 1; min-width: 12px; border-bottom: 1px dotted var(--line); transform: translateY(-4px); }
+.index-ref { font: 500 11px/1 var(--mono); color: var(--accent); white-space: nowrap; }
+.index-topic { display: block; font-size: 11px; color: var(--muted); }
+.index-sub .index-text { font-style: italic; color: var(--muted); }
+@media (max-width: 760px) { .index-page { padding: 0 22px 40px; } .index-head { padding-top: 28px; } }
 @keyframes arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+/* Logo parts stay inline text, so spacing and kerning are exactly the approved wordmark's.
+   They move with relative offsets, which never affect layout. */
+.logo-part { position: relative; }
+@keyframes logo-rise { from { opacity: 0; top: .1em; } }
+@keyframes logo-fade { from { opacity: 0; } }
+@keyframes logo-drop {
+  0% { opacity: 0; top: -1.5em; animation-timing-function: cubic-bezier(.55, 0, .9, .45); }
+  68% { opacity: 1; top: .05em; animation-timing-function: ease-out; }
+  84% { top: -.05em; animation-timing-function: ease-in-out; }
+  100% { opacity: 1; top: 0; }
+}
 /* Reference-inspired entrance: fade + zoom from 90% + slide from above.
    Keep the two sections intact, and leave no transform/layer after the entrance. */
 @keyframes collection-enter {
@@ -313,10 +421,16 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
   to { opacity: 1; transform: none; }
 }
 @media screen and (prefers-reduced-motion: no-preference) {
-  body[data-page='collection'] .collection-hero,
+  body[data-page='collection'] .collection-intro,
   body[data-page='collection'] .collection-list { transform-origin: 50% 0; animation: collection-enter .8s ease backwards; }
-  body[data-page='collection'] .collection-hero { --entrance-y: -64px; }
-  body[data-page='collection'] .collection-list { --entrance-y: -48px; animation-duration: 1s; animation-delay: .6s; }
+  body[data-page='collection'] .collection-intro { --entrance-y: -64px; }
+  /* The logo arrives on its own: “the way” rises, the shared I drops in with a small bounce,
+     then the last line rises as the I lands, and the wave fades in. */
+  body[data-page='collection'] .hero-wordmark .logo-word { animation: logo-rise .45s cubic-bezier(.2, .8, .2, 1) calc(var(--logo-order, 0) * 80ms) backwards; }
+  body[data-page='collection'] .hero-wordmark .logo-stem { animation: logo-drop .72s .2s backwards; }
+  body[data-page='collection'] .hero-wordmark .logo-arrive { animation: logo-rise .48s cubic-bezier(.2, .8, .2, 1) .66s backwards; }
+  body[data-page='collection'] .hero-wordmark .title-art { animation: logo-fade .7s ease .8s backwards; }
+  body[data-page='collection'] .collection-list { --entrance-y: -48px; animation-duration: 1s; animation-delay: .5s; }
   .article-hero:not([data-reveal='shown']) { --entrance-y: -48px; transform-origin: 50% 0; animation: collection-enter .8s ease backwards; }
   .article-hero:focus-within { opacity: 1; animation: none; }
   .article-reveal[data-reveal='pending'] { opacity: 0; }
@@ -328,7 +442,7 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 }
 @media screen and (prefers-reduced-motion: no-preference) and (max-width: 760px) {
   .article-reveal, .article-hero:not([data-reveal='shown']) { --entrance-y: -24px; }
-  body[data-page='collection'] .collection-hero { --entrance-y: -32px; }
+  body[data-page='collection'] .collection-intro { --entrance-y: -32px; }
   body[data-page='collection'] .collection-list { --entrance-y: -24px; }
 }
 @media (max-width: 1200px) {
@@ -418,6 +532,17 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
   .prose th, .prose td { padding: 11px; }
   .footer { margin-inline: 22px; font-size: 10px; }
 }
+/* On phones the switch shows only the other design, as one compact button. */
+@media (max-width: 420px) {
+  .design-switch { padding: 0; border: 0; }
+  .design-switch button[aria-pressed='true'] { display: none; }
+  .design-switch button { padding: 6px 2px; font-size: 10px; text-decoration: underline; text-underline-offset: 3px; }
+}
+@media (max-width: 360px) {
+  .masthead { gap: 6px; }
+  .brand { padding-right: 6px; }
+  .header-actions { gap: 2px; }
+}
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; animation: none !important; } }
 @media print {
   :root, :root[data-theme='dark'], :root:not([data-theme]) { --paper: #fff; --surface: #fff; --ink: #111; --muted: #444; --line: #ccc; --accent: #214a35; --tint: #f2f4ef; --code: #f5f5f5; --title-ink: #4b2e4a; --title-accent: #147c86; color-scheme: light; }
@@ -430,7 +555,7 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
   .collection-intro h2 { font-size: 36px; }
   .topic-hero h1 { font-size: 36pt; }
   .prose { font-size: 12pt; }
-  .reading-main:has(> .article-presentation) > .topic-hero h1,
+  .reading-main:has(> .article-presentation) .topic-hero h1,
   .article-presentation :is(.prose, .article-reveal) > :is(h2, h3) { color: var(--ink); }
   .explorer-figure { display: none; }
   .explorer-panel, .explorer-panel[hidden] { display: block !important; margin-bottom: 22px; }

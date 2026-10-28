@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.ts';
 import { readFile } from 'node:fs/promises';
 import { topicSource } from '../scripts/markdown-source.ts';
 
@@ -26,11 +26,13 @@ for (const width of [1440, 390, 320]) {
         await expect(page.locator('.masthead a[href*="github.com"]')).toHaveCount(1);
         await expect(page.locator('.masthead').getByRole('link', { name: 'The collection', exact: true })).toHaveCount(0);
         const headerOrder = await page.locator('.masthead').evaluate(header => {
+          // Field Atlas controls stay in the DOM but are not rendered in Folio.
+          const rendered = (element: Element | null) => { while (element && getComputedStyle(element).display === 'none') element = element.nextElementSibling; return element; };
           const logo = header.querySelector('.brand');
           const search = header.querySelector('[data-open-search]')!;
           const actions = header.querySelector('.header-actions')!;
-          return (logo ? logo.nextElementSibling === search && logo.getBoundingClientRect().right <= search.getBoundingClientRect().left : header.firstElementChild === search)
-            && search.nextElementSibling === actions
+          return (logo ? rendered(logo.nextElementSibling) === search && logo.getBoundingClientRect().right <= search.getBoundingClientRect().left : rendered(header.firstElementChild) === search)
+            && rendered(search.nextElementSibling) === actions
             && search.getBoundingClientRect().right <= actions.getBoundingClientRect().left;
         });
         expect(headerOrder).toBe(true);
@@ -69,7 +71,7 @@ for (const width of [1440, 390, 320]) {
             .toEqual(registry.topics.toReversed().map(id => `topics/${id}/index.html`));
           await expect(page.locator('.topic-card[href="topics/just-enough-context/index.html"] .topic-visual img')).toBeVisible();
           await expect(page.locator('.masthead .brand')).toHaveCount(0);
-          await expect(page.locator('.wordmark .title-line')).toHaveCount(2);
+          await expect(page.locator('.wordmark .title-line:visible')).toHaveCount(2);
           const headerAlignment = await page.evaluate(() => {
             document.querySelector('.collection-page')!.getAnimations({ subtree: true }).forEach(animation => animation.finish());
             const content = document.querySelector('.collection-list')!.getBoundingClientRect();
@@ -409,14 +411,17 @@ test('mobile focus mode collapses navigation without leaving empty space', async
   await expect(page.locator('.on-page')).toBeVisible();
 });
 
-test('the full article and native collection navigation work without JavaScript', async ({ browser }) => {
+test('the full article and native plate navigation work without JavaScript', async ({ browser }) => {
+  // Without JavaScript no saved choice can apply, so readers get the default Field Atlas.
   const context = await browser.newContext({ javaScriptEnabled: false, colorScheme: 'dark' });
   const page = await context.newPage();
   await page.goto(url(topicPath));
+  await expect(page.locator('html')).toHaveAttribute('data-design', 'atlas');
   await expect(page.locator('.prose').first()).toBeVisible();
   await expect(page.locator('.theme-toggle')).not.toBeVisible();
-  await page.locator('.collection-contents summary').click();
-  await expect(page.locator('.collection-contents .nav-topic').first()).toBeVisible();
+  await expect(page.locator('.design-switch')).not.toBeVisible();
+  await page.locator('.plates-menu summary').click();
+  await expect(page.locator('.plates-drawer .drawer-plate').first()).toBeVisible();
   await expect(page.locator('.visual-guide')).toHaveCount(0);
   await context.close();
 });

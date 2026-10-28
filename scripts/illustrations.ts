@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import type { RenderedDocument } from '../design-system/types.ts';
+import type { RenderedDocument, Species } from '../design-system/types.ts';
 import { escape } from '../design-system/layout.ts';
+import { thumbnail } from './thumbnail.ts';
 
 export interface Illustration {
   file: string;
@@ -71,6 +72,12 @@ function parseWildlifeManifest(value: Record<string, unknown>): WildlifeManifest
   return value as unknown as WildlifeManifest;
 }
 
+/** Manifests name species as "Common name (Binomial)" or just the binomial. */
+export function parseSpecies(value: string): Species {
+  const match = /^(.+?)\s*\(([^()]+)\)$/.exec(value.trim());
+  return match ? { common: match[1].trim(), latin: match[2].trim() } : { latin: value.trim() };
+}
+
 async function optionalRead(path: string) {
   try { return await readFile(path); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined; throw error; }
@@ -81,7 +88,7 @@ async function loadWildlife(directory: string, manifest: WildlifeManifest, docum
   const boundaries = documents.flatMap(doc => doc.headings.filter(heading => heading.level === 2).slice(1).map(heading => ({ doc, heading })));
   const count = Math.min(4, boundaries.length);
   const slots = Array.from({ length: count }, (_, index) => boundaries[Math.floor(index * boundaries.length / count)]);
-  let homepage = '', hero = '';
+  let homepage = '', hero = '', portrait: string | undefined;
   for (const [index, image] of manifest.images.entries()) {
     // Slots depend on declared reading order, never which image files have arrived.
     const slot = index > 0 ? slots[index - 1] : undefined;
@@ -94,20 +101,21 @@ async function loadWildlife(directory: string, manifest: WildlifeManifest, docum
     if (index === 0) {
       homepage = `<img class="editorial-image editorial-homepage" ${attributes}>`;
       hero = `<img class="editorial-image editorial-hero editorial-portrait" ${attributes}>`;
+      portrait = thumbnail(data, extension) ?? `data:image/${mime};base64,${data.toString('base64')}`;
     } else {
       const html = `<img class="editorial-image editorial-chapter editorial-wildlife" ${attributes} loading="lazy">`;
       const start = slot!.doc.html.indexOf(`<h2 id="${slot!.heading.id}"`);
       slot!.doc.html = slot!.doc.html.slice(0, start) + html + slot!.doc.html.slice(start);
     }
   }
-  return { homepage, hero };
+  return { homepage, hero, species: parseSpecies(manifest.species), ...(portrait ? { thumbnail: portrait } : {}) };
 }
 
 /** Missing artwork is normal during delivery; invalid metadata is not. */
 export async function loadIllustrations(root: string, topic: string, documents: RenderedDocument[]) {
   const directory = resolve(root, 'topics', topic, 'assets/illustrations');
   const source = await optionalRead(resolve(directory, 'manifest.json'));
-  let homepage = '', hero = '';
+  let homepage = '', hero = '', portrait: string | undefined;
   if (!source) return { homepage, hero };
   const manifest = parseManifest(JSON.parse(source.toString('utf8')), topic, documents);
   if (manifest.version === 3) return loadWildlife(directory, manifest, documents);
@@ -122,6 +130,7 @@ export async function loadIllustrations(root: string, topic: string, documents: 
     const mime = extension === 'jpg' || extension === 'jpeg' ? 'jpeg' : extension;
     const html = `<img class="editorial-image editorial-${image.placement}" src="data:image/${mime};base64,${data.toString('base64')}" alt="${escape(image.alt)}" width="${image.width}" height="${image.height}"${image.placement === 'chapter' ? ' loading="lazy"' : ''} decoding="async">`;
     if (image === sharedHero) {
+      portrait = thumbnail(data, extension) ?? `data:image/${mime};base64,${data.toString('base64')}`;
       homepage = html.replace(`editorial-${image.placement}`, 'editorial-homepage');
       hero = html.replace(`editorial-${image.placement}`, 'editorial-hero');
     } else {
@@ -132,5 +141,5 @@ export async function loadIllustrations(root: string, topic: string, documents: 
       doc.html = doc.html.slice(0, end) + html + doc.html.slice(end);
     }
   }
-  return { homepage, hero };
+  return { homepage, hero, ...(portrait ? { thumbnail: portrait } : {}) };
 }

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.ts';
 
 const articleURL = new URL('../_site/topics/just-enough-context/index.html', import.meta.url).href;
 const chapterID = 'just-enough-context-doc-1-project-context-intelligence';

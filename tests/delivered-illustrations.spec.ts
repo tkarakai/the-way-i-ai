@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.ts';
 import { readFile } from 'node:fs/promises';
 import type { IllustrationManifest } from '../scripts/illustrations.ts';
 

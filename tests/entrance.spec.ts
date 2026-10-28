@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures.ts';
 
 const home = new URL('../_site/index.html', import.meta.url).href;
 const topic = new URL('../_site/topics/worktrees/index.html', import.meta.url).href;
@@ -8,12 +8,19 @@ const entranceCount = (page: Page) => page.locator('.collection-page').evaluate(
 
 async function pauseEntrance(page: Page) {
   await page.addInitScript(() => {
+    // The page is large; on a slow machine the 800ms intro could end before DOMContentLoaded.
+    // Hold the entrances from the first frame, then hand them to explicit pauses. An adopted
+    // sheet works before the document has an element to attach a <style> to.
+    const hold = new CSSStyleSheet();
+    hold.replaceSync('.collection-page * { animation-play-state: paused !important; }');
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, hold];
     document.addEventListener('DOMContentLoaded', () => {
       document.querySelector('.collection-page')?.getAnimations({ subtree: true }).forEach(animation => {
         if (animation instanceof CSSAnimation && animation.animationName === 'collection-enter') {
           animation.pause(); animation.currentTime = 0;
         }
       });
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(sheet => sheet !== hold);
     });
   });
   await page.goto(home);
@@ -36,11 +43,11 @@ for (const width of [1440, 390, 320]) {
         return { duration: timing.duration, delay: timing.delay, fill: timing.fill, easing: effect.getKeyframes()[0].easing, iterations: timing.iterations };
       }))).toEqual([
         { duration: 800, delay: 0, fill: 'backwards', easing: 'ease', iterations: 1 },
-        { duration: 1000, delay: 600, fill: 'backwards', easing: 'ease', iterations: 1 },
+        { duration: 1000, delay: 500, fill: 'backwards', easing: 'ease', iterations: 1 },
       ]);
       const sample = (time: number) => animations.evaluate((items, time) => {
         items.forEach(animation => { animation.currentTime = time; });
-        const sections = [...document.querySelectorAll<HTMLElement>('.collection-hero,.collection-list')];
+        const sections = [...document.querySelectorAll<HTMLElement>('.collection-intro,.collection-list')];
         return {
           sections: sections.map(node => {
             const style = getComputedStyle(node), transform = new DOMMatrix(style.transform);
@@ -64,7 +71,7 @@ for (const width of [1440, 390, 320]) {
       const second = await sample(800);
       expect(second.sections[0].opacity).toBe(1);
       expect(second.sections[1].opacity).toBeGreaterThan(0);
-      expect(second.sections[1].opacity).toBeLessThan(.5);
+      expect(second.sections[1].opacity).toBeLessThan(.6); // 300ms into the 500ms-delayed collection entrance
       await page.screenshot({ path: `test-results/entrance-${width}-${theme}-second-stage.png` });
       const end = await sample(1600);
       expect(end.sections.map(section => [section.opacity, section.transform])).toEqual([[1, 'none'], [1, 'none']]);
@@ -88,14 +95,14 @@ test('keyboard focus finishes the entrance immediately and never restarts it on 
   const card = page.locator('.topic-card').first();
   await card.focus();
   await expect(card).toBeFocused();
-  for (const selector of ['.collection-hero', '.collection-list']) {
+  for (const selector of ['.collection-intro', '.collection-list']) {
     await expect(page.locator(selector)).toHaveCSS('opacity', '1');
     await expect(page.locator(selector)).toHaveCSS('transform', 'none');
   }
   await page.locator('.theme-toggle').focus();
   expect(await entranceCount(page)).toBe(0);
   await page.goto(topic);
-  await expect(page.locator('.collection-hero,.collection-list')).toHaveCount(0);
+  await expect(page.locator('.collection-intro,.collection-list')).toHaveCount(0);
   await expect(page.locator('.article-hero')).toHaveCount(1);
 });
 
@@ -103,7 +110,7 @@ for (const mode of ['reduced motion', 'print'] as const) {
   test(`homepage is immediately readable with ${mode}`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: mode === 'reduced motion' ? 'reduce' : 'no-preference', media: mode === 'print' ? 'print' : 'screen' });
     await page.goto(home);
-    for (const selector of ['.collection-hero', '.collection-list']) {
+    for (const selector of ['.collection-intro', '.collection-list']) {
       await expect(page.locator(selector)).toHaveCSS('animation-name', 'none');
       await expect(page.locator(selector)).toHaveCSS('opacity', '1');
       await expect(page.locator(selector)).toHaveCSS('transform', 'none');

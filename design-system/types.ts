@@ -55,16 +55,19 @@ export interface RenderedTopic extends Topic {
   title: string;
   id: string;
   number: string;
-  illustrations?: { homepage: string; hero: string };
+  /** `thumbnail` is a small data URL of the portrait for navigation to this topic from other pages. */
+  illustrations?: { homepage: string; hero: string; species?: Species; thumbnail?: string };
   coverSVG: string;
   diagramSVG: string;
   rendered: RenderedDocument[];
 }
+/** A wildlife manifest species, split into an optional common name and binomial. */
+export interface Species { common?: string; latin: string }
 export interface SearchEntry { title: string; topic: string; href: string; text: string }
 export interface ShellOptions {
   title: string; description: string; body: string; css: string; js: string;
   themeJS: string; search: SearchEntry[];
-  fonts: string; collection: Collection; prefix?: string; page?: string;
+  fonts: string; collection: Collection; topics: RenderedTopic[]; prefix?: string; page?: string;
   wordmarkBackground?: boolean; created?: string; updated?: string;
 }
 export interface WavePosition {

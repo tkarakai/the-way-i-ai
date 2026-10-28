@@ -15,6 +15,17 @@ for (const width of [1440, 390]) {
         }
       });
     });
+    await page.addInitScript(() => {
+      // Freeze the opening section when it enters, before slow image loading
+      // can let animationend mark it shown and override the paused opacity.
+      new MutationObserver(records => {
+        for (const { target } of records) {
+          if (!(target instanceof HTMLElement) || !target.matches('.article-reveal[data-entrance-delay="true"][data-reveal="entering"]')) continue;
+          const animation = target.getAnimations().find((item): item is CSSAnimation => item instanceof CSSAnimation && item.animationName === 'collection-enter');
+          if (animation) { animation.pause(); animation.currentTime = 0; }
+        }
+      }).observe(document, { subtree: true, attributes: true, attributeFilter: ['data-reveal'] });
+    });
     await page.goto(articleURL);
     const hero = page.locator('.article-hero');
     const introduction = page.locator('.article-reveal').first();

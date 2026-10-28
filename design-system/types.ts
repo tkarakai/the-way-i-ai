@@ -5,6 +5,8 @@ export interface Collection {
   titleBackground?: string;
   titleBackgroundPosition?: string;
   repositoryUrl?: string;
+  siteUrl: string;
+  author: { name: string; url: string };
   description: string;
   eyebrow: string;
   subtitle: string;
@@ -63,12 +65,23 @@ export interface RenderedTopic extends Topic {
 }
 /** A wildlife manifest species, split into an optional common name and binomial. */
 export interface Species { common?: string; latin: string }
+/** A site page from `pages/`, such as About or the 404 page: a title, a derived description and authored chapters. */
+export interface RenderedPage { id: string; title: string; description: string; html: string; headings: Heading[] }
+/** A site page link: `id` is its folder, so `about` links to `about/index.html`. */
+export interface PageLink { id: string; title: string; description: string }
+/** A site page from `pages/`, such as About or the 404 page: its title, a description derived from its first paragraph, and authored chapters. */
+export interface RenderedPage { id: string; title: string; description: string; html: string; headings: Heading[] }
+/** A footer link to a site page; `id` is its folder, so `about` links to `about/index.html`. */
+export interface PageLink { id: string; title: string; description: string }
 export interface SearchEntry { title: string; topic: string; href: string; text: string }
 export interface ShellOptions {
   title: string; description: string; body: string; css: string; js: string;
   themeJS: string; search: SearchEntry[];
   fonts: string; collection: Collection; topics: RenderedTopic[]; prefix?: string; page?: string;
   wordmarkBackground?: boolean; created?: string; updated?: string;
+  headMetadata?: string;
+  /** Site pages linked from every footer. */
+  sitePages?: PageLink[];
 }
 export interface WavePosition {
   version: 1;

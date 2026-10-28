@@ -9,13 +9,14 @@ import { fileURLToPath } from 'node:url';
 import { spawn, spawnSync } from 'node:child_process';
 import { topicSource, splitFrontMatter } from './markdown-source.ts';
 import { stringify } from 'yaml';
+import jpeg from 'jpeg-js';
 import type { Topic } from '../design-system/types.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 async function fixture(t: TestContext) {
   const path = await mkdtemp(resolve(tmpdir(), 'the-way-i-ai-'));
   t.after(() => rm(path, { recursive: true, force: true }));
-  for (const item of ['scripts', 'design-system', 'topics', 'package.json', 'README.md', 'AGENTS.md', 'CLAUDE.md']) {
+  for (const item of ['scripts', 'design-system', 'topics', 'package.json', 'README.md', 'AGENTS.md', 'CLAUDE.md', 'robots.txt', 'pages']) {
     await cp(resolve(root, item), resolve(path, item), { recursive: true, filter: file => !file.endsWith('.html') });
   }
   // Source-editing fixtures start without optional delivered artwork bindings.
@@ -362,19 +363,92 @@ test('a missing SVG highlight target fails instead of silently losing the explan
   assert.match(result.stderr, /missing SVG node/);
 });
 
+test('discovery metadata matches the published inventory and stale sitemap checks fail', async t => {
+  const f = await fixture(t);
+  passed(f.build());
+  const registry = JSON.parse(await f.read('topics/topics.json')) as { topics: string[]; siteUrl: string };
+  const paths = ['index.html', 'general-index/index.html', ...registry.topics.map(id => `topics/${id}/index.html`), 'about/index.html', 'privacy/index.html', 'licensing/index.html'];
+  const xml = await f.read('sitemap.xml');
+  const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
+  assert.equal(urls.length, paths.length);
+  for (const [index, path] of paths.entries()) {
+    const html = await f.read(path);
+    const canonical = html.match(/<link rel="canonical" href="([^"]+)">/g) ?? [];
+    assert.equal(canonical.length, 1);
+    assert.ok(canonical[0].includes(`href="${urls[index]}"`));
+    const data = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
+    assert.equal(data.url, urls[index]);
+    assert.equal(data['@type'], index === 0 ? 'WebSite' : index === 1 ? 'CollectionPage' : path.startsWith('topics/') ? 'Article' : 'WebPage');
+    assert.match(html, /rel="alternate" type="application\/rss\+xml"/);
+    assert.ok(html.includes(`href="${new URL('feed.xml', registry.siteUrl).href}"`));
+  }
+  assert.doesNotMatch(xml, /README|pages\/|previews\/|404/);
+  const missing = await f.read('404.html');
+  assert.match(missing, /<meta name="robots" content="noindex">/);
+  assert.doesNotMatch(missing, /rel="canonical"/);
+  const robots = await f.read('robots.txt');
+  assert.ok(robots.includes(`Sitemap: ${new URL('sitemap.xml', registry.siteUrl).href}`));
+  const groups: { agents: string[]; disallow: string[] }[] = [];
+  for (const block of robots.split(/\n\s*\n/)) {
+    const agents = [...block.matchAll(/^User-agent:\s*(\S+)/gm)].map(match => match[1].toLowerCase());
+    const disallow = [...block.matchAll(/^Disallow:[ \t]*(.*)$/gm)].map(match => match[1].trim());
+    if (agents.length) groups.push({ agents, disallow });
+  }
+  const blocked = (agent: string) => (groups.find(group => group.agents.includes(agent.toLowerCase())) ?? groups.find(group => group.agents.includes('*')))!.disallow.includes('/');
+  for (const agent of ['Googlebot', 'Bingbot', 'Applebot', 'OAI-SearchBot', 'Claude-SearchBot']) assert.equal(blocked(agent), false, agent);
+  for (const agent of ['GPTBot', 'ClaudeBot', 'Google-Extended', 'Applebot-Extended', 'CCBot', 'meta-externalagent', 'Bytespider']) assert.equal(blocked(agent), true, agent);
+  passed(f.build('--check'));
+  await f.write('sitemap.xml', '<stale/>');
+  const stale = f.build('--check');
+  assert.notEqual(stale.status, 0);
+  assert.match(stale.stderr, /sitemap.xml is out of date/);
+  assert.equal(await f.read('sitemap.xml'), '<stale/>');
+  passed(f.build());
+  const feed = await f.read('feed.xml');
+  assert.equal((feed.match(/<item>/g) ?? []).length, registry.topics.length);
+  await f.write('feed.xml', '<stale/>');
+  const staleFeed = f.build('--check');
+  assert.notEqual(staleFeed.status, 0);
+  assert.match(staleFeed.stderr, /feed.xml is out of date/);
+  assert.equal(await f.read('feed.xml'), '<stale/>');
+});
+
 test('the publication bundle is clean and contains the same standalone pages and their source links', async t => {
   const f = await fixture(t);
   passed(f.build());
   await mkdir(resolve(f.path, '_site'), { recursive: true });
   await f.write('_site/stale.html', 'Old publication');
   passed(f.build('--site'));
-  for (const file of ['index.html', 'topics/worktrees/index.html', 'topics/agent-roles/index.html']) {
+  for (const file of ['index.html', 'general-index/index.html', 'topics/worktrees/index.html', 'topics/agent-roles/index.html', 'about/index.html', '404.html', 'sitemap.xml', 'feed.xml', 'robots.txt']) {
     assert.equal(await f.read(`_site/${file}`), await f.read(file));
   }
   assert.equal(await f.read('_site/topics/worktrees/README.md'), await f.read('topics/worktrees/README.md'));
   assert.equal(await f.read('_site/topics/agent-roles/README.md'), await f.read('topics/agent-roles/README.md'));
   assert.deepEqual(await readFile(resolve(f.path, '_site/topics/assets/logo-bg.png')), await readFile(resolve(f.path, 'topics/assets/logo-bg.png')));
   assert.equal(await f.read('_site/topics/assets/title-wave-position.json'), await f.read('topics/assets/title-wave-position.json'));
+  for (const file of ['favicon.ico', 'favicon-16.png', 'favicon-32.png', 'favicon-48.png', 'apple-touch-icon.png', 'favicon-192.png', 'favicon-512.png']) {
+    const approved = await readFile(resolve(f.path, 'design-system/assets/favicon', file));
+    assert.deepEqual(await readFile(resolve(f.path, file)), approved);
+    assert.deepEqual(await readFile(resolve(f.path, '_site', file)), approved);
+  }
+  const sharingPaths = new Set<string>();
+  const topicRegistry = JSON.parse(await f.read('topics/topics.json')) as { topics: string[]; siteUrl: string };
+  for (const page of ['index.html', 'general-index/index.html', ...topicRegistry.topics.map(id => `topics/${id}/index.html`)]) {
+    const html = await f.read(`_site/${page}`);
+    const imageURL = html.match(/<meta property="og:image" content="([^"]+)">/)![1];
+    assert.match(html, /name="twitter:card" content="summary_large_image"/);
+    const path = new URL(imageURL).pathname.slice(new URL(topicRegistry.siteUrl).pathname.length);
+    sharingPaths.add(path);
+    const data = await readFile(resolve(f.path, '_site', path));
+    const image = jpeg.decode(data, { useTArray: true });
+    assert.deepEqual([image.width, image.height], [1200, 630]);
+    assert.ok(data.length < 300_000, 'Sharing JPEGs stay compact');
+  }
+  assert.equal(sharingPaths.size, topicRegistry.topics.length + 1, 'The A–Z index reuses the collection card');
+  const topicHead = (await f.read('_site/topics/worktrees/index.html')).split('</head>')[0];
+  assert.match(topicHead, /href="\.\.\/\.\.\/favicon.ico"/);
+  assert.match(topicHead, /href="\.\.\/\.\.\/apple-touch-icon.png"/);
+  assert.match(topicHead, /rel="icon" type="image\/png" sizes="32x32" href="data:image\/png;base64,/);
   await access(resolve(f.path, '_site/.nojekyll'));
   await assert.rejects(access(resolve(f.path, '_site/stale.html')));
   await assert.rejects(access(resolve(f.path, '_site/node_modules')));
@@ -402,19 +476,55 @@ test('the local preview serves the generated site, links and images without serv
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type') ?? '', /text\/html/);
     assert.equal(await response.text(), await f.read('_site/index.html'));
-    for (const file of ['topics/worktrees/index.html', 'topics/agent-roles/README.md', 'topics/topics.json']) {
+    for (const file of ['topics/worktrees/index.html', 'topics/agent-roles/README.md', 'topics/topics.json', 'sitemap.xml', 'feed.xml', 'robots.txt', 'favicon.ico', 'apple-touch-icon.png']) {
       const linked = await fetch(new URL(file, base));
       assert.equal(linked.status, 200);
-      assert.equal(await linked.text(), await f.read(`_site/${file}`));
+      if (file === 'sitemap.xml') assert.match(linked.headers.get('content-type') ?? '', /application\/xml/);
+      if (file === 'feed.xml') assert.match(linked.headers.get('content-type') ?? '', /application\/rss\+xml/);
+      if (file === 'robots.txt') assert.match(linked.headers.get('content-type') ?? '', /text\/plain/);
+      if (file.endsWith('.ico') || file.endsWith('.png')) {
+        assert.deepEqual(Buffer.from(await linked.arrayBuffer()), await readFile(resolve(f.path, '_site', file)));
+      } else assert.equal(await linked.text(), await f.read(`_site/${file}`));
     }
+    const homepage = await f.read('_site/index.html');
+    const sharingURL = homepage.match(/<meta property="og:image" content="([^"]+)">/)![1];
+    const shared = await fetch(new URL(new URL(sharingURL).pathname, base));
+    assert.equal(shared.status, 200);
+    assert.match(shared.headers.get('content-type') ?? '', /image\/jpeg/);
+    assert.deepEqual([jpeg.decode(Buffer.from(await shared.arrayBuffer()), { useTArray: true }).width], [1200]);
     const head = await fetch(base, { method: 'HEAD' });
     assert.equal(head.status, 200);
     assert.equal(await head.text(), '');
-    assert.equal((await fetch(new URL('missing.html', base))).status, 404);
+    const missing = await fetch(new URL('some/deep/missing.html', base));
+    assert.equal(missing.status, 404);
+    assert.equal(await missing.text(), await f.read('_site/404.html'), 'Missing paths get the 404 page, as on GitHub Pages');
     assert.equal((await fetch(new URL('%2e%2e%2fpackage.json', base))).status, 403);
     assert.equal((await fetch(base, { method: 'POST' })).status, 405);
   } finally {
     child.kill('SIGTERM');
     await new Promise<void>(resolveExit => { if (child.exitCode !== null || child.signalCode) resolveExit(); else child.once('exit', () => resolveExit()); });
   }
+});
+
+test('site pages render from pages/ with footer links, and the 404 page links from the site root', async t => {
+  const f = await fixture(t);
+  await f.write('pages/about.md', '# About\n\nAn opening paragraph.\n\n## First\n\nText.\n\n## Second\n\n[Home](https://thewayiai.com/)');
+  passed(f.build());
+  const about = await f.read('about/index.html');
+  assert.match(about, /<h1 id="page-title">About<\/h1>/);
+  assert.match(about, /<meta name="description" content="An opening paragraph.">/);
+  assert.match(about, /<nav class="info-toc" aria-label="On this page"><ol><li><a href="#first">First<\/a><\/li><li><a href="#second">Second<\/a><\/li><\/ol><\/nav>/);
+  assert.match(about, /<a href="\.\.\/index\.html">Home<\/a>/, 'Links to the published site stay relative');
+  assert.match(about, /<a href="\.\.\/about\/index\.html" aria-current="page">About<\/a><a href="\.\.\/privacy\/index\.html">Privacy<\/a><a href="\.\.\/licensing\/index\.html">Licensing<\/a>/);
+  assert.match(about, /<a href="\.\.\/licensing\/index\.html">© \d{4}(?:–\d{4})? tkarakai<\/a>/, 'Copyright years come from authored dates');
+  assert.doesNotMatch(about, /class="icon-button focus-toggle/);
+  assert.match(await f.read('index.html'), /<a href="privacy\/index\.html">Privacy<\/a>/);
+  const missing = await f.read('404.html');
+  assert.match(missing, /<h1 id="page-title">Nothing here<\/h1>/);
+  assert.match(missing, /href="\/index\.html">Browse the topics<\/a>/);
+  assert.match(missing, /class="info-topic" href="\/topics\/worktrees\/index\.html"/);
+  assert.match(missing, /<link rel="icon" type="image\/x-icon" href="\/favicon\.ico">/);
+  for (const [, href] of missing.matchAll(/\bhref="([^"#]+)"/g)) assert.ok(/^(?:\/|https:|data:)/.test(href), `404 links must work at any depth: ${href}`);
+  await f.write('pages/privacy.md', '# Privacy\n\nOpening.\n\n### Skipped');
+  assert.match(f.build().stderr, /headings must not skip levels/);
 });

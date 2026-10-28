@@ -9,7 +9,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 test('delivered artwork renders offline in both themes, with exact chapter anchors and graceful partial delivery', async ({ page, context }) => {
   const fixture = await mkdtemp(resolve(tmpdir(), 'illustration-browser-'));
   try {
-    for (const item of ['scripts', 'design-system', 'topics']) await cp(resolve(root, item), resolve(fixture, item), { recursive: true, filter: file => !file.endsWith('.html') && !file.includes('/assets/illustrations') });
+    for (const item of ['scripts', 'design-system', 'topics', 'robots.txt', 'pages']) await cp(resolve(root, item), resolve(fixture, item), { recursive: true, filter: file => !file.endsWith('.html') && !file.includes('/assets/illustrations') });
     await symlink(resolve(root, 'node_modules'), resolve(fixture, 'node_modules'), 'dir');
     const directory = resolve(fixture, 'topics/worktrees/assets/illustrations');
     await mkdir(directory, { recursive: true });

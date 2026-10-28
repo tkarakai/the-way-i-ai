@@ -19,6 +19,8 @@
 
 <p align="center"><strong><a href="https://thewayiai.com/">Explore the interactive collection →</a></strong></p>
 
+Subscribe to new topics in your feed reader with the [RSS feed](https://thewayiai.com/feed.xml).
+
 ---
 
 ## About the collection
@@ -98,13 +100,13 @@ npm ci
 npm run typecheck
 npm run build
 npm run check
+npx playwright install chromium # First checkout: sharing-card renderer and browser tests
 npm test
 ```
 
 For browser acceptance tests (also run before deployment):
 
 ```sh
-npx playwright install chromium
 npm run test:browser
 ```
 
@@ -128,6 +130,8 @@ Worktree installation paths changed when the topic moved. Existing shell functio
 ```sh
 npm run preview
 ```
+
+Install Playwright Chromium first with `npx playwright install chromium`. Publication builds automatically render the social sharing images from the current titles, artwork, and shared card design; standalone HTML builds and output checks do not require a browser.
 
 This builds the current checkout into `_site/` and serves it at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`). If another worktree is using that port, the server chooses an available one. After editing, run `npm run build:site` in another terminal and refresh the browser. This full-site preview uses the publication content and theme.
 

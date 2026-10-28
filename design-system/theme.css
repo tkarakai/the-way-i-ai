@@ -402,6 +402,60 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 .index-topic { display: block; font-size: 11px; color: var(--muted); }
 .index-sub .index-text { font-style: italic; color: var(--muted); }
 @media (max-width: 760px) { .index-page { padding: 0 22px 40px; } .index-head { padding-top: 28px; } }
+/* Site pages (About, Privacy, Licensing, 404): a title column with the chapter outline beside the text,
+   then links to the other site pages. Both designs share this markup. */
+.footer-identity { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.footer-links a[aria-current='page'] { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line); }
+.info-page { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 680px); justify-content: center; gap: 0 80px; max-width: 1200px; margin-inline: auto; padding: 64px 60px 72px; }
+.info-head { position: sticky; top: calc(var(--header-height) + 40px); align-self: start; display: grid; gap: 16px; transition: top .3s ease; }
+.info-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; margin: 0; font-size: 10px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+.info-label span:last-child { color: var(--accent); }
+.info-head h1 { margin: 0; font: 450 clamp(40px, 4.6vw, 58px)/1.02 var(--serif); letter-spacing: -.035em; color: var(--article-title-ink); text-wrap: balance; }
+.info-toc ol { display: grid; gap: 2px; margin: 4px 0 0; padding: 14px 0 0; border-top: 1px solid var(--line); list-style: none; }
+.info-toc a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid transparent; color: var(--muted); font-size: 13px; line-height: 1.4; text-decoration: none; transition: color .2s, border-color .2s; }
+.info-toc a:hover { color: var(--chapter-ink); border-left-color: var(--chapter-ink); }
+.info-body { min-width: 0; }
+.info-body .prose a:not(.heading-link) { text-decoration-color: color-mix(in srgb, var(--accent) 50%, transparent); text-decoration-thickness: 1px; }
+.info-section-label { margin: 0 0 14px; font: 500 10px/1.4 var(--sans); letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+.info-pages { grid-column: 1 / -1; margin-top: 64px; padding-top: 26px; border-top: 1px solid var(--ink); }
+.info-card-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.info-card { display: grid; align-content: start; gap: 8px; padding: 20px 22px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-decoration: none; transition: transform .3s ease, border-color .3s ease; }
+.info-card:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--ink); }
+.info-card strong { font: 450 25px/1.15 var(--serif); letter-spacing: -.02em; }
+.info-card strong::after { content: ' →'; color: var(--accent); }
+.info-card span { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: var(--muted); font-size: 13px; line-height: 1.55; }
+/* The 404 page: one centred column, then the way back to the topics. */
+.info-missing { grid-template-columns: minmax(0, 960px); text-align: center; }
+.info-missing :is(.info-head, .info-body) { width: 100%; max-width: 680px; margin-inline: auto; }
+.info-missing .info-body { margin-top: 22px; }
+.info-missing .info-head { position: static; justify-items: center; margin-bottom: 0; }
+.info-missing .info-label { gap: 4px 0; }
+.info-missing .info-label span + span::before { content: '·'; margin-inline: 8px; color: var(--muted); }
+.info-code { margin: 8px 0 0; font: 300 clamp(110px, 20vw, 200px)/.82 var(--serif); letter-spacing: -.06em; color: var(--accent); }
+.info-missing .prose > p:first-child { font-size: 21px; line-height: 1.6; }
+.info-topics { grid-column: 1 / -1; margin-top: 48px; text-align: left; }
+.info-topics .info-section-label { text-align: center; margin-bottom: 14px; }
+.info-topic-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.info-topic { display: grid; align-content: start; gap: 4px; padding: 10px 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-decoration: none; transition: transform .3s ease, border-color .3s ease; }
+.info-topic:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--ink); }
+.info-topic-portrait { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; margin-bottom: 6px; border-radius: 4px; background: var(--tint); }
+.info-topic-number, .info-topic-category { font-size: 10px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+.info-topic strong { font: 500 19px/1.2 var(--serif); }
+.info-missing .info-pages { margin-top: 48px; text-align: left; }
+@media (max-width: 980px) {
+  .info-page { grid-template-columns: minmax(0, 680px); gap: 0; padding: 40px 35px 56px; }
+  .info-head { position: static; margin-bottom: 30px; }
+  .info-toc ol { display: flex; flex-wrap: wrap; gap: 2px 18px; }
+  .info-toc a { padding: 4px 0; border-left: 0; }
+}
+@media (max-width: 760px) {
+  .info-page { padding: 28px 22px 44px; }
+  .info-body .prose > p:first-child { font-size: 19px; }
+  .info-pages { margin-top: 44px; }
+  .info-topic-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .info-topic strong { font-size: 16px; }
+}
 @keyframes arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 /* Logo parts stay inline text, so spacing and kerning are exactly the approved wordmark's.
    They move with relative offsets, which never affect layout. */
@@ -437,11 +491,15 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
   .article-reveal[data-reveal='entering'] { animation: collection-enter .8s ease backwards; }
   .article-reveal[data-reveal='entering'][data-entrance-delay='true'] { animation-delay: .5s; }
   .article-reveal:focus-within { opacity: 1; animation: none; }
+  /* Site pages: the title column arrives like a topic header, the text and links 500ms later. */
+  .info-page > :is(.info-head, .info-body, .info-topics, .info-pages) { --entrance-y: -48px; transform-origin: 50% 0; animation: collection-enter .8s ease backwards; }
+  .info-page > :is(.info-body, .info-topics, .info-pages) { animation-duration: 1s; animation-delay: .5s; }
+  .info-page > :focus-within { opacity: 1 !important; animation: none !important; }
   /* Native keyboard focus stays visible even when JavaScript is unavailable. */
   .collection-page > section:focus-within { opacity: 1 !important; transform: none !important; }
 }
 @media screen and (prefers-reduced-motion: no-preference) and (max-width: 760px) {
-  .article-reveal, .article-hero:not([data-reveal='shown']) { --entrance-y: -24px; }
+  .article-reveal, .article-hero:not([data-reveal='shown']), .info-page > * { --entrance-y: -24px; }
   body[data-page='collection'] .collection-intro { --entrance-y: -32px; }
   body[data-page='collection'] .collection-list { --entrance-y: -24px; }
 }
@@ -550,6 +608,9 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
   .masthead, .collection-nav, .on-page, .footer, .search-dialog, .toast, .js-only, .js .js-only, .title-art, .ambient-canvas, .visual-guide > summary { display: none !important; }
   .workspace, .reading-layout, .reading-main, .focus-mode .workspace, .focus-mode .reading-layout, .focus-mode .reading-main { display: block; padding: 0; max-width: none; }
   .collection-page { padding: 0; }
+  .info-page { display: block; padding: 0; }
+  .info-head { position: static; margin-bottom: 24pt; }
+  .info-toc, .info-topics, .info-pages { display: none !important; }
   .collection-hero { gap: 35px; padding-block: 35px; }
   .collection-hero .wordmark { --wordmark-size: 90px; }
   .collection-intro h2 { font-size: 36px; }

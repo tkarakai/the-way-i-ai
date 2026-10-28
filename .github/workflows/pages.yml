@@ -26,9 +26,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # Publication-bundle tests also rasterize the sharing cards.
+      - run: npx playwright install --with-deps chromium
       - run: npm test
       - run: npm run check
-      - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - name: Upload PR preview
         if: github.event_name == 'pull_request'

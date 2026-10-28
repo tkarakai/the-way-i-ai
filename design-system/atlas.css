@@ -279,6 +279,39 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
 [data-design='atlas'] .index-columns h2 { font: 600 36px/1 var(--display); }
 [data-design='atlas'] .index-topic { font-family: var(--mono); font-size: 10.5px; }
 
+/* Site pages in the atlas: the title sits on a label card with a dotted outline; the text keeps the topic measure.
+   The 404 page shows an empty mount where a portrait would be. */
+.stamp-info { --stamp: 520px; right: -170px; top: -60px; }
+[data-design='atlas'] .footer-links a[aria-current='page'] { text-decoration-color: var(--accent); }
+[data-design='atlas'] .info-page { max-width: 1440px; gap: 0 64px; padding: 48px var(--atlas-inset) 72px; }
+[data-design='atlas'] .info-head { gap: 12px; padding: 20px 22px 22px; border: 1px solid var(--ink); background: var(--surface); box-shadow: 6px 6px 0 var(--tint); }
+[data-design='atlas'] .info-label { padding-bottom: 10px; border-bottom: 1px solid var(--line); font: 500 10.5px/1.3 var(--mono); letter-spacing: .14em; color: var(--accent); }
+[data-design='atlas'] .info-label span:first-child { color: var(--muted); }
+[data-design='atlas'] .info-head h1 { margin-top: 2px; font: italic 600 clamp(42px, 4.4vw, 60px)/.98 var(--display); letter-spacing: 0; color: var(--ink); }
+[data-design='atlas'] .info-toc ol { gap: 0; margin: 0; padding-top: 12px; }
+[data-design='atlas'] .info-toc a { position: relative; padding: 4px 0 4px 20px; border: 0; color: var(--ink); font-size: 14px; }
+[data-design='atlas'] .info-toc a::before { content: ''; position: absolute; left: 0; top: calc(4px + .7em - 4px); width: 7px; height: 7px; border: 1px solid var(--chapter-ink); border-radius: 50%; transition: background-color .3s, transform .3s var(--atlas-ease); }
+[data-design='atlas'] .info-toc a:hover { color: var(--chapter-ink); }
+[data-design='atlas'] .info-toc a:hover::before { background: var(--chapter-ink); transform: scale(1.25); }
+[data-design='atlas'] .info-section-label { font: 500 10.5px/1.4 var(--mono); letter-spacing: .14em; color: var(--accent); }
+[data-design='atlas'] .info-card-list { gap: 18px; }
+[data-design='atlas'] .info-card { gap: 6px; padding: 18px 20px; border-radius: 0; transition: transform .4s var(--atlas-ease), border-color .3s; }
+[data-design='atlas'] .info-card:hover { transform: translateY(-3px); border-color: var(--ink); }
+[data-design='atlas'] .info-card strong { font: 600 26px/1.1 var(--display); letter-spacing: 0; }
+[data-design='atlas'] .info-card span { font: 400 12px/1.55 var(--mono); }
+[data-design='atlas'] .info-missing .info-head { justify-items: stretch; padding: 22px 26px 26px; }
+[data-design='atlas'] .info-missing .info-label { justify-content: space-between; }
+[data-design='atlas'] .info-missing .info-label span + span::before { content: none; }
+[data-design='atlas'] .info-missing .info-body { margin-top: 30px; }
+[data-design='atlas'] .info-code { display: grid; place-items: center; aspect-ratio: 16 / 7; margin: 6px 0 4px; border: 1px dashed var(--mount-ink); outline: .5px solid var(--line); outline-offset: 5px; background: var(--mount); color: var(--mount-ink); font: italic 500 clamp(96px, 16vw, 168px)/1 var(--display); letter-spacing: -.02em; }
+[data-design='atlas'] .info-code span { opacity: .82; }
+[data-design='atlas'] .info-topic { padding: 8px 8px 14px; border-radius: 0; transition: transform .4s var(--atlas-ease), border-color .3s; }
+[data-design='atlas'] .info-topic:hover { transform: translateY(-3px); border-color: var(--ink); }
+[data-design='atlas'] .info-topic-portrait { border: 1px solid var(--line); border-radius: 0; background: var(--mount); }
+[data-design='atlas'] .info-topic-number { font: 500 10.5px/1.3 var(--mono); letter-spacing: .14em; color: var(--accent); }
+[data-design='atlas'] .info-topic strong { font: 600 21px/1.12 var(--display); }
+[data-design='atlas'] .info-topic .plate-species { font-size: 15px; }
+
 /* Focus mode: the masthead, outline, margin, running head and plate bar step aside; the text moves to the centre. */
 @property --atlas-toc { syntax: '<length-percentage>'; inherits: true; initial-value: 230px; }
 @property --atlas-measure { syntax: '<length-percentage>'; inherits: true; initial-value: 100%; }

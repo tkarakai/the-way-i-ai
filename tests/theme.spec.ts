@@ -45,12 +45,12 @@ test('a stale stored choice resets before navigation can renew it', async ({ pag
   expect(await page.evaluate(key => localStorage.getItem(key), key)).toBeNull();
 });
 
-test('manual toggles and resetting storage synchronize the target icons across tabs', async ({ page, context }) => {
+test('manual toggles and resetting storage synchronize the target icons across tabs', async ({ page, context, siteURL }) => {
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
-  await page.goto(home);
+  await page.goto(siteURL);
   const other = await context.newPage();
   await other.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
-  await other.goto(home);
+  await other.goto(siteURL);
   await page.locator('.theme-toggle').click();
   await expect(other.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(other.locator('.theme-light')).toBeVisible();

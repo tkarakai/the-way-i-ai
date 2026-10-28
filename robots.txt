@@ -1,0 +1,21 @@
+# Allow normal search indexing, including search-specific AI crawlers.
+User-agent: *
+Disallow:
+
+# Training crawlers and AI-training usage controls.
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+Disallow: /
+
+# Common Crawl datasets can be reused for model training.
+User-agent: CCBot
+Disallow: /
+
+# Additional precautionary exclusions for AI collection.
+User-agent: meta-externalagent
+User-agent: Bytespider
+Disallow: /
+
+Sitemap: https://thewayiai.com/sitemap.xml

@@ -137,12 +137,20 @@ for (const design of ['atlas', 'folio'] as const) {
 
 test('the topic list drawer slides closed and the browse picture opens its topic', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(url('index.html'));
+  await page.goto(url('general-index/index.html'));
   await page.locator('.plates-menu summary').click();
   await expect(page.locator('.drawer-plate img').first()).toHaveJSProperty('complete', true);
+  // The closing slide lasts 300ms, too briefly to poll for on a slow runner, so record it as it happens.
+  await page.locator('.plates-menu').evaluate(menu => {
+    const observer = new MutationObserver(() => { if (menu.classList.contains('is-closing')) { menu.dataset.sawClosing = 'true'; observer.disconnect(); } });
+    observer.observe(menu, { attributes: true, attributeFilter: ['class'] });
+  });
   await page.locator('[data-close-plates]').click();
-  await expect(page.locator('.plates-menu')).toHaveClass(/is-closing/);
+  await expect(page.locator('.plates-menu')).toHaveAttribute('data-saw-closing', 'true');
   await expect(page.locator('.plates-menu')).not.toHaveAttribute('open', '');
+  // The home page already presents every topic, so it has no topic list button.
+  await page.goto(url('index.html'));
+  await expect(page.locator('.plates-menu')).toHaveCount(0);
   await page.locator('.spread-plate-link').click();
   await expect(page).toHaveURL(new RegExp(`topics/${registry.topics.at(-1)}/index.html`));
 });

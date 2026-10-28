@@ -7,7 +7,7 @@ export interface PublishedPage {
   path: string;
   title: string;
   description: string;
-  kind: 'collection' | 'index' | 'article';
+  kind: 'collection' | 'index' | 'article' | 'page';
   category?: string;
   created?: string;
   updated?: string;
@@ -46,7 +46,7 @@ export function pageMetadata(collection: Collection, page: PublishedPage): strin
   const entity = {
     '@context': 'https://schema.org',
     ...(page.kind === 'collection' ? website : {
-      '@type': page.kind === 'article' ? 'Article' : 'CollectionPage',
+      '@type': page.kind === 'article' ? 'Article' : page.kind === 'page' ? 'WebPage' : 'CollectionPage',
       '@id': `${url}#${page.kind === 'article' ? 'article' : 'webpage'}`,
       url,
       ...(page.kind === 'article' ? { headline: page.title, author, mainEntityOfPage: { '@type': 'WebPage', '@id': url }, articleSection: page.category } : { name: page.title }),

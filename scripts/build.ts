@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import type { Collection, RenderedTopic, SourceDocument, RenderedDocument, Heading } from '../design-system/types.ts';
+import type { Collection, RenderedTopic, SourceDocument, RenderedDocument, RenderedPage, PageLink, Heading } from '../design-system/types.ts';
 import type { Tokens } from 'marked';
 import { readFile, writeFile, access, mkdir, rm, cp } from 'node:fs/promises';
 import { dirname, resolve, relative } from 'node:path';
@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { Marked, Renderer } from 'marked';
 import { preloadFile } from '@pierre/diffs/ssr';
-import { shell, collectionBody, readerBody, indexBody, escape } from '../design-system/layout.ts';
+import { shell, collectionBody, readerBody, indexBody, pageBody, escape } from '../design-system/layout.ts';
 import { explorerFor } from '../design-system/explorers.ts';
 import { parseWavePosition, wordmarkStyles } from '../design-system/wordmark.ts';
 import { collectionSearch } from '../design-system/search.ts';
@@ -182,6 +182,56 @@ for (const topic of topics) {
   topic.illustrations = await loadIllustrations(root, topic.id, topic.rendered);
 }
 
+// Site pages: About, Privacy and Licensing in footer order, plus the GitHub Pages 404 page.
+// GitHub Pages serves 404.html at any missing path, so its links start from the site root.
+const sitePageIds = ['about', 'privacy', 'licensing'];
+const missingPrefix = new URL(registry.siteUrl).pathname;
+async function renderPage(id: string, prefix: string): Promise<RenderedPage> {
+  const file = `pages/${id}.md`;
+  const markdown = await read(file);
+  if (splitFrontMatter(markdown, file).metadata) throw new Error(`${file}: site pages have no front matter.`);
+  const headings: Heading[] = [];
+  const used = new Set<string>();
+  let previousLevel = 1;
+  const parser = new Marked({
+    gfm: true,
+    walkTokens(token) {
+      if (token.type === 'image') throw new Error(`${file}: site pages do not embed images.`);
+      // Links to the published site stay relative, so previews and downloaded copies stay local.
+      if (token.type === 'link' && token.href.startsWith(registry.siteUrl)) {
+        const target = token.href.slice(registry.siteUrl.length);
+        token.href = prefix + (!target || target.endsWith('/') ? `${target}index.html` : target);
+      }
+    },
+    renderer: {
+      heading(token) {
+        if (token.depth === 1) throw new Error(`${file}: each page requires exactly one level-one title.`);
+        if (token.depth > previousLevel + 1) throw new Error(`${file}: headings must not skip levels.`);
+        previousLevel = token.depth;
+        const content = this.parser.parseInline(token.tokens);
+        const text = plain(content);
+        let headingId = slug(text);
+        while (used.has(headingId) || headingId === 'page-title') headingId += '-2';
+        used.add(headingId);
+        headings.push({ id: headingId, text, level: token.depth, excerpt: '' });
+        return `<h${token.depth} id="${headingId}"><a class="heading-link" href="#${headingId}">${content}</a></h${token.depth}>\n`;
+      }
+    }
+  });
+  const tokens = parser.lexer(markdown);
+  const first = tokens.findIndex(token => token.type !== 'space');
+  if (tokens[first]?.type !== 'heading' || tokens[first].depth !== 1) throw new Error(`${file} must start with a level-one title.`);
+  const title = plain(parser.parseInline(tokens[first].text) as string);
+  const paragraph = tokens.find((token): token is Tokens.Paragraph => token.type === 'paragraph');
+  if (!title.trim() || !paragraph) throw new Error(`${file} needs a title and an opening paragraph.`);
+  const html = parser.parse(markdown.replace(tokens[first].raw, '')) as string;
+  // The opening paragraph doubles as the search and sharing description.
+  return { id, title, description: plain(parser.parseInline(paragraph.text) as string).replace(/\s+/g, ' ').trim(), html, headings };
+}
+const sitePages = await Promise.all(sitePageIds.map(id => renderPage(id, '../')));
+const pageLinks: PageLink[] = sitePages.map(({ id, title, description }) => ({ id, title, description }));
+const missingPage = await renderPage('404', missingPrefix);
+
 const publicIcons = await loadIcons(root);
 const outputs = new Map<string, string>();
 const titleBackgroundPath = registry.titleBackground ? resolve(root, 'topics', registry.titleBackground) : undefined;
@@ -201,20 +251,28 @@ const cards = [homeCard, ...topicCards.values()];
 const published: PublishedPage[] = [
   { path: 'index.html', title: registry.title, description: registry.description, kind: 'collection', sharingImage: homeCard },
   { path: 'general-index/index.html', title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, kind: 'index', sharingImage: homeCard },
-  ...topics.map((topic): PublishedPage => ({ path: `topics/${topic.id}/index.html`, title: topic.title, description: topic.description, kind: 'article', category: topic.category, created: topic.created, updated: topic.updated, sharingImage: topicCards.get(topic.id)! }))
+  ...topics.map((topic): PublishedPage => ({ path: `topics/${topic.id}/index.html`, title: topic.title, description: topic.description, kind: 'article', category: topic.category, created: topic.created, updated: topic.updated, sharingImage: topicCards.get(topic.id)! })),
+  ...sitePages.map((page): PublishedPage => ({ path: `${page.id}/index.html`, title: page.title, description: page.description, kind: 'page', sharingImage: homeCard }))
 ];
 const metadataFor = (path: string) => {
   const page = published.find(page => page.path === path);
   if (!page) throw new Error(`Missing publication metadata: ${path}`);
   return pageMetadata(registry, page) + iconMetadata(publicIcons, path) + feedLink(registry);
 };
-outputs.set('index.html', shell({ headMetadata: metadataFor('index.html'), title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, topics, wordmarkBackground }));
-outputs.set('general-index/index.html', shell({ headMetadata: metadataFor('general-index/index.html'), title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, body: indexBody(topics), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../', page: 'index', wordmarkBackground }));
+outputs.set('index.html', shell({ headMetadata: metadataFor('index.html'), title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, topics, wordmarkBackground, sitePages: pageLinks }));
+outputs.set('general-index/index.html', shell({ headMetadata: metadataFor('general-index/index.html'), title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, body: indexBody(topics), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../', page: 'index', wordmarkBackground, sitePages: pageLinks }));
 for (const topic of topics) {
   const fingerprints = `<!-- Markdown sources: ${topic.rendered.map(doc => `${doc.file} sha256:${doc.sha256}`).join('; ')} -->\n`;
-  outputs.set(`topics/${topic.id}/index.html`, shell({ headMetadata: metadataFor(`topics/${topic.id}/index.html`), title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered), registry), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../../', page: topic.id, wordmarkBackground, created: topic.created, updated: topic.updated }));
+  outputs.set(`topics/${topic.id}/index.html`, shell({ headMetadata: metadataFor(`topics/${topic.id}/index.html`), title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered), registry), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../../', page: topic.id, wordmarkBackground, created: topic.created, updated: topic.updated, sitePages: pageLinks }));
 }
+for (const page of sitePages) {
+  outputs.set(`${page.id}/index.html`, shell({ headMetadata: metadataFor(`${page.id}/index.html`), title: page.title, description: page.description, body: pageBody(page, pageLinks, topics, registry, '../'), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../', page: page.id, wordmarkBackground, sitePages: pageLinks }));
+}
+// Not a published page: no canonical URL, sitemap entry or sharing card, and never indexed.
+outputs.set('404.html', shell({ headMetadata: '<meta name="robots" content="noindex">' + iconMetadata(publicIcons, '404.html', missingPrefix) + feedLink(registry), title: missingPage.title, description: missingPage.description, body: pageBody(missingPage, pageLinks, topics, registry, missingPrefix, true), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: missingPrefix, page: '404', wordmarkBackground, sitePages: pageLinks }));
 
+// Root-relative links (only on the 404 page) start at the site root; others at the page's folder.
+const localTarget = (path: string, href: string) => href.startsWith('/') ? resolve(root, href.slice(missingPrefix.length)) : resolve(root, dirname(path), href);
 // Validate output before writing: navigation, ids, and offline render dependencies.
 for (const [path, html] of outputs) {
   const lightDOM = html.replace(/<template shadowrootmode="open">[\s\S]*?<\/template>/g, '');
@@ -226,7 +284,7 @@ for (const [path, html] of outputs) {
     .replace(/<link rel="alternate" type="application\/rss\+xml"[^>]*>/g, '')
     .replace(/<link rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"[^>]*>/g, (tag, href: string) => {
       if (href.startsWith('data:')) return tag;
-      const target = relative(root, resolve(root, dirname(path), href));
+      const target = relative(root, localTarget(path, href));
       if (!publicIcons.has(target)) throw new Error(`Unknown local icon in ${path}: ${href}`);
       return ''; // Only approved local icons are optional non-prose dependencies.
     });
@@ -235,7 +293,7 @@ for (const [path, html] of outputs) {
   for (const [, href] of lightDOM.matchAll(/\bhref="([^"]+)"/g)) {
     if (/^(?:[a-z]+:|\/\/)/i.test(href)) continue;
     const [file, fragment] = href.split('#');
-    const target = file ? resolve(root, dirname(path), decodeURIComponent(file)) : resolve(root, path);
+    const target = file ? localTarget(path, decodeURIComponent(file)) : resolve(root, path);
     const targetPath = relative(root, target);
     if (!outputs.has(targetPath) && !publicIcons.has(targetPath)) await access(target).catch(() => { throw new Error(`Broken local link in ${path}: ${href}`); });
     if (fragment && outputs.has(targetPath)) {
@@ -244,7 +302,7 @@ for (const [path, html] of outputs) {
     }
   }
 }
-if (published.length !== outputs.size || published.some(page => !outputs.has(page.path))) throw new Error('Published page inventory must match generated HTML.');
+if (published.length + 1 !== outputs.size || !outputs.has('404.html') || published.some(page => !outputs.has(page.path))) throw new Error('Published page inventory must match generated HTML.');
 outputs.set('sitemap.xml', sitemap(registry, published));
 outputs.set('feed.xml', rssFeed(registry, published));
 outputs.set('robots.txt', await read('robots.txt'));

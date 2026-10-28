@@ -18,9 +18,10 @@ The same generated HTML works as downloaded standalone files and as a GitHub Pag
 | Other topic Markdown | Companion documents or supporting notes. Listed documents are rendered in full, in reading order. |
 | `topics/<id>/assets/` | Authored diagrams, images, data, and other topic-specific visual content. |
 | Topic-local scripts and examples | Supporting tools that belong to the idea. |
+| `pages/about.md`, `pages/privacy.md`, `pages/licensing.md`, `pages/404.md` | Site pages, rendered in both designs. Each has one `#` title, an opening paragraph (reused as its description), and `##` chapters that form its outline; no front matter or images. Absolute `siteUrl` links become relative. The footer links About, Privacy and Licensing in that order (labels come from the file names). |
 | `design-system/` | Shared visual language, generic components, layout, and browser behavior. |
 | `scripts/` | Building, checking, and packaging the collection. |
-| `index.html`, `topics/*/index.html`, `general-index/index.html` | Generated output. Never edit directly. |
+| `index.html`, `topics/*/index.html`, `general-index/index.html`, `about/`, `privacy/`, `licensing/`, `404.html` | Generated output. Never edit directly. GitHub Pages serves the root `404.html` for any missing path, so only that page uses root-relative links; it is `noindex` and stays out of the sitemap. |
 | `robots.txt` | Authored crawl rules and the published sitemap reference. Copied into the publication bundle. |
 | `sitemap.xml` | Generated published-page inventory. Never edit directly. |
 | `feed.xml` | Generated RSS 2.0 summaries feed. Never edit directly. |
@@ -191,7 +192,7 @@ The optional `titleBackground` in `topics/topics.json` references a local image 
 
 Every generated page carries both designs. **Field Atlas** is the default: each topic's wildlife portrait is mounted like a plate in a naturalist's book, the manifest `species` becomes the Latin and common name, and the title, description, category and dates appear on a label card. Visible wording stays plain for readers whose first language is not English: “Topic 4” and “No. 4” (ordinary numbers from canonical order), “All topics”, “Browse the topics”, “Category”, “Previous/Next topic”, and “A–Z index”. Do not reintroduce book jargon such as “plate”, “leaf through”, or “habitat” in visible text. **Folio** is the previous editorial design, preserved unchanged. A segmented Atlas/Folio switch at the masthead's right swaps the presentation in place, keeps the reader's position, and persists the choice in `the-way-i-ai-design` local storage; a head script applies it before first paint. Without JavaScript, readers get Field Atlas with full content and native topic navigation.
 
-The masthead has the same geometry in both designs (Folio's heights, compaction on scroll, insets, gaps, and control sizes), and the switch uses the same embedded Plex Mono in both, so its buttons never move under the pointer. The atlas only adds the “All topics” button on the left; on phone-width topic pages it is hidden and the bottom bar handles navigation.
+The masthead has the same geometry in both designs (Folio's heights, compaction on scroll, insets, gaps, and control sizes), and the switch uses the same embedded Plex Mono in both, so its buttons never move under the pointer. The atlas only adds the “All topics” button on the left of every page except the home page, which already presents every topic; on phone-width topic pages it is hidden and the bottom bar handles navigation.
 
 - Both designs share one DOM, the same content, the same wordmark lettering and wave, and the same embedded images. Never duplicate images per design; the home spread clones the cards' own images at runtime.
 - Folio styles live in `design-system/theme.css`. Field Atlas styles live in `design-system/atlas.css`, scoped to `:root[data-design='atlas']`. Design-specific markup uses `.atlas-only` or `.folio-only`; never branch on topic IDs.

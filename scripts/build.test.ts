@@ -16,7 +16,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 async function fixture(t: TestContext) {
   const path = await mkdtemp(resolve(tmpdir(), 'the-way-i-ai-'));
   t.after(() => rm(path, { recursive: true, force: true }));
-  for (const item of ['scripts', 'design-system', 'topics', 'package.json', 'README.md', 'AGENTS.md', 'CLAUDE.md', 'robots.txt']) {
+  for (const item of ['scripts', 'design-system', 'topics', 'package.json', 'README.md', 'AGENTS.md', 'CLAUDE.md', 'robots.txt', 'pages']) {
     await cp(resolve(root, item), resolve(path, item), { recursive: true, filter: file => !file.endsWith('.html') });
   }
   // Source-editing fixtures start without optional delivered artwork bindings.
@@ -367,7 +367,7 @@ test('discovery metadata matches the published inventory and stale sitemap check
   const f = await fixture(t);
   passed(f.build());
   const registry = JSON.parse(await f.read('topics/topics.json')) as { topics: string[]; siteUrl: string };
-  const paths = ['index.html', 'general-index/index.html', ...registry.topics.map(id => `topics/${id}/index.html`)];
+  const paths = ['index.html', 'general-index/index.html', ...registry.topics.map(id => `topics/${id}/index.html`), 'about/index.html', 'privacy/index.html', 'licensing/index.html'];
   const xml = await f.read('sitemap.xml');
   const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
   assert.equal(urls.length, paths.length);
@@ -378,11 +378,14 @@ test('discovery metadata matches the published inventory and stale sitemap check
     assert.ok(canonical[0].includes(`href="${urls[index]}"`));
     const data = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
     assert.equal(data.url, urls[index]);
-    assert.equal(data['@type'], index === 0 ? 'WebSite' : index === 1 ? 'CollectionPage' : 'Article');
+    assert.equal(data['@type'], index === 0 ? 'WebSite' : index === 1 ? 'CollectionPage' : path.startsWith('topics/') ? 'Article' : 'WebPage');
     assert.match(html, /rel="alternate" type="application\/rss\+xml"/);
     assert.ok(html.includes(`href="${new URL('feed.xml', registry.siteUrl).href}"`));
   }
   assert.doesNotMatch(xml, /README|pages\/|previews\/|404/);
+  const missing = await f.read('404.html');
+  assert.match(missing, /<meta name="robots" content="noindex">/);
+  assert.doesNotMatch(missing, /rel="canonical"/);
   const robots = await f.read('robots.txt');
   assert.ok(robots.includes(`Sitemap: ${new URL('sitemap.xml', registry.siteUrl).href}`));
   const groups: { agents: string[]; disallow: string[] }[] = [];
@@ -416,7 +419,7 @@ test('the publication bundle is clean and contains the same standalone pages and
   await mkdir(resolve(f.path, '_site'), { recursive: true });
   await f.write('_site/stale.html', 'Old publication');
   passed(f.build('--site'));
-  for (const file of ['index.html', 'general-index/index.html', 'topics/worktrees/index.html', 'topics/agent-roles/index.html', 'sitemap.xml', 'feed.xml', 'robots.txt']) {
+  for (const file of ['index.html', 'general-index/index.html', 'topics/worktrees/index.html', 'topics/agent-roles/index.html', 'about/index.html', '404.html', 'sitemap.xml', 'feed.xml', 'robots.txt']) {
     assert.equal(await f.read(`_site/${file}`), await f.read(file));
   }
   assert.equal(await f.read('_site/topics/worktrees/README.md'), await f.read('topics/worktrees/README.md'));
@@ -492,11 +495,36 @@ test('the local preview serves the generated site, links and images without serv
     const head = await fetch(base, { method: 'HEAD' });
     assert.equal(head.status, 200);
     assert.equal(await head.text(), '');
-    assert.equal((await fetch(new URL('missing.html', base))).status, 404);
+    const missing = await fetch(new URL('some/deep/missing.html', base));
+    assert.equal(missing.status, 404);
+    assert.equal(await missing.text(), await f.read('_site/404.html'), 'Missing paths get the 404 page, as on GitHub Pages');
     assert.equal((await fetch(new URL('%2e%2e%2fpackage.json', base))).status, 403);
     assert.equal((await fetch(base, { method: 'POST' })).status, 405);
   } finally {
     child.kill('SIGTERM');
     await new Promise<void>(resolveExit => { if (child.exitCode !== null || child.signalCode) resolveExit(); else child.once('exit', () => resolveExit()); });
   }
+});
+
+test('site pages render from pages/ with footer links, and the 404 page links from the site root', async t => {
+  const f = await fixture(t);
+  await f.write('pages/about.md', '# About\n\nAn opening paragraph.\n\n## First\n\nText.\n\n## Second\n\n[Home](https://thewayiai.com/)');
+  passed(f.build());
+  const about = await f.read('about/index.html');
+  assert.match(about, /<h1 id="page-title">About<\/h1>/);
+  assert.match(about, /<meta name="description" content="An opening paragraph.">/);
+  assert.match(about, /<nav class="info-toc" aria-label="On this page"><ol><li><a href="#first">First<\/a><\/li><li><a href="#second">Second<\/a><\/li><\/ol><\/nav>/);
+  assert.match(about, /<a href="\.\.\/index\.html">Home<\/a>/, 'Links to the published site stay relative');
+  assert.match(about, /<a href="\.\.\/about\/index\.html" aria-current="page">About<\/a><a href="\.\.\/privacy\/index\.html">Privacy<\/a><a href="\.\.\/licensing\/index\.html">Licensing<\/a>/);
+  assert.match(about, /<a href="\.\.\/licensing\/index\.html">© \d{4}(?:–\d{4})? tkarakai<\/a>/, 'Copyright years come from authored dates');
+  assert.doesNotMatch(about, /class="icon-button focus-toggle/);
+  assert.match(await f.read('index.html'), /<a href="privacy\/index\.html">Privacy<\/a>/);
+  const missing = await f.read('404.html');
+  assert.match(missing, /<h1 id="page-title">Nothing here<\/h1>/);
+  assert.match(missing, /href="\/index\.html">Browse the topics<\/a>/);
+  assert.match(missing, /class="info-topic" href="\/topics\/worktrees\/index\.html"/);
+  assert.match(missing, /<link rel="icon" type="image\/x-icon" href="\/favicon\.ico">/);
+  for (const [, href] of missing.matchAll(/\bhref="([^"#]+)"/g)) assert.ok(/^(?:\/|https:|data:)/.test(href), `404 links must work at any depth: ${href}`);
+  await f.write('pages/privacy.md', '# Privacy\n\nOpening.\n\n### Skipped');
+  assert.match(f.build().stderr, /headings must not skip levels/);
 });

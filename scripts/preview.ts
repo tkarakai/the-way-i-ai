@@ -20,8 +20,11 @@ const server = createServer(async (request, response) => {
     response.writeHead(200, { 'Content-Type': (file === resolve(directory, 'feed.xml') ? 'application/rss+xml; charset=utf-8' : types[extname(file)]) || 'application/octet-stream', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
     response.end(request.method === 'HEAD' ? undefined : body);
   } catch (error) {
-    response.writeHead(error instanceof URIError ? 400 : 404);
-    response.end(error instanceof URIError ? 'Bad request' : 'Not found');
+    if (error instanceof URIError) { response.writeHead(400); response.end('Bad request'); return; }
+    // Like GitHub Pages, a missing path gets the generated 404 page with a 404 status.
+    const page = await readFile(resolve(directory, '404.html')).catch(() => undefined);
+    response.writeHead(404, page ? { 'Content-Type': types['.html'], 'Content-Length': page.length, 'Cache-Control': 'no-store' } : {});
+    response.end(request.method === 'HEAD' ? undefined : page ?? 'Not found');
   }
 });
 server.on('error', error => {

@@ -8,8 +8,8 @@ export async function loadIcons(root: string): Promise<Map<string, Buffer>> {
   return new Map(await Promise.all(iconFiles.map(async file => [file, await readFile(resolve(root, 'design-system/assets/favicon', file))] as const)));
 }
 
-export function iconMetadata(files: Map<string, Buffer>, path: string): string {
-  const prefix = '../'.repeat(path.split('/').length - 1);
+/** `prefix` overrides the relative path to the site root, as for the 404 page served at any depth. */
+export function iconMetadata(files: Map<string, Buffer>, path: string, prefix = '../'.repeat(path.split('/').length - 1)): string {
   const png = (size: number) => {
     const data = files.get(`favicon-${size}.png`);
     if (!data) throw new Error(`Missing approved ${size}px favicon`);

@@ -1,6 +1,5 @@
 // An unwired favicon study, derived from the current wordmark. Run with Node 24.
 import { chromium } from '@playwright/test';
-import { PNG } from 'pngjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -19,6 +18,8 @@ try {
     const mark = original.cloneNode(true) as HTMLElement;
     mark.querySelector('.title-art')?.remove();
     mark.querySelector('.title-line')!.innerHTML = '<span>y</span> <span class="favicon-top-i">I</span>';
+    // Use the shared lettering without depending on animation-only logo spans.
+    mark.querySelector('.title-line:last-child')!.innerHTML = '<span class="title-initial">A</span><span class="favicon-bottom-i">I</span>';
     document.body.replaceChildren(mark);
     document.documentElement.dataset.design = 'atlas';
     document.documentElement.dataset.theme = 'light';
@@ -33,26 +34,32 @@ try {
     // Match the I glyph origins, not the line boxes: trailing letter spacing
     // makes their edges misleading when the bottom row is right-aligned.
     const upper = mark.querySelector<HTMLElement>('.favicon-top-i')!;
-    const lower = mark.querySelector<HTMLElement>('.logo-rest')!;
+    const lower = mark.querySelector<HTMLElement>('.favicon-bottom-i')!;
     const offset = lower.getBoundingClientRect().left - upper.getBoundingClientRect().left;
     (mark.querySelector('.title-line') as HTMLElement).style.transform = `translateX(${offset}px)`;
     console.log(`Upper row alignment correction: ${offset}px at 400px font size`);
   });
   const image = await page.screenshot({ omitBackground: true });
-  const pixels = PNG.sync.read(image);
-  let left = pixels.width, top = pixels.height, right = 0, bottom = 0;
-  for (let y = 0; y < pixels.height; y++) {
-    for (let x = 0; x < pixels.width; x++) {
-      if (pixels.data[(y * pixels.width + x) * 4 + 3]! > 0) {
-        left = Math.min(left, x); right = Math.max(right, x);
-        top = Math.min(top, y); bottom = Math.max(bottom, y);
-      }
-    }
-  }
   const source = `data:image/png;base64,${image.toString('base64')}`;
   const sizes = [16, 32, 48, 180, 192, 512];
-  const files = await page.evaluate(async ({ source, left, top, width, height, sizes }) => {
+  const files = await page.evaluate(async ({ source, sizes }) => {
     const image = new Image(); image.src = source; await image.decode();
+    const probe = document.createElement('canvas');
+    probe.width = image.width; probe.height = image.height;
+    const context = probe.getContext('2d')!;
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, probe.width, probe.height).data;
+    let left = probe.width, top = probe.height, right = -1, bottom = -1;
+    for (let y = 0; y < probe.height; y++) {
+      for (let x = 0; x < probe.width; x++) {
+        if (pixels[(y * probe.width + x) * 4 + 3]! > 0) {
+          left = Math.min(left, x); right = Math.max(right, x);
+          top = Math.min(top, y); bottom = Math.max(bottom, y);
+        }
+      }
+    }
+    if (right < left) throw new Error('Wordmark screenshot contains no visible pixels.');
+    const width = right - left + 1, height = bottom - top + 1;
     return sizes.map(size => {
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = size;
       const context = canvas.getContext('2d')!;
@@ -61,7 +68,7 @@ try {
       context.drawImage(image, left, top, width, height, (size - width * scale) / 2, (size - height * scale) / 2, width * scale, height * scale);
       return { size, data: canvas.toDataURL('image/png').split(',')[1]! };
     });
-  }, { source, left, top, width: right - left + 1, height: bottom - top + 1, sizes });
+  }, { source, sizes });
   for (const file of files) {
     const data = Buffer.from(file.data, 'base64');
     await writeFile(resolve(output, `favicon-${file.size}.png`), data);

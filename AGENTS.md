@@ -12,7 +12,7 @@ The same generated HTML works as downloaded standalone files and as a GitHub Pag
 
 | Source | Owns |
 | --- | --- |
-| `topics/topics.json` | Collection copy and canonical topic order; IDs correspond to folders. The homepage displays this order in reverse. In `introduction`, `[first|second|third]` renders rotating phrases in a secondary highlight colour, in order and looping (the first phrase is the static fallback; screen readers get the full list once). |
+| `topics/topics.json` | Collection copy, canonical publication base (`siteUrl`), author identity (`author.name` and `author.url`), and canonical topic order; IDs correspond to folders. The homepage displays this order in reverse. In `introduction`, `[first|second|third]` renders rotating phrases in a secondary highlight colour, in order and looping (the first phrase is the static fallback; screen readers get the full list once). |
 | `topics/assets/` | Authored collection visuals, including the optional title background. |
 | `topics/<id>/README.md` | YAML front matter owns topic metadata, optional document order, cover, and explorer bindings. Its single `#` heading owns the topic title. The body owns the argument and named excerpts. |
 | Other topic Markdown | Companion documents or supporting notes. Listed documents are rendered in full, in reading order. |
@@ -21,6 +21,10 @@ The same generated HTML works as downloaded standalone files and as a GitHub Pag
 | `design-system/` | Shared visual language, generic components, layout, and browser behavior. |
 | `scripts/` | Building, checking, and packaging the collection. |
 | `index.html`, `topics/*/index.html`, `general-index/index.html` | Generated output. Never edit directly. |
+| `robots.txt` | Authored crawl rules and the published sitemap reference. Copied into the publication bundle. |
+| `sitemap.xml` | Generated published-page inventory. Never edit directly. |
+| `feed.xml` | Generated RSS 2.0 summaries feed. Never edit directly. |
+| Root `favicon*` and `apple-touch-icon.png` | Reproducible copies of approved files in `design-system/assets/favicon/`. Never edit the root copies directly. |
 | `_site/` | Ignored, generated publication bundle. Never author here. |
 
 Diagrams communicate content through their labels and relationships. Keep their source with the topic, not inside a shared template. The design system may define generic UI text such as “Contents” or “Copy”; it must not contain topic-specific prose, labels, or illustrations, or branch on topic IDs.
@@ -88,8 +92,8 @@ npm ci              # First checkout, or after the lockfile changes
 npm run typecheck   # Strict TypeScript checking
 npm run build       # Regenerate root and topic HTML files
 npm run check       # Detect stale output, broken links and invalid references
-npm test            # Generator, search, and theme contract checks
-npx playwright install chromium # First checkout: browser test engine
+npx playwright install chromium # First checkout: sharing-card renderer and browser tests
+npm test            # Generator, publication, search, and theme contract checks
 npm run test:browser # Offline, responsive, keyboard, and interaction checks
 ```
 
@@ -158,7 +162,7 @@ The excerpt is not hidden content. It remains visible in the Markdown document a
 
 `package.json` defines the build/check commands and development dependencies: Markdown parsing, code rendering, and font sources. `package-lock.json` pins the dependency tree for reproducible builds. Neither is needed to read the generated pages.
 
-`npm run build:site` creates a clean `_site/` bundle for GitHub Pages. This uses the same generator and presentation as the checked-in standalone files. Keep all navigation relative so it works under a repository subpath and through `file://`.
+`npm run build:site` creates a clean `_site/` bundle for GitHub Pages, including automatically rendered social sharing JPEGs. Install Playwright Chromium first (`npx playwright install chromium`); publication-bundle tests also need it. The approved card layout lives in `design-system/sharing.css`, and `scripts/sharing.ts` derives its copy, artwork, and wordmark from existing sources. Sharing images live only in `_site/assets/sharing/`; their source-addressed URLs are included in generated HTML. Do not author cards in `_site/` or maintain separate article copy. This uses the same generator and presentation as the checked-in standalone files. Keep all navigation relative so it works under a repository subpath and through `file://`.
 
 Use `npm run preview` to build and serve the current branch locally. After edits, rebuild with `npm run build:site` and refresh. PR builds upload a complete downloadable preview artifact, linked from the Actions run summary. Preview builds must not deploy the main Pages site.
 

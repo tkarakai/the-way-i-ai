@@ -9,7 +9,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 test('species-only ZIP contents integrate without topic bindings, preserve portraits, and remain decorative offline', async ({ page, context, browser }) => {
   const fixture = await mkdtemp(resolve(tmpdir(), 'wildlife-browser-'));
   try {
-    for (const item of ['scripts', 'design-system', 'topics']) await cp(resolve(root, item), resolve(fixture, item), { recursive: true, filter: file => !file.endsWith('.html') });
+    for (const item of ['scripts', 'design-system', 'topics', 'robots.txt']) await cp(resolve(root, item), resolve(fixture, item), { recursive: true, filter: file => !file.endsWith('.html') });
     await symlink(resolve(root, 'node_modules'), resolve(fixture, 'node_modules'), 'dir');
     const directory = resolve(fixture, 'topics/worktrees/assets/illustrations');
     await mkdir(directory, { recursive: true });

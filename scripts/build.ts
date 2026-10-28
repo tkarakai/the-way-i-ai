@@ -13,6 +13,11 @@ import { parseWavePosition, wordmarkStyles } from '../design-system/wordmark.ts'
 import { collectionSearch } from '../design-system/search.ts';
 import { topicSource, splitFrontMatter } from './markdown-source.ts';
 import { loadIllustrations } from './illustrations.ts';
+import { validatePublication, pageMetadata, sitemap } from './discovery.ts';
+import type { PublishedPage } from './discovery.ts';
+import { loadIcons, iconMetadata } from './icons.ts';
+import { sharingCard, renderSharingCards } from './sharing.ts';
+import { feedLink, rssFeed } from './feed.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
@@ -27,6 +32,7 @@ const [registry, css, js, themeJS] = await Promise.all([
   Promise.all([compile('design-system/reader.ts'), compile('design-system/atlas.ts'), compile('design-system/logo.ts')]).then(scripts => scripts.join('\n')),
   Promise.all([compile('design-system/design.ts'), compile('design-system/theme.ts')]).then(scripts => scripts.join('\n'))
 ]);
+validatePublication(registry);
 if (registry.ambientBackground !== undefined && registry.ambientBackground !== 'F') throw new Error('Unsupported ambientBackground: expected F.');
 if (registry.ambientIntensity !== undefined && (!Number.isFinite(registry.ambientIntensity) || registry.ambientIntensity < 0 || registry.ambientIntensity > 1)) throw new Error('ambientIntensity must be a number between 0 and 1.');
 const ambientJS = registry.ambientBackground === 'F'
@@ -176,7 +182,8 @@ for (const topic of topics) {
   topic.illustrations = await loadIllustrations(root, topic.id, topic.rendered);
 }
 
-const outputs = new Map();
+const publicIcons = await loadIcons(root);
+const outputs = new Map<string, string>();
 const titleBackgroundPath = registry.titleBackground ? resolve(root, 'topics', registry.titleBackground) : undefined;
 if (titleBackgroundPath && !titleBackgroundPath.startsWith(`${resolve(root, 'topics')}/`)) throw new Error('The title background must be a local image inside topics/.');
 const titleBackground = titleBackgroundPath ? await embedImage(titleBackgroundPath) : '';
@@ -187,11 +194,25 @@ if (wavePosition && resolve(root, wavePosition.source) !== titleBackgroundPath) 
 const pageCSS = `${css}\n${wordmarkStyles(titleBackground, wavePosition)}`;
 const wordmarkBackground = Boolean(titleBackground);
 const search = collectionSearch(topics);
-outputs.set('index.html', shell({ title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, topics, wordmarkBackground }));
-outputs.set('general-index/index.html', shell({ title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, body: indexBody(topics), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../', page: 'index', wordmarkBackground }));
+const sharingSources = { collection: registry, fonts, css: pageCSS, sharingCSS: await read('design-system/sharing.css'), wordmarkBackground };
+const homeCard = sharingCard(sharingSources);
+const topicCards = new Map(topics.map(topic => [topic.id, sharingCard(sharingSources, topic)]));
+const cards = [homeCard, ...topicCards.values()];
+const published: PublishedPage[] = [
+  { path: 'index.html', title: registry.title, description: registry.description, kind: 'collection', sharingImage: homeCard },
+  { path: 'general-index/index.html', title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, kind: 'index', sharingImage: homeCard },
+  ...topics.map((topic): PublishedPage => ({ path: `topics/${topic.id}/index.html`, title: topic.title, description: topic.description, kind: 'article', category: topic.category, created: topic.created, updated: topic.updated, sharingImage: topicCards.get(topic.id)! }))
+];
+const metadataFor = (path: string) => {
+  const page = published.find(page => page.path === path);
+  if (!page) throw new Error(`Missing publication metadata: ${path}`);
+  return pageMetadata(registry, page) + iconMetadata(publicIcons, path) + feedLink(registry);
+};
+outputs.set('index.html', shell({ headMetadata: metadataFor('index.html'), title: 'The collection', description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, topics, wordmarkBackground }));
+outputs.set('general-index/index.html', shell({ headMetadata: metadataFor('general-index/index.html'), title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, body: indexBody(topics), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../', page: 'index', wordmarkBackground }));
 for (const topic of topics) {
   const fingerprints = `<!-- Markdown sources: ${topic.rendered.map(doc => `${doc.file} sha256:${doc.sha256}`).join('; ')} -->\n`;
-  outputs.set(`topics/${topic.id}/index.html`, shell({ title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered), registry), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../../', page: topic.id, wordmarkBackground, created: topic.created, updated: topic.updated }));
+  outputs.set(`topics/${topic.id}/index.html`, shell({ headMetadata: metadataFor(`topics/${topic.id}/index.html`), title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered), registry), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../../', page: topic.id, wordmarkBackground, created: topic.created, updated: topic.updated }));
 }
 
 // Validate output before writing: navigation, ids, and offline render dependencies.
@@ -200,27 +221,49 @@ for (const [path, html] of outputs) {
   const elementIds = [...lightDOM.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
   if (new Set(elementIds).size !== elementIds.length) throw new Error(`Duplicate element ids in ${path}`);
   if ((html.match(/<h1\b/g) || []).length !== 1) throw new Error(`Expected one page title in ${path}`);
-  const renderDependencies = [...html.matchAll(/<(?:script|img|iframe|link|video|audio|source)\b[^>]*\b(?:src|href)=["']([^"']+)/gi)];
+  // Canonical links identify a page; they do not fetch a rendering dependency.
+  const dependencyHTML = html.replace(/<link rel="canonical" href="https:\/\/[^"<>]+">/g, '')
+    .replace(/<link rel="alternate" type="application\/rss\+xml"[^>]*>/g, '')
+    .replace(/<link rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"[^>]*>/g, (tag, href: string) => {
+      if (href.startsWith('data:')) return tag;
+      const target = relative(root, resolve(root, dirname(path), href));
+      if (!publicIcons.has(target)) throw new Error(`Unknown local icon in ${path}: ${href}`);
+      return ''; // Only approved local icons are optional non-prose dependencies.
+    });
+  const renderDependencies = [...dependencyHTML.matchAll(/<(?:script|img|iframe|link|video|audio|source)\b[^>]*\b(?:src|href)=["']([^"']+)/gi)];
   if (renderDependencies.some(([, url]) => !url.startsWith('data:')) || /@import\b/i.test(pageCSS) || /url\((?!data:|['"]?data:)/i.test(pageCSS)) throw new Error(`Non-embedded render dependency in ${path}`);
   for (const [, href] of lightDOM.matchAll(/\bhref="([^"]+)"/g)) {
     if (/^(?:[a-z]+:|\/\/)/i.test(href)) continue;
     const [file, fragment] = href.split('#');
     const target = file ? resolve(root, dirname(path), decodeURIComponent(file)) : resolve(root, path);
     const targetPath = relative(root, target);
-    if (!outputs.has(targetPath)) await access(target).catch(() => { throw new Error(`Broken local link in ${path}: ${href}`); });
+    if (!outputs.has(targetPath) && !publicIcons.has(targetPath)) await access(target).catch(() => { throw new Error(`Broken local link in ${path}: ${href}`); });
     if (fragment && outputs.has(targetPath)) {
       const targetHTML = outputs.get(targetPath)!;
       if (!targetHTML.includes(`id="${decodeURIComponent(fragment)}"`)) throw new Error(`Broken anchor in ${path}: ${href}`);
     }
   }
-  if (check) {
+}
+if (published.length !== outputs.size || published.some(page => !outputs.has(page.path))) throw new Error('Published page inventory must match generated HTML.');
+outputs.set('sitemap.xml', sitemap(registry, published));
+outputs.set('feed.xml', rssFeed(registry, published));
+outputs.set('robots.txt', await read('robots.txt'));
+if (check) {
+  for (const [path, data] of publicIcons) {
+    const existing = await readFile(resolve(root, path)).catch(() => undefined);
+    if (!existing?.equals(data)) throw new Error(`${path} is out of date. Run npm run build.`);
+  }
+  for (const [path, content] of outputs) {
     const existing = await read(path).catch(() => '');
-    if (existing !== html) throw new Error(`${path} is out of date. Run npm run build.`);
+    if (existing !== content) throw new Error(`${path} is out of date. Run npm run build.`);
   }
 }
 
 // Validation completes before any output is replaced. The site bundle contains
 // only generated pages and reader-facing topic sources, not build dependencies.
+// Only publication builds rasterize JPEGs. HTML and metadata stay deterministic
+// across platforms; screenshots are build artifacts, not checked-in output.
+const sharingImages = site ? await renderSharingCards(cards) : new Map<string, Buffer>();
 const outputRoot = site ? resolve(root, '_site') : root;
 if (site) {
   await rm(outputRoot, { recursive: true, force: true });
@@ -244,6 +287,14 @@ if (site) {
     });
   }
   await writeFile(resolve(outputRoot, '.nojekyll'), '');
+}
+for (const [path, data] of sharingImages) {
+  await mkdir(dirname(resolve(outputRoot, path)), { recursive: true });
+  await writeFile(resolve(outputRoot, path), data);
+}
+for (const [path, data] of publicIcons) {
+  if (!check) await writeFile(resolve(outputRoot, path), data);
+  console.log(`${check ? 'Verified' : 'Built'} ${site ? '_site/' : ''}${path}`);
 }
 for (const [path, html] of outputs) {
   if (!check) {

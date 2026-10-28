@@ -1,0 +1,29 @@
+/* The approved static 1200 × 630 Atlas sharing-card layout. */
+* { box-sizing: border-box; animation: none !important; transition: none !important; }
+html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+body { background: #e5e9e1; color: #1d2620; }
+.share-card { position: relative; width: 1200px; height: 630px; overflow: hidden; padding: 48px 56px; isolation: isolate; }
+.share-card::after { content: ''; position: absolute; inset: 20px; border: 1px solid #aebaaa; pointer-events: none; }
+.share-kicker, .share-foot, .share-category { font-family: 'IBM Plex Mono'; font-size: 16px; line-height: 1.4; letter-spacing: .05em; }
+.share-kicker { margin: 0; color: #52634f; }
+.share-foot { position: absolute; bottom: 45px; left: 56px; right: 56px; display: flex; justify-content: space-between; color: #52634f; }
+.share-card .wordmark { font-family: 'Newsreader'; max-width: none; translate: none; }
+.share-card .title-art { display: block; }
+.home-logo { position: absolute; left: 84px; top: 239px; }
+.home-logo .wordmark { --wordmark-size: 146px; }
+.home-copy { position: absolute; left: 656px; right: 70px; top: 188px; margin: 0; font: 400 39px/1.22 'Spectral'; letter-spacing: -.025em; }
+.home-rule { position: absolute; left: 600px; top: 132px; bottom: 132px; width: 1px; background: #aebaaa; }
+.home-ring { position: absolute; width: 485px; height: 485px; border: 1px solid #bac5b5; border-radius: 50%; left: 46px; top: 72px; opacity: .65; z-index: -1; }
+.home-ring::before { content: ''; position: absolute; inset: 13px; border: 1px solid #bac5b5; border-radius: inherit; }
+.article-mount { position: absolute; left: 56px; top: 134px; width: 580px; padding: 15px; background: #f8f5ee; border: 1px solid #b9c2b5; box-shadow: 5px 6px 0 #d5ddcf; }
+.article-mount::before { content: ''; position: absolute; inset: 6px; border: 1px solid #d0d3c5; pointer-events: none; }
+.article-mount img { display: block; width: 100%; height: auto; aspect-ratio: 16/9; object-fit: contain; margin: 0; }
+.article-species { margin: 17px 2px 6px; font: italic 18px/1.2 'Spectral'; color: #52634f; }
+.article-copy { position: absolute; left: 691px; right: 56px; top: 128px; }
+.share-category { margin: 0 0 22px; color: #1f6b66; font-size: 15px; letter-spacing: .025em; }
+.share-title { margin: 0; font: 500 65px/1.01 'Cormorant Garamond'; letter-spacing: -.025em; text-wrap: balance; }
+.article-brand { position: absolute; right: 60px; bottom: 94px; }
+.article-brand .wordmark { --wordmark-size: 43px; }
+.article-brand .title-art { display: none; }
+/* A topic without artwork still gets a complete, legible card. */
+.article-card.no-artwork .article-copy { left: 116px; right: 116px; top: 130px; }

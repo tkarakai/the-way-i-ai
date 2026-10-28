@@ -5,6 +5,8 @@ export interface Collection {
   titleBackground?: string;
   titleBackgroundPosition?: string;
   repositoryUrl?: string;
+  siteUrl: string;
+  author: { name: string; url: string };
   description: string;
   eyebrow: string;
   subtitle: string;
@@ -69,6 +71,7 @@ export interface ShellOptions {
   themeJS: string; search: SearchEntry[];
   fonts: string; collection: Collection; topics: RenderedTopic[]; prefix?: string; page?: string;
   wordmarkBackground?: boolean; created?: string; updated?: string;
+  headMetadata?: string;
 }
 export interface WavePosition {
   version: 1;

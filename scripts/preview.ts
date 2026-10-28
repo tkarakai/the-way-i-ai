@@ -8,7 +8,7 @@ const directory = resolve(dirname(fileURLToPath(import.meta.url)), '../_site');
 const requestedPort = Number(process.env.PORT ?? 4173);
 if (!Number.isInteger(requestedPort) || requestedPort < 0 || requestedPort > 65535) throw new Error('PORT must be an integer between 0 and 65535.');
 await stat(resolve(directory, 'index.html')).catch(() => { throw new Error('Build the publication bundle first: npm run build:site'); });
-const types: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.md': 'text/plain; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.css': 'text/css', '.js': 'text/javascript', '.csv': 'text/csv' };
+const types: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.md': 'text/plain; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.json': 'application/json', '.xml': 'application/xml; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.css': 'text/css', '.js': 'text/javascript', '.csv': 'text/csv' };
 const server = createServer(async (request, response) => {
   if (!['GET', 'HEAD'].includes(request.method ?? '')) { response.writeHead(405, { Allow: 'GET, HEAD' }); response.end(); return; }
   try {
@@ -17,7 +17,7 @@ const server = createServer(async (request, response) => {
     if (file !== directory && !file.startsWith(directory + sep)) { response.writeHead(403); response.end('Forbidden'); return; }
     if ((await stat(file)).isDirectory()) file = resolve(file, 'index.html');
     const body = await readFile(file);
-    response.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
+    response.writeHead(200, { 'Content-Type': (file === resolve(directory, 'feed.xml') ? 'application/rss+xml; charset=utf-8' : types[extname(file)]) || 'application/octet-stream', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
     response.end(request.method === 'HEAD' ? undefined : body);
   } catch (error) {
     response.writeHead(error instanceof URIError ? 400 : 404);

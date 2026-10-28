@@ -1,5 +1,7 @@
 {
   "title": "The Way I AI",
+  "siteUrl": "https://thewayiai.com/",
+  "author": { "name": "tkarakai", "url": "https://github.com/tkarakai" },
   "displayTitle": "the way I\nAI",
   "titleBackground": "assets/logo-bg.png",
   "titleBackgroundPosition": "assets/title-wave-position.json",

@@ -126,9 +126,9 @@ test('theme toggles in one click or keypress, shows the target icon, and returns
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
 
-test('sidebar starts collapsed, animates both ways, and persists after topic navigation', async ({ page }) => {
+test('sidebar starts collapsed, animates both ways, and persists after topic navigation', async ({ page, siteURL }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(url(topicPath));
+  await page.goto(new URL(topicPath, siteURL).href);
   const sidebar = page.locator('.collection-contents');
   const toggle = sidebar.locator('summary');
   const width = () => page.locator('.collection-nav').evaluate(node => node.getBoundingClientRect().width);
@@ -222,9 +222,9 @@ for (const width of [1691, 1100]) {
   });
 }
 
-test('desktop navigation and reading columns can be resized with pointer and keyboard', async ({ page }) => {
+test('desktop navigation and reading columns can be resized with pointer and keyboard', async ({ page, siteURL }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(url(topicPath));
+  await page.goto(new URL(topicPath, siteURL).href);
   await page.locator('.collection-contents summary').click();
   const collection = page.locator('.collection-nav');
   const collectionHandle = page.locator('.collection-resizer');

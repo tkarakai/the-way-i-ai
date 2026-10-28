@@ -8,7 +8,7 @@
   const rest = logo?.querySelector<HTMLElement>('.logo-rest');
   if (!logo || !stem || !initial || !rest) return;
   const parts = [...logo.querySelectorAll<HTMLElement>('.logo-part')];
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const reducedMotion = { get matches() { return document.documentElement.dataset.motion === 'reduce'; } };
   const ease = 'cubic-bezier(.2, .8, .2, 1)';
   const idleBefore = 20_000, gap = [60_000, 120_000];
 
@@ -59,12 +59,17 @@
   const tricks: Record<string, () => Animation> = {
     // Alien energy: a glow charges letter by letter in irregular pulses, the letters tremble at the
     // peak, flash, and the power drains away.
+    // On dark paper the letters light up nearly white; on light paper white would vanish into the page,
+    // so they light up neon green with a deeper green halo instead.
     glow: () => {
+      const night = dark();
       const off = '0 0 0 rgba(150, 255, 120, 0), 0 0 0 rgba(77, 255, 58, 0), 0 0 0 rgba(57, 255, 20, 0)';
-      const charge = (level: number) => `0 0 ${.05 * level}em rgba(225, 255, 215, ${Math.min(1, level)}), 0 0 ${.16 * level}em rgba(77, 255, 58, ${Math.min(1, .9 * level)}), 0 0 ${.42 * level}em rgba(57, 255, 20, ${Math.min(.8, .6 * level)})`;
+      const charge = (level: number) => night
+        ? `0 0 ${.05 * level}em rgba(225, 255, 215, ${Math.min(1, level)}), 0 0 ${.16 * level}em rgba(77, 255, 58, ${Math.min(1, .9 * level)}), 0 0 ${.42 * level}em rgba(57, 255, 20, ${Math.min(.8, .6 * level)})`
+        : `0 0 ${.03 * level}em rgba(18, 120, 8, ${Math.min(.9, .8 * level)}), 0 0 ${.14 * level}em rgba(40, 200, 20, ${Math.min(.9, .75 * level)}), 0 0 ${.4 * level}em rgba(57, 230, 20, ${Math.min(.7, .55 * level)})`;
       const total = 2600;
       const animations = parts.map((part, index) => {
-        const ink = getComputedStyle(part).color, lit = '#f2fff0';
+        const ink = getComputedStyle(part).color, lit = night ? '#f2fff0' : '#2fd014', peak = night ? '#ffffff' : '#39e81a';
         const jitter = () => `${(Math.random() - .5) * .016}em`;
         return part.animate(timeline(total, [
           { at: 0, textShadow: off, color: ink },
@@ -76,7 +81,7 @@
           { at: 1180, textShadow: charge(1.2), color: lit, left: jitter(), top: jitter() },
           { at: 1260, textShadow: charge(1.15), color: lit, left: jitter(), top: jitter() },
           { at: 1340, textShadow: charge(1.3), color: lit, left: jitter(), top: jitter() },
-          { at: 1420, textShadow: charge(1.6), color: '#ffffff', left: '0', top: '0' },
+          { at: 1420, textShadow: charge(1.6), color: peak, left: '0', top: '0' },
           { at: 1700, textShadow: charge(.9), color: lit },
           { at: 2200, textShadow: charge(.25), color: ink },
           { at: total, textShadow: off, color: ink }
@@ -220,6 +225,8 @@
     // A failing light, as in films: stutters, a moment of steady light, a near-blackout with a
     // stuttering recovery, then a last twitch. Changes are instant (step easing), and timing and
     // levels vary slightly each time. The shared I also flickers on its own, like one bad tube.
+    // Photosensitive safety (WCAG 2.3.1): no area changes brightness more than six times (three
+    // flashes) in any second, counting the I's own flicker; segments stay at least about 130ms long.
     flicker: () => {
       const vary = (value: number, amount: number) => value * (1 - amount + Math.random() * amount * 2);
       const frames = (segments: [number, number][]) => {
@@ -234,12 +241,12 @@
         return { keyframes, total };
       };
       const light = frames(([
-        [40, .2], [30, 1], [60, .35], [25, .95], [35, .08], [90, 1],
-        [300, 1],
-        [30, .05], [50, .7], [25, .04], [220, .03], [40, .85], [30, .25], [70, 1],
-        [200, 1], [25, .5], [40, 1]
-      ] as [number, number][]).map(([duration, level]) => [vary(duration, .3), level >= 1 ? 1 : vary(level, .25)]));
-      const tube = frames([[vary(190, .2), 1], [35, .15], [45, 1], [vary(280, .2), 1], [60, .1], [30, .6], [vary(600, .1), 1]]);
+        [150, .2], [180, 1], [200, .35], [500, 1],
+        [180, .05], [220, .7], [700, 1],
+        [180, .4], [300, 1]
+      ] as [number, number][]).map(([duration, level]) => [vary(duration, .15), level >= 1 ? 1 : vary(level, .25)]));
+      // One dip of the I, while the rest of the logo holds steady.
+      const tube = frames([[1650, 1], [150, .12], [vary(600, .1), 1]]);
       stem.animate(tube.keyframes, { duration: tube.total });
       return logo.animate(light.keyframes, { duration: light.total });
     },
@@ -462,8 +469,8 @@
         at: from + (to - from) * step / count, opacity: .85, left: step % 3 ? jump() : `${index ? .02 : -.02}em`, clipPath: step % 2 ? band() : 'inset(0 0 0 0)', easing: 'steps(1, end)'
       }));
       channels.forEach((copy, index) => copy.animate(timeline(total, [
-        ...torn(index, 0, 400, 4), { at: 400, opacity: 0, easing: 'steps(1, end)' }, ...torn(index, 520, off, 3), { at: off, opacity: 0, easing: 'steps(1, end)' },
-        ...torn(index, on, on + 280, 3), { at: on + 280, opacity: 0 }, { at: total, opacity: 0 }
+        ...torn(index, 0, 400, 2), { at: 400, opacity: 0, easing: 'steps(1, end)' }, ...torn(index, 520, off, 2), { at: off, opacity: 0, easing: 'steps(1, end)' },
+        ...torn(index, on, on + 280, 2), { at: on + 280, opacity: 0 }, { at: total, opacity: 0 }
       ]), { duration: total }));
       logo.animate(timeline(total, [
         { at: 0, transform: 'none', opacity: 1, easing: 'steps(1, end)' }, { at: 180, transform: `translateX(${jump()}) skewX(-6deg)` }, { at: 260, transform: 'none' },
@@ -473,10 +480,11 @@
       const host = logo.parentElement!.getBoundingClientRect();
       Object.assign(screen.style, { left: `${box.left - host.left}px`, top: `${box.top - host.top}px`, width: `${box.width}px`, height: `${box.height}px`, fontSize: `${size * .14}px` });
       logo.parentElement!.append(screen);
-      // The dark frame holds for a while, with the odd flutter of a weak signal.
+      // The dark frame holds for a while, with one flutter of a weak signal. Torn frames change at most
+      // every 140ms or so, keeping every area under three flashes a second (WCAG 2.3.1).
       screen.animate(timeline(total, [
         { at: 0, opacity: 0, easing: 'steps(1, end)' }, { at: off, opacity: 1, easing: 'steps(1, end)' }, { at: off + 520, opacity: .82, easing: 'steps(1, end)' }, { at: off + 580, opacity: 1, easing: 'steps(1, end)' },
-        { at: on - 260, opacity: .88, easing: 'steps(1, end)' }, { at: on - 220, opacity: 1, easing: 'steps(1, end)' }, { at: on, opacity: 0 }, { at: total, opacity: 0 }
+        { at: on, opacity: 0 }, { at: total, opacity: 0 }
       ]), { duration: total });
       return clock(total, () => { channels.forEach(copy => copy.remove()); screen.remove(); });
     },
@@ -530,8 +538,9 @@
     return (last = bag.shift()!);
   };
   // Plays a trick. Asked for by name, it interrupts whatever is playing (finishing it cleanly first).
+  // Nothing plays when animations are off, whether by the device setting or the reader's choice.
   const play = (name = nextTrick(), interrupt = false) => {
-    if (!tricks[name]) return;
+    if (!tricks[name] || reducedMotion.matches) return;
     if (playing) {
       if (!interrupt) return;
       const current = playing;
@@ -557,7 +566,7 @@
   };
   logo.addEventListener('click', event => { if (event.detail === 3) { getSelection()?.removeAllRanges(); force(); } });
   let picker: HTMLElement | undefined, returnFocus: HTMLElement | null = null;
-  const closePicker = () => { picker?.remove(); picker = undefined; returnFocus?.focus?.({ preventScroll: true }); };
+  const closePicker = () => { const closing = picker; picker = undefined; closing?.remove(); returnFocus?.focus?.({ preventScroll: true }); };
   const openPicker = () => {
     if (picker) { picker.querySelector('button')?.focus(); return; }
     returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -569,6 +578,8 @@
     document.body.append(picker);
     const buttons = [...picker.querySelectorAll<HTMLButtonElement>('[data-pick]')];
     buttons[0].focus();
+    // Not modal: leaving it with Tab or a click closes it.
+    picker.addEventListener('focusout', event => { if (picker && !(event.relatedTarget instanceof Node && picker.contains(event.relatedTarget))) { returnFocus = null; closePicker(); } });
     picker.addEventListener('click', event => {
       const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('button') : null;
       if (!button) return;
@@ -589,6 +600,8 @@
   document.addEventListener('pointerdown', event => { if (picker && event.target instanceof Node && !picker.contains(event.target)) closePicker(); });
   let typed = '', typedAt = 0;
   addEventListener('keydown', event => {
+    // Typing 'ai' is a single-key shortcut: off with the others, and with animations off there is nothing to pick.
+    if (document.documentElement.dataset.shortcuts === 'off' || reducedMotion.matches) return;
     if (event.metaKey || event.ctrlKey || event.altKey || (event.target instanceof Element && event.target.closest('input, textarea, [contenteditable], dialog, .logo-picker'))) return;
     const now = performance.now();
     typed = (now - typedAt < 800 ? typed : '') + event.key.toLowerCase();

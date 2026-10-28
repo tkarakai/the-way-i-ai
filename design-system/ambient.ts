@@ -3,7 +3,7 @@
   const canvas = document.querySelector<HTMLCanvasElement>('.ambient-canvas');
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx) return;
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const reduced = { get matches() { return document.documentElement.dataset.motion === 'reduce'; } };
   let width = 0, height = 0, time = 12, last = 0, frame = 0;
   let printing = false, suspended = false;
   const paint = () => {
@@ -42,7 +42,7 @@
     canvas.height = Math.round(height * ratio);
     sync();
   }).observe(canvas);
-  reduced.addEventListener('change', sync);
+  document.addEventListener('motion-change', sync);
   document.addEventListener('theme-change', sync);
   document.addEventListener('design-change', sync);
   document.addEventListener('visibilitychange', sync);

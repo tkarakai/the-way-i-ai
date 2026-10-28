@@ -6,7 +6,7 @@
   const storageKey = 'the-way-i-ai-design';
   type Design = 'atlas' | 'folio';
   const design = (): Design => root.dataset.design === 'folio' ? 'folio' : 'atlas';
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const reducedMotion = { get matches() { return document.documentElement.dataset.motion === 'reduce'; } };
 
   /* Design switch: same page and content, different presentation. */
   const choices = [...document.querySelectorAll<HTMLButtonElement>('[data-design-choice]')];
@@ -71,10 +71,25 @@
     if (event.key === storageKey && (event.newValue === 'atlas' || event.newValue === 'folio')) applyDesign(event.newValue, false);
   });
 
-  /* Plates drawer: a native <details>, enhanced with Escape, outside clicks and focus handling. */
+  /* Plates drawer: a native <details>, enhanced with Escape, outside clicks and focus handling.
+     With JavaScript it is a modal dialog: everything outside it is inert while it is open (WCAG 2.4.3). */
   const plates = document.querySelector<HTMLDetailsElement>('.plates-menu');
   if (plates) {
     const summary = plates.querySelector('summary')!;
+    const drawer = plates.querySelector<HTMLElement>('.plates-drawer')!;
+    drawer.setAttribute('role', 'dialog');
+    drawer.setAttribute('aria-modal', 'true');
+    let inerted: HTMLElement[] = [];
+    const setModal = (modal: boolean) => {
+      inerted.forEach(element => { element.inert = false; });
+      inerted = [];
+      if (!modal) return;
+      for (let node: HTMLElement = plates; node.parentElement && node !== document.body; node = node.parentElement) {
+        for (const sibling of node.parentElement.children) {
+          if (sibling !== node && sibling instanceof HTMLElement && !sibling.inert && !(sibling instanceof HTMLScriptElement)) { sibling.inert = true; inerted.push(sibling); }
+        }
+      }
+    };
     // Closing slides the drawer out before the <details> actually closes.
     const close = (restoreFocus = true) => {
       if (!plates.open || plates.classList.contains('is-closing')) return;
@@ -88,6 +103,7 @@
     summary.addEventListener('click', event => { if (plates.open) { event.preventDefault(); close(); } });
     plates.addEventListener('toggle', () => {
       document.body.classList.toggle('plates-open', plates.open);
+      setModal(plates.open);
       if (plates.open) (plates.querySelector<HTMLElement>('[aria-current="page"]') ?? plates.querySelector<HTMLElement>('.drawer-plate'))?.focus({ preventScroll: true });
     });
     plates.querySelector('[data-close-plates]')?.addEventListener('click', () => close());
@@ -186,7 +202,8 @@
       // The spread is one Tab stop: arrows turn it, Enter opens its topic. Its links and buttons stay for pointers.
       spread.querySelectorAll<HTMLElement>('a, button').forEach(control => { control.tabIndex = -1; });
       spread.dataset.href = plate.href;
-      if (direction && status) status.textContent = `Topic ${plate.plate}, ${plate.title}`;
+      // Announce only while the spread has focus; a topic chosen in the list is already read out there.
+      if (direction && status && spread.contains(document.activeElement)) status.textContent = `Topic ${plate.plate}, ${plate.title}`;
       // Centre the current thumbnail by scrolling the strip only, never the page.
       const selected = film.querySelector<HTMLElement>('[aria-current="true"]');
       if (selected) film.scrollTo({ left: selected.offsetLeft - film.offsetLeft - (film.clientWidth - selected.offsetWidth) / 2, behavior: 'instant' });
@@ -198,18 +215,20 @@
       render(step);
     };
     const turn = (step: number) => show(current + step);
-    // ← → (and Home/End) select a topic whenever the spread is on screen, moving focus to it, so Enter then opens it.
+    // ← → (and Home/End) turn the spread while it has focus, or while nothing else does (focus on the page itself);
+    // they never pull focus away from another control. Focus then rests on the spread, so Enter opens its topic.
     const keys: Record<string, () => number> = { ArrowRight: () => current + 1, ArrowLeft: () => current - 1, Home: () => 0, End: () => plates.length - 1 };
     document.addEventListener('keydown', event => {
       if (design() !== 'atlas' || !keys[event.key] || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
       if (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable],dialog,.logo-picker')) return;
       // Home/End belong to the spread only while it has focus; elsewhere they scroll the page.
       if ((event.key === 'Home' || event.key === 'End') && document.activeElement !== spread) return;
+      if (document.activeElement !== spread && document.activeElement !== document.body && document.activeElement !== null) return;
       const box = spread.getBoundingClientRect();
       if (box.bottom < 0 || box.top > innerHeight) return;
       event.preventDefault();
-      show(keys[event.key]());
       if (document.activeElement !== spread) spread.focus({ preventScroll: true });
+      show(keys[event.key]());
     });
     spread.addEventListener('keydown', event => {
       if (event.key !== 'Enter' || event.target !== spread) return;
@@ -237,10 +256,14 @@
   /* Home: filter the plate list by habitat (the topic category). */
   const filterButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-habitat]')].filter(button => button.matches('button'));
   const cards = [...document.querySelectorAll<HTMLElement>('.topic-card[data-habitat]')];
+  const count = document.querySelector<HTMLElement>('[data-topic-count]');
   const filter = (habitat: string) => {
     document.querySelector('.topic-grid')?.classList.add('is-filtering');
     filterButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.habitat === habitat)));
     cards.forEach(card => { card.hidden = Boolean(habitat) && card.dataset.habitat !== habitat; });
+    // The visible count is a status region, so screen readers hear how many topics match.
+    const shown = cards.filter(card => !card.hidden).length;
+    if (count) count.textContent = `${shown} ${shown === 1 ? 'topic' : 'topics'}`;
   };
   filterButtons.forEach(button => button.addEventListener('click', () => filter(button.dataset.habitat ?? '')));
   document.addEventListener('design-change', () => { if (design() === 'folio') filter(''); });

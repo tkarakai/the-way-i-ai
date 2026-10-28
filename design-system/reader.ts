@@ -4,7 +4,8 @@
   const storagePrefix = 'the-way-i-ai-';
   const readPreference = (key: string) => { try { return localStorage.getItem(storagePrefix + key); } catch { return null; } };
   const writePreference = (key: string, value: string) => { try { localStorage.setItem(storagePrefix + key, value); } catch { /* Preferences remain available for this page. */ } };
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  // Set by the head script from the device setting or the reader's own choice.
+  const reducedMotion = { get matches() { return document.documentElement.dataset.motion === 'reduce'; } };
   // Cross-fade whole-page changes (theme, design) where View Transitions are available.
   const transitionPage = (update: () => void) => {
     const start = (document as Document & { startViewTransition?: (callback: () => void) => unknown }).startViewTransition;
@@ -37,8 +38,13 @@
     relative.textContent = age(time.dateTime.slice(0, 10));
     time.replaceChildren(relative, exact);
     time.classList.add('has-age');
-    // A tap shows the exact date; dates are not Tab stops, since screen readers already get the exact date.
-    if (!time.closest('a')) time.addEventListener('click', () => time.classList.toggle('is-exact'));
+    // A tap shows the exact date. Outside links a date is also a Tab stop, so keyboard readers can see it
+    // on focus (WCAG 2.1.1); Escape hides it again. Inside links, focusing the link shows it.
+    if (!time.closest('a')) {
+      time.tabIndex = 0;
+      time.addEventListener('click', () => time.classList.toggle('is-exact'));
+      time.addEventListener('keydown', event => { if (event.key === 'Escape' && time.classList.contains('is-exact')) { event.stopPropagation(); time.classList.remove('is-exact'); } });
+    }
   });
   (window as Window & { ageDates?: typeof ageDates }).ageDates = ageDates;
   ageDates();
@@ -140,6 +146,8 @@
     }
     holder.addEventListener('pointerenter', () => { paused = true; });
     holder.addEventListener('pointerleave', () => { paused = false; });
+    holder.addEventListener('focusin', () => { paused = true; });
+    holder.addEventListener('focusout', () => { paused = false; });
     document.fonts.ready.then(fit);
     addEventListener('resize', fit);
     document.addEventListener('design-change', () => requestAnimationFrame(fit));
@@ -286,15 +294,55 @@
     dialog.querySelector('[data-close-dialog]')?.addEventListener('click', close);
     return { open, close };
   };
-  const typing = (event: KeyboardEvent) => event.metaKey || event.ctrlKey || event.altKey || (event.target instanceof Element && Boolean(event.target.closest('input,textarea,[contenteditable]')));
+  /*
+   * Single-key shortcuts can be turned off in the “Shortcuts and settings” panel (WCAG 2.1.4), for speech input and
+   * anyone who presses keys by accident. Modifier shortcuts (⌘/Ctrl K) and keys inside a focused control stay.
+   */
+  const shortcutsKey = 'shortcuts';
+  const syncShortcuts = () => {
+    if (readPreference(shortcutsKey) === 'off') root.dataset.shortcuts = 'off';
+    else delete root.dataset.shortcuts;
+  };
+  syncShortcuts();
+  addEventListener('storage', event => { if (event.key === storagePrefix + shortcutsKey || event.key === null) syncShortcuts(); });
+  /** Dialogs, the topic drawer and the logo-trick menu take the keyboard while open. */
+  const overlayOpen = () => Boolean(document.querySelector('dialog[open], .plates-menu[open], .logo-picker'));
+  const typing = (event: KeyboardEvent) => root.dataset.shortcuts === 'off' || event.metaKey || event.ctrlKey || event.altKey || (event.target instanceof Element && Boolean(event.target.closest('input,textarea,select,[contenteditable],.logo-picker')));
 
   // Keyboard shortcuts: “?” (or the footer button) opens a short list of the keys this page understands.
   const shortcutsDialog = document.querySelector<HTMLDialogElement>('.shortcuts-dialog');
   if (shortcutsDialog) {
     const shortcuts = modal(shortcutsDialog);
     document.querySelectorAll('[data-open-shortcuts]').forEach(button => button.addEventListener('click', shortcuts.open));
+    const motionSwitch = shortcutsDialog.querySelector<HTMLInputElement>('[data-preference="motion"]');
+    const shortcutSwitch = shortcutsDialog.querySelector<HTMLInputElement>('[data-preference="shortcuts"]');
+    const deviceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    const syncPreferences = () => {
+      if (motionSwitch) {
+        motionSwitch.checked = !reducedMotion.matches;
+        // The device setting cannot be overridden from here; say so instead of offering a switch that does nothing.
+        motionSwitch.disabled = deviceMotion.matches;
+        shortcutsDialog.querySelector<HTMLElement>('[data-motion-device]')!.hidden = !deviceMotion.matches;
+      }
+      if (shortcutSwitch) shortcutSwitch.checked = root.dataset.shortcuts !== 'off';
+    };
+    syncPreferences();
+    document.addEventListener('motion-change', syncPreferences);
+    deviceMotion.addEventListener('change', syncPreferences);
+    addEventListener('storage', syncPreferences);
+    shortcutsDialog.addEventListener('toggle', syncPreferences);
+    motionSwitch?.addEventListener('change', () => {
+      const choice = motionSwitch.checked ? 'full' : 'reduce';
+      root.dataset.motionChoice = choice;
+      try { if (choice === 'reduce') localStorage.setItem(storagePrefix + 'motion', choice); else localStorage.removeItem(storagePrefix + 'motion'); } catch { /* This page keeps the choice. */ }
+      document.dispatchEvent(new Event('motion-preference-change'));
+    });
+    shortcutSwitch?.addEventListener('change', () => {
+      try { if (shortcutSwitch.checked) localStorage.removeItem(storagePrefix + shortcutsKey); else localStorage.setItem(storagePrefix + shortcutsKey, 'off'); } catch { /* This page keeps the choice. */ }
+      if (shortcutSwitch.checked) delete root.dataset.shortcuts; else root.dataset.shortcuts = 'off';
+    });
     document.addEventListener('keydown', event => {
-      if (event.key !== '?' || typing(event) || searchDialog.open || shareDialog?.open) return;
+      if (event.key !== '?' || typing(event) || searchDialog.open || shareDialog?.open || document.querySelector('.plates-menu[open], .logo-picker')) return;
       event.preventDefault();
       if (shortcutsDialog.open) shortcuts.close(); else shortcuts.open();
     });
@@ -337,9 +385,12 @@
     shareDialog.querySelectorAll<HTMLAnchorElement>('[data-share-target]').forEach(link => { link.href = targets[link.dataset.shareTarget!]; });
     const copy = shareDialog.querySelector<HTMLButtonElement>('[data-copy-link]')!;
     let copiedTimer: ReturnType<typeof setTimeout>;
+    const copyStatus = shareDialog.querySelector<HTMLElement>('[data-copy-status]')!;
     copy.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(url); } catch { field.focus(); field.select(); document.execCommand('copy'); }
-      copy.textContent = 'Copied ✓';
+      let copied = true;
+      try { await navigator.clipboard.writeText(url); } catch { field.focus(); field.select(); copied = document.execCommand('copy'); }
+      copy.textContent = copied ? 'Copied ✓' : 'Copy failed';
+      speak(copyStatus, copied ? 'Link copied' : 'Copy failed. The link is selected; copy it with your keyboard.');
       clearTimeout(copiedTimer);
       copiedTimer = setTimeout(() => { copy.textContent = 'Copy link'; }, 2000);
     });
@@ -365,11 +416,10 @@
     const before = focusButton.getBoundingClientRect();
     document.body.classList.toggle('focus-mode', focused);
     focusButton.setAttribute('aria-pressed', String(focused));
-    const label = focused ? 'Show navigation' : 'Focus on reading';
-    focusButton.setAttribute('aria-label', label);
-    focusButton.title = focused ? 'Show navigation (F or Esc)' : `${label} (F)`;
+    // The name stays the same and aria-pressed says whether it is on; only the tooltip describes the next step.
+    focusButton.title = focused ? 'Show navigation (F or Esc)' : 'Focus on reading (F)';
     const after = focusButton.getBoundingClientRect();
-    if (animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (animate && !reducedMotion.matches) {
       focusButton.animate([
         { transform: `translate(${before.left - after.left}px, ${before.top - after.top}px)` },
         { transform: 'translate(0, 0)' }
@@ -381,7 +431,7 @@
   if (focusButton && readPreference('focus-mode') === 'true') setFocusMode(true, false, false);
   focusButton?.addEventListener('click', () => setFocusMode(!document.body.classList.contains('focus-mode')));
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape' || !document.body.classList.contains('focus-mode') || !focusButton || document.querySelector('dialog[open], .plates-menu[open]')) return;
+    if (event.key !== 'Escape' || !document.body.classList.contains('focus-mode') || !focusButton || overlayOpen()) return;
     event.preventDefault();
     setFocusMode(false);
     focusButton.focus({ preventScroll: true });
@@ -403,14 +453,17 @@
   const chapterLinks = [...document.querySelectorAll<HTMLAnchorElement>('.toc-chapter > .toc-link')];
   const currentLink = () => document.querySelector<HTMLAnchorElement>('.toc-link[aria-current="location"]');
   const copyText = async (text: string) => {
-    try { await navigator.clipboard.writeText(text); return; } catch { /* Fall back below. */ }
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* Fall back below. */ }
+    const active = document.activeElement;
     const field = document.createElement('textarea');
     field.value = text;
     field.style.cssText = 'position:fixed;left:-9999px;top:0';
     document.body.append(field);
     field.select();
-    document.execCommand('copy');
+    const copied = document.execCommand('copy');
     field.remove();
+    if (active instanceof HTMLElement) active.focus({ preventScroll: true });
+    return copied;
   };
   // Topic pages step through authored chapters; the A–Z index through letters; site pages through their sections.
   const sectionHeadings = chapterLinks.length
@@ -472,7 +525,7 @@
   };
   let pressedG = 0;
   document.addEventListener('keydown', event => {
-    if (event.shiftKey || typing(event) || document.querySelector('dialog[open]')) return;
+    if (event.shiftKey || typing(event) || overlayOpen()) return;
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     const go = (href?: string) => { if (href) { event.preventDefault(); location.href = href; } };
     if (performance.now() - pressedG < 1200 && ['h', 'i', 't', 'a'].includes(key)) {
@@ -501,7 +554,7 @@
       event.preventDefault();
       const link = currentLink();
       const address = meta('og:url') || location.href.split('#')[0];
-      copyText(link ? address + link.hash : address).then(() => announce(link ? `Link to “${link.textContent}” copied` : 'Link to this topic copied'));
+      copyText(link ? address + link.hash : address).then(copied => announce(!copied ? 'Copy unavailable in this browser' : link ? `Link to “${link.textContent}” copied` : 'Link to this topic copied'));
     } else if (key === 't') {
       event.preventDefault();
       themeToggle.click();
@@ -512,7 +565,7 @@
   });
   // F turns focus mode on and off; Ctrl/⌘+F stays the browser's find.
   document.addEventListener('keydown', event => {
-    if (event.key.toLowerCase() !== 'f' || event.shiftKey || !focusButton || typing(event) || document.querySelector('dialog[open], .plates-menu[open]')) return;
+    if (event.key.toLowerCase() !== 'f' || event.shiftKey || !focusButton || typing(event) || overlayOpen()) return;
     event.preventDefault();
     setFocusMode(!document.body.classList.contains('focus-mode'));
   });
@@ -524,8 +577,17 @@
     template.remove();
   });
 
+  /**
+   * Status messages go to a live region that is always in the page: one that appears together with its text
+   * is often not read. Emptying it first makes a repeated message read again.
+   */
+  function speak(region: HTMLElement, message: string) {
+    region.textContent = '';
+    setTimeout(() => { region.textContent = message; }, 60);
+  }
   let toastTimer: ReturnType<typeof setTimeout>;
   const announce = (message: string) => {
+    speak(document.querySelector<HTMLElement>('[data-announcer]')!, message);
     const toast = document.querySelector<HTMLElement>('.toast')!;
     toast.textContent = message;
     toast.hidden = false;
@@ -606,14 +668,13 @@
         if (node instanceof HTMLElement && node.matches('h2,h3')) {
           group = document.createElement('section');
           group.className = 'article-reveal';
-          group.setAttribute('aria-labelledby', node.id);
           prose.insertBefore(group, node);
           groups.push(group);
         }
         group?.append(node);
       }
     }
-    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    const motion = reducedMotion;
     let observer: IntersectionObserver | undefined;
     const finish = (section: HTMLElement) => {
       section.dataset.reveal = 'shown';
@@ -679,7 +740,7 @@
     document.addEventListener('keydown', event => {
       if (((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') || event.key === 'F3') revealAllSections();
     });
-    motion.addEventListener('change', () => { if (motion.matches) revealAllSections(); });
+    document.addEventListener('motion-change', () => { if (motion.matches) revealAllSections(); });
     addEventListener('beforeprint', () => revealAllSections());
     addEventListener('pageshow', event => { if (event.persisted) revealVisibleSections(); });
   }
@@ -702,9 +763,7 @@
   const collectionSummary = collectionContents.querySelector('summary')!;
   collectionContents.open = readPreference('collection-open') === 'true';
   const syncCollection = () => {
-    const label = `${collectionContents.open ? 'Collapse' : 'Expand'} collection sidebar`;
-    collectionSummary.setAttribute('aria-label', label);
-    collectionSummary.title = label;
+    collectionSummary.title = `${collectionContents.open ? 'Collapse' : 'Expand'} collection sidebar`;
   };
   syncCollection();
   collectionContents.addEventListener('toggle', () => {
@@ -839,11 +898,14 @@
     search.dispatchEvent(new Event('input'));
   }
   document.addEventListener('keydown', event => {
-    if (event.key === '/' && !searchDialog.open && !event.metaKey && !event.ctrlKey && !event.altKey && !(event.target instanceof Element && event.target.closest('input,textarea,[contenteditable]'))) {
+    if (event.key === '/' && !overlayOpen() && !typing(event)) {
       event.preventDefault(); showNavigation(); contents.open = true; search.focus();
     }
+    // Escape first clears the find box, keeping focus there; a second Escape steps out to the outline
+    // (never to nowhere), so the page's single-key shortcuts work again.
     if (event.key === 'Escape' && document.activeElement === search) {
-      search.value = ''; search.dispatchEvent(new Event('input')); search.blur();
+      if (search.value) { search.value = ''; search.dispatchEvent(new Event('input')); }
+      else document.querySelector<HTMLElement>('#outline')?.focus({ preventScroll: true });
     }
   });
   links.forEach(link => link.addEventListener('click', () => {

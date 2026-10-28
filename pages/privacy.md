@@ -8,7 +8,7 @@ Fonts, illustrations, and scripts are included in the published pages rather tha
 
 ## What your browser remembers
 
-The site uses local storage in your browser to remember things like your chosen design, light or dark theme, focus mode, sidebar settings, column widths, and reading position.
+The site uses local storage in your browser to remember things like your chosen design, light or dark theme, animation and keyboard shortcut settings, focus mode, sidebar settings, column widths, and reading position.
 
 The theme setting also stores a last-activity time so a manual theme choice can expire after two hours of inactivity. This is used for the display preference, not sent to an analytics service.
 

@@ -22,6 +22,7 @@ import { Assets, ROOT, imageAttributes } from './assets.ts';
 import type { PublishedImage } from './assets.ts';
 import { assertSafeMarkdown, assertSafeSVG } from './safety.ts';
 import { buildEdition, topicMarkdown, pageMarkdown, llmsIndex, llmsFull, securityTxt } from './agents.ts';
+import { topicTable, withTopicTable } from './topic-registry.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // build writes _site/; --site also renders the sharing JPEGs (needs Playwright Chromium);
@@ -240,6 +241,19 @@ for (const topic of topics) {
   topic.title = topic.rendered[0].title;
   topic.illustrations = await loadIllustrations(root, topic.id, topic.rendered, assets);
 }
+
+// The root README's topic table is generated from the registry and each topic's sources.
+// The README documents the repository, not the site, so source-only fixtures may omit it.
+const readmePath = resolve(root, 'README.md');
+const readme = await readFile(readmePath, 'utf8').catch((error: NodeJS.ErrnoException) => {
+  if (error.code === 'ENOENT') return undefined;
+  throw error;
+});
+const generatedReadme = readme === undefined ? undefined : withTopicTable(readme, topicTable(registry.siteUrl, topics.map(topic => ({
+  id: topic.id, number: topic.number, title: topic.title, description: topic.description,
+  documents: topic.rendered.map(doc => ({ file: doc.file, title: doc.title }))
+}))));
+if (check && generatedReadme !== readme) throw new Error('The README.md topic table is out of date. Run npm run build.');
 
 // Site pages: About, Privacy and Licensing in footer order, plus the GitHub Pages 404 page.
 // GitHub Pages serves 404.html at any missing path, so its links start from the site root.
@@ -464,6 +478,10 @@ for (const [path, data] of [...sharingImages, ...publicIcons, ...assets.files]) 
 for (const [path, content] of outputs) await write(path, content);
 await rm(outputRoot, { recursive: true, force: true });
 await rename(stage, outputRoot);
+if (generatedReadme !== undefined && generatedReadme !== readme) {
+  await writeFile(readmePath, generatedReadme);
+  console.log('Updated the README.md topic table.');
+}
 const kb = (bytes: number) => `${Math.round(bytes / 1024)} KB`;
 for (const [path, content] of outputs) if (path.endsWith('.html')) console.log(`Built _site/${path} (${kb(Buffer.byteLength(content))})`);
 const assetBytes = [...assets.files.values()].reduce((total, data) => total + data.length, 0);

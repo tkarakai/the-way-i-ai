@@ -79,6 +79,13 @@
     const drawer = plates.querySelector<HTMLElement>('.plates-drawer')!;
     drawer.setAttribute('role', 'dialog');
     drawer.setAttribute('aria-modal', 'true');
+    /* In the top layer the drawer is never clipped or stacked under the page, whatever its ancestors do,
+       and it changes from hidden to shown itself, so Safari also plays its entrance (it does not for <details> content). */
+    const layered = 'showPopover' in drawer;
+    if (layered) drawer.popover = 'manual';
+    const showDrawer = (shown: boolean) => {
+      if (layered && shown !== drawer.matches(':popover-open')) drawer.togglePopover(shown);
+    };
     let inerted: HTMLElement[] = [];
     const setModal = (modal: boolean) => {
       inerted.forEach(element => { element.inert = false; });
@@ -94,22 +101,25 @@
     const close = (restoreFocus = true) => {
       if (!plates.open || plates.classList.contains('is-closing')) return;
       if (restoreFocus) summary.focus({ preventScroll: true });
-      if (reducedMotion.matches) { plates.open = false; return; }
+      if (reducedMotion.matches) { showDrawer(false); plates.open = false; return; }
       plates.classList.add('is-closing');
-      const finish = () => { if (plates.classList.contains('is-closing')) { plates.classList.remove('is-closing'); plates.open = false; } };
-      plates.querySelector('.plates-drawer')!.addEventListener('animationend', finish, { once: true });
-      setTimeout(finish, 360);
+      setTimeout(finishClosing, 360);
     };
+    const finishClosing = () => { if (plates.classList.contains('is-closing')) { plates.classList.remove('is-closing'); showDrawer(false); plates.open = false; } };
+    drawer.addEventListener('animationend', event => { if (event.target === drawer) finishClosing(); });
     summary.addEventListener('click', event => { if (plates.open) { event.preventDefault(); close(); } });
     plates.addEventListener('toggle', () => {
+      showDrawer(plates.open);
       document.body.classList.toggle('plates-open', plates.open);
       setModal(plates.open);
       if (plates.open) (plates.querySelector<HTMLElement>('[aria-current="page"]') ?? plates.querySelector<HTMLElement>('.drawer-plate'))?.focus({ preventScroll: true });
     });
     plates.querySelector('[data-close-plates]')?.addEventListener('click', () => close());
     plates.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); close(); } });
-    // The backdrop is the open <details> itself, outside its panel and summary.
-    plates.addEventListener('click', event => { if (event.target === plates) close(false); });
+    // A click on the backdrop closes it. The top layer's ::backdrop passes clicks through to the (inert) page beneath.
+    document.addEventListener('click', event => {
+      if (plates.open && event.target instanceof Node && !drawer.contains(event.target) && !summary.contains(event.target)) close(false);
+    });
     document.addEventListener('design-change', () => { if (design() === 'folio') close(false); });
   }
 

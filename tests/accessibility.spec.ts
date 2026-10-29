@@ -102,7 +102,8 @@ test('controls are named by their visible text, and Escape in the outline find n
   await context.addInitScript(() => localStorage.setItem('the-way-i-ai-design', 'folio'));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(topic);
-  await expect(page.locator('.collection-contents summary')).toHaveAccessibleName('The collection');
+  // The masthead's sidebar button is icon-only; its name says what it shows.
+  await expect(page.locator('.collection-toggle')).toHaveAccessibleName('The collection');
   await page.locator('body').press('/');
   await page.keyboard.type('worktree');
   await page.keyboard.press('Escape');

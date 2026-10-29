@@ -126,26 +126,41 @@ test('theme toggles in one click or keypress, shows the target icon, and returns
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
 
-test('sidebar starts collapsed, animates both ways, and persists after topic navigation', async ({ page, siteURL }) => {
+test('sidebar starts collapsed without a gutter, animates both ways, and persists after topic navigation', async ({ page, siteURL }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(new URL(topicPath, siteURL).href);
   const sidebar = page.locator('.collection-contents');
-  const toggle = sidebar.locator('summary');
+  // The outline's first row opens the sidebar; the label then becomes the sidebar's title, which closes it.
+  const toggle = page.locator('.on-page .collection-toggle');
+  const title = sidebar.locator('summary');
   const width = () => page.locator('.collection-nav').evaluate(node => node.getBoundingClientRect().width);
-  expect(await width()).toBe(64);
+  expect(await width()).toBe(0);
+  await expect(page.locator('.collection-nav')).not.toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  // The label's flight lasts 300ms, too briefly to poll for, so record it as it happens.
+  await page.evaluate(() => new MutationObserver((records, observer) => {
+    if (document.querySelector('.collection-ghost')) { document.body.dataset.sawFlight = 'true'; observer.disconnect(); }
+  }).observe(document.body, { childList: true }));
   await toggle.focus();
   await page.keyboard.press('Enter');
   await expect(sidebar).toHaveAttribute('open');
   const animated = await page.locator('.workspace').evaluate(node => node.getAnimations().some(animation => animation.playState === 'running'));
   expect(animated).toBe(true);
-  await expect.poll(width).toBe(220);
-  await toggle.click();
+  await expect(page.locator('body')).toHaveAttribute('data-saw-flight', 'true');
+  await expect(page.locator('.collection-ghost')).toHaveCount(0);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(title).toBeFocused();
+  await expect(title).toHaveText('The collection');
+  await expect(toggle).not.toBeVisible();
+  await expect.poll(width).toBe(240);
+  await page.keyboard.press('Enter');
   await expect(sidebar).not.toHaveAttribute('open');
-  await expect.poll(width).toBe(64);
+  await expect(toggle).toBeFocused();
+  await expect.poll(width).toBe(0);
   await toggle.click();
   await sidebar.locator('.nav-topic').last().click();
   await expect(page.locator('.collection-contents')).toHaveAttribute('open');
-  await expect.poll(() => page.locator('.collection-nav').evaluate(node => node.getBoundingClientRect().width)).toBe(220);
+  await expect.poll(() => page.locator('.collection-nav').evaluate(node => node.getBoundingClientRect().width)).toBe(240);
 });
 
 for (const width of [1691, 1100]) {
@@ -158,54 +173,73 @@ for (const width of [1691, 1100]) {
       const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
       const logo = box('.brand'), search = box('.search-trigger'), shell = box('.site-shell');
       const outline = box('.on-page'), article = box('.reading-main');
-      return { logo: logo.left - shell.left, search: search.left, github: box('.repo-link').right,
-        sidebar: box('.collection-nav').width, outlineRight: outline.right, articleLeft: article.left };
+      return { logo: logo.left - shell.left, logoLeft: logo.left, search: search.left, github: box('.repo-link').right,
+        sidebar: box('.collection-nav').width, outlineText: box('.contents-label').left, outlineRight: outline.right, articleLeft: article.left,
+        // The text's margin from the outline's shaded pane and from the page's right edge.
+        margins: (() => {
+          const layout = document.querySelector('.reading-layout')!, text = box('.prose p');
+          const pane = layout.getBoundingClientRect().left + parseFloat(getComputedStyle(layout, '::before').width);
+          return [text.left - pane, shell.right - text.right];
+        })() };
     });
     const collapsed = await geometry();
-    expect(collapsed.logo).toBe(12);
-    expect(collapsed.outlineRight).toBeLessThan(collapsed.articleLeft);
-    expect(await page.locator('#main').evaluate(main => main.firstElementChild?.classList.contains('on-page'))).toBe(true);
-    await page.locator('.collection-contents summary').click();
     const headerInset = width > 1200 ? 60 : 35;
-    const sidebarWidth = width > 1200 ? 220 : 200;
+    const sidebarWidth = width > 1200 ? 240 : 220;
+    // Collapsed, the sidebar leaves no gutter and the outline's text starts on the logo's edge.
+    expect(collapsed.logo).toBe(headerInset);
+    expect(collapsed.sidebar).toBe(0);
+    expect(Math.abs(collapsed.outlineText - collapsed.logoLeft)).toBeLessThanOrEqual(1);
+    expect(collapsed.outlineRight).toBeLessThan(collapsed.articleLeft);
+    // The reading column sits centred between the shaded pane and the page edge, never crowding the pane.
+    expect(Math.abs(collapsed.margins[0] - collapsed.margins[1])).toBeLessThanOrEqual(2);
+    expect(collapsed.margins[0]).toBeGreaterThanOrEqual(width > 1200 ? 52 : 40);
+    expect(await page.locator('#main').evaluate(main => main.firstElementChild?.classList.contains('on-page'))).toBe(true);
+    await page.locator('.collection-toggle').click();
     await expect.poll(async () => (await geometry()).sidebar).toBe(sidebarWidth);
     const expanded = await geometry();
+    // The masthead never moves.
     expect(expanded.logo).toBe(headerInset);
-    expect(expanded.search - collapsed.search).toBeCloseTo(headerInset - 12, 1);
+    expect(expanded.search).toBe(collapsed.search);
     expect(expanded.github).toBe(collapsed.github);
     expect(expanded.outlineRight).toBeLessThan(expanded.articleLeft);
-    const navigationTop = await page.evaluate(() => {
-      const textTop = (selector: string) => {
-        const element = document.querySelector(selector)!;
-        const node = [...element.childNodes].find(child => child.nodeType === Node.TEXT_NODE && child.textContent?.trim()) ?? element.firstChild!;
-        const range = document.createRange(); range.selectNodeContents(node); return range.getBoundingClientRect().top;
+    expect(Math.abs(expanded.margins[0] - expanded.margins[1])).toBeLessThanOrEqual(2);
+    expect(expanded.margins[0]).toBeGreaterThanOrEqual(width > 1200 ? 52 : 40);
+    const baselines = await page.evaluate(() => {
+      // A zero-size inline block sits on its line's baseline, whatever the font size.
+      const baseline = (selector: string) => {
+        const marker = document.createElement('span');
+        marker.style.cssText = 'display: inline-block; width: 0; height: 0';
+        document.querySelector(selector)!.prepend(marker);
+        const y = marker.getBoundingClientRect().bottom;
+        marker.remove();
+        return y;
       };
-      return [textTop('.collection-contents summary span'), textTop('.contents-label'), textTop('.breadcrumbs a')];
+      // Each column's title shares one line: the sidebar's, the outline's and the breadcrumbs.
+      return [baseline('.collection-contents summary span'), baseline('.contents-label'), baseline('.breadcrumbs a')];
     });
-    expect(Math.max(...navigationTop) - Math.min(...navigationTop)).toBeLessThanOrEqual(3);
+    expect(Math.max(...baselines) - Math.min(...baselines)).toBeLessThanOrEqual(1.5);
     await page.screenshot({ path: `test-results/folio-left-navigation-expanded-${width}.png`, animations: 'disabled' });
 
-    // Sample both actual CSS animations at halfway. Matching normalized travel
-    // verifies synchronized motion rather than merely naming a transition in CSS.
+    // Sample both actual CSS transitions at halfway. Matching normalized travel
+    // verifies that the sidebar column and the outline's inset move together.
     const midway = await page.evaluate(() => {
       document.querySelector<HTMLElement>('.collection-contents summary')!.click();
-      const header = document.querySelector('.masthead')!, workspace = document.querySelector('.workspace')!;
-      getComputedStyle(header).paddingLeft;
+      const layout = document.querySelector('.reading-layout')!, workspace = document.querySelector('.workspace')!;
+      getComputedStyle(layout).paddingLeft;
       getComputedStyle(workspace).gridTemplateColumns;
-      const transitions = [header, workspace].map(node => node.getAnimations().find(animation =>
+      const transitions = [layout, workspace].map(node => node.getAnimations().find(animation =>
         animation instanceof CSSTransition && ['padding-left', 'grid-template-columns'].includes(animation.transitionProperty))!);
       transitions.forEach(animation => { animation.pause(); animation.currentTime = Number(animation.effect!.getTiming().duration) / 2; });
-      return { inset: parseFloat(getComputedStyle(header).paddingLeft), sidebar: document.querySelector('.collection-nav')!.getBoundingClientRect().width };
+      return { inset: parseFloat(getComputedStyle(layout).paddingLeft), sidebar: document.querySelector('.collection-nav')!.getBoundingClientRect().width };
     });
-    const headerTravel = (headerInset - midway.inset) / (headerInset - 12);
-    const sidebarTravel = (sidebarWidth - midway.sidebar) / (sidebarWidth - 64);
-    expect(headerTravel).toBeGreaterThan(0);
-    expect(headerTravel).toBeLessThan(1);
-    expect(headerTravel).toBeCloseTo(sidebarTravel, 2);
+    const insetTravel = (midway.inset - 24) / (headerInset - 24);
+    const sidebarTravel = (sidebarWidth - midway.sidebar) / sidebarWidth;
+    expect(insetTravel).toBeGreaterThan(0);
+    expect(insetTravel).toBeLessThan(1);
+    expect(insetTravel).toBeCloseTo(sidebarTravel, 2);
     await page.evaluate(() => document.getAnimations().filter(animation => animation.playState === 'paused').forEach(animation => animation.play()));
-    await expect.poll(async () => (await geometry()).logo).toBe(12);
-    await expect.poll(async () => (await geometry()).sidebar).toBe(64);
-    expect((await geometry()).search).toBeCloseTo(collapsed.search, 1);
+    await expect.poll(async () => (await geometry()).sidebar).toBe(0);
+    expect((await geometry()).search).toBe(collapsed.search);
 
     // The outline remains sticky and its native anchor still reaches the section.
     const scrollEnd = page.evaluate(() => new Promise<void>(resolve => window.addEventListener('scrollend', () => resolve(), { once: true })));
@@ -223,15 +257,15 @@ for (const width of [1691, 1100]) {
 }
 
 test('desktop navigation and reading columns can be resized with pointer and keyboard', async ({ page, siteURL }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto(new URL(topicPath, siteURL).href);
-  await page.locator('.collection-contents summary').click();
+  await page.locator('.collection-toggle').click();
   const collection = page.locator('.collection-nav');
   const collectionHandle = page.locator('.collection-resizer');
   await collectionHandle.focus();
   await page.keyboard.press('ArrowRight');
-  await expect.poll(() => collection.evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(230);
-  await expect(collectionHandle).toHaveAttribute('aria-valuenow', '230');
+  await expect.poll(() => collection.evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(250);
+  await expect(collectionHandle).toHaveAttribute('aria-valuenow', '250');
 
   const toc = page.locator('.on-page');
   const tocHandle = page.locator('.toc-resizer');
@@ -265,7 +299,7 @@ test('desktop navigation and reading columns can be resized with pointer and key
 
   await page.reload();
   await expect(page.locator('.collection-contents')).toHaveAttribute('open');
-  await expect.poll(() => page.locator('.collection-nav').evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(230);
+  await expect.poll(() => page.locator('.collection-nav').evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(250);
   await expect.poll(() => page.locator('.on-page').evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(before + 35);
   await expect.poll(() => page.locator('.reading-main').evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(Math.round(initialReading!.width) + 60);
 });
@@ -328,7 +362,8 @@ test('search, section links, code copying, focus and print layout remain usable'
     reading: document.querySelector('.reading-layout')!.getAnimations().some(animation => animation.playState === 'running'),
     icon: document.querySelector('[data-focus]')!.getAnimations().some(animation => animation.playState === 'running'),
   }));
-  expect(focusMotion).toEqual({ header: true, collection: true, workspace: true, outline: true, reading: true, icon: true });
+  // The collapsed collection sidebar has no column to close, so only the other parts move.
+  expect(focusMotion).toEqual({ header: true, collection: true, workspace: false, outline: true, reading: true, icon: true });
   await expect(page.locator('body')).toHaveClass(/focus-mode/);
   await expect(page.locator('.on-page')).not.toBeVisible();
   await expect(page.locator('.collection-nav')).not.toBeVisible();
@@ -349,7 +384,7 @@ test('search, section links, code copying, focus and print layout remain usable'
   await expect(focus).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('Escape');
   const restoreMotion = await page.evaluate(() => [
-    document.querySelector('.masthead'), document.querySelector('.collection-nav'), document.querySelector('.workspace'),
+    document.querySelector('.masthead'), document.querySelector('.collection-nav'),
     document.querySelector('.on-page'), document.querySelector('.reading-layout')
   ].every(node => node!.getAnimations().some(animation => animation.playState === 'running')));
   expect(restoreMotion).toBe(true);
@@ -434,7 +469,7 @@ test('the full article and native plate navigation work without JavaScript', asy
 test('reduced-motion users get immediate layout changes', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(url(topicPath));
-  await page.locator('.collection-contents summary').click();
+  await page.locator('.collection-toggle').click();
   expect(await page.locator('.workspace').evaluate(node => getComputedStyle(node).transitionDuration)).toBe('0s');
   expect(await page.locator('.masthead').evaluate(node => getComputedStyle(node).transitionDuration)).toBe('0s');
   await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }));

@@ -58,7 +58,10 @@ svg .diagram-dot { fill: var(--accent); }
 .skip-link:focus { top: 12px; }
 /* Headings that J/K focus sit just below the masthead; the move itself shows where focus went. */
 :is(.prose, .index-columns) :is(h2, h3)[tabindex="-1"]:focus, :is(#text, #outline):focus { outline: none; }
-.site-shell { --collection-width: 64px; --collection-open-width: 220px; --toc-width: 190px; --reading-width: 790px; --header-inset: 60px; --navigation-motion: .24s ease; max-width: 1600px; margin-inline: auto; }
+.site-shell { --reading-margin: 52px; --collection-width: 64px; --collection-open-width: 240px; --toc-width: 220px; --reading-width: 790px; --header-inset: 60px; --navigation-motion: .24s ease; max-width: 1600px; margin-inline: auto; }
+/* With JavaScript a collapsed collection sidebar leaves no gutter: the masthead's sidebar button reopens it.
+   Without JavaScript its own disclosure button stays in a narrow column. */
+.js .site-shell { --collection-width: 0px; }
 .site-shell:has(.collection-contents[open]) { --collection-width: var(--collection-open-width); }
 .masthead { position: sticky; top: 0; z-index: 20; height: var(--header-height); transition: height .28s ease, padding-left var(--navigation-motion), background-color .2s ease, border-color .2s ease; display: flex; align-items: center; gap: 32px; padding: 0 var(--header-inset); background: var(--paper); border-bottom: 1px solid var(--line); }
 body[data-page='collection'] .masthead { width: calc(100% - 120px); max-width: 1200px; margin-inline: auto; padding-inline: 0; }
@@ -67,7 +70,21 @@ body[data-page='collection'] .footer { width: calc(100% - 120px); max-width: 120
 .restoring-position .masthead { transition: none; }
 @media (min-width: 761px) {
   /* Only Folio has the collection sidebar; the atlas keeps the logo on its content edge. */
-  :root:not([data-design='atlas']) .site-shell:has(.collection-contents:not([open])) .masthead { padding-left: 12px; }
+  :root:not(.js):not([data-design='atlas']) .site-shell:has(.collection-contents:not([open])) .masthead { padding-left: 12px; }
+}
+/* Beside the text, the collection sidebar opens from the button at the top of the outline; collapsed, it has no column at all. */
+@media (min-width: 981px) {
+  .js .collection-contents > summary { display: none; }
+  /* The list keeps its open width while the column grows or shrinks, so the column reveals it rather than reflowing it. */
+  .js .collection-contents nav { padding-top: 0; width: calc(var(--collection-open-width) - 36px); max-width: none; }
+  .collection-nav { overflow: clip; }
+  .js .site-shell:not(:has(.collection-contents[open])) .collection-nav { visibility: hidden; padding-inline: 0; border-right-width: 0; transition-delay: 0s, 0s, .28s; }
+  /* Open, "The collection" moves from the outline's top into the sidebar as its title (its summary, which closes it);
+     the outline's button folds away. reader.ts flies the label between the two places. */
+  .js .collection-contents[open] > summary { display: flex; }
+  .js .collection-contents .nav-home { display: none; }
+  .collection-flying :is(.collection-toggle, .collection-contents > summary) > * { visibility: hidden; }
+  .js .site-shell:has(.collection-contents[open]) .collection-toggle { max-height: 0; min-height: 0; margin-block: 0; padding-block: 0; opacity: 0; visibility: hidden; transition-delay: 0s, 0s, 0s, 0s, 0s, 0s, .28s; }
 }
 .brand { --wordmark-size: 36px; display: block; flex-shrink: 0; padding: 22px 24px 12px 0; text-decoration: none; transition: opacity .2s ease, transform .24s ease, visibility 0s, padding .24s ease; }
 .brand .wordmark { transition: font-size .24s ease; }
@@ -83,6 +100,14 @@ body[data-page='collection'] .footer { width: calc(100% - 120px); max-width: 120
 .focus-mode .masthead { height: 0; border-color: transparent; background: transparent; pointer-events: none; }
 .search-trigger, .theme-toggle, .share-trigger, .repo-link { transition: opacity .2s ease, transform .24s ease, visibility 0s; }
 .design-switch, .plates-menu { transition: opacity .2s ease, transform .24s ease, visibility 0s; }
+/* The outline's first row opens the collection sidebar. It sits exactly where the sidebar's title will be (12px above the outline,
+   like the sidebar's own top), so the label's flight between them is purely sideways. Its icon sits on the outline's text edge. */
+.js .contents .collection-toggle { display: flex; align-items: center; gap: 10px; width: calc(100% + 20px); min-height: 40px; max-height: 56px; overflow: hidden; margin: -12px -10px 16px; padding: 8px 10px; border: 0; border-radius: 4px; background: transparent; color: var(--accent); font: inherit; font-size: 14px; text-align: left; white-space: nowrap; cursor: pointer; transition: background-color .2s ease, max-height .28s ease, min-height .28s ease, margin .28s ease, padding .28s ease, opacity .2s ease, visibility 0s; }
+.collection-toggle:hover { background: var(--tint); }
+.collection-toggle svg { width: 20px; height: 20px; flex-shrink: 0; transition: transform .28s ease; }
+.collection-toggle[aria-expanded='true'] svg { transform: scaleX(-1); }
+.collection-ghost { position: fixed; z-index: 30; top: 0; left: 0; display: flex; align-items: center; gap: 10px; height: 20px; color: var(--accent); font-size: 14px; white-space: nowrap; pointer-events: none; }
+.collection-ghost svg { width: 20px; height: 20px; flex-shrink: 0; transform: scaleX(var(--flip, 1)); }
 .focus-mode .brand, .focus-mode .search-trigger, .focus-mode .theme-toggle, .focus-mode .share-trigger, .focus-mode .repo-link, .focus-mode .design-switch, .focus-mode .plates-menu { opacity: 0; transform: translateY(-8px); visibility: hidden; pointer-events: none; transition-delay: 0s, 0s, .2s; }
 .icon-button:hover, .repo-link:hover { color: var(--ink); background: var(--tint); }
 .icon-button svg, .repo-link svg { width: 20px; height: 20px; }
@@ -206,7 +231,7 @@ time.has-age { display: inline-grid; cursor: default; }
 .workspace { --reader-top: 40px; display: grid; grid-template-columns: var(--collection-width) minmax(0, 1fr); transition: grid-template-columns .28s ease; }
 .collection-nav { position: relative; padding: calc(var(--reader-top) - 12px) 12px 40px; min-width: 0; transition: opacity .2s ease, transform .28s ease, visibility 0s; }
 .collection-contents { position: sticky; top: calc(var(--header-height) + var(--reader-top) - 12px); max-height: calc(100dvh - var(--header-height) - 55px); overflow-y: auto; scrollbar-width: thin; transition: top .24s ease; }
-.collection-contents > summary { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 10px; border-radius: 4px; list-style: none; color: var(--accent); font-size: 12px; white-space: nowrap; }
+.collection-contents > summary { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 10px; border-radius: 4px; list-style: none; color: var(--accent); font-size: 14px; white-space: nowrap; }
 .collection-contents > summary::-webkit-details-marker { display: none; }
 .collection-contents > summary:hover { background: var(--tint); }
 .collection-contents > summary svg { width: 20px; height: 20px; flex-shrink: 0; }
@@ -214,20 +239,21 @@ time.has-age { display: inline-grid; cursor: default; }
 .collection-contents[open] > summary span { display: inline; }
 .collection-contents[open] > summary svg { transform: scaleX(-1); }
 .collection-contents nav { width: 184px; max-width: 100%; padding-top: 12px; animation: arrive .24s ease both; }
-.collection-nav a { display: flex; gap: 10px; padding: 12px 10px; border-radius: 4px; font-size: 12px; line-height: 1.6; text-decoration: none; color: var(--muted); }
+/* Sidebar text: navigation at 14–15px and helper text at 12px or more, so it reads as a companion to 18px prose rather than as fine print. */
+.collection-nav a { display: flex; gap: 10px; padding: 10px; border-radius: 4px; font-size: 14px; line-height: 1.45; text-decoration: none; color: var(--muted); }
 .collection-nav .nav-home { color: var(--ink); padding-bottom: 22px; }
 .collection-nav .nav-topic { margin-block: 4px; }
 .collection-nav .nav-index { margin-top: 14px; border-top: 1px solid var(--line); border-radius: 0; padding-top: 16px; }
 .nav-index:hover { color: var(--accent); }
 .nav-topic:hover, .nav-topic[aria-current='page'] { background: var(--tint); color: var(--accent); }
-.nav-number { font: 10px/1.9 var(--mono); color: var(--accent); }
-.reading-layout { position: relative; display: grid; grid-template-columns: var(--toc-width) minmax(0, 1fr); gap: 40px; padding: var(--reader-top) 35px 65px 0; min-width: 0; transition: grid-template-columns .28s ease, gap .28s ease; }
+.nav-number { font: 11px/1.9 var(--mono); color: var(--accent); }
+.reading-layout { position: relative; display: grid; grid-template-columns: var(--toc-width) minmax(0, 1fr); gap: 40px; padding: var(--reader-top) 35px 65px 0; min-width: 0; transition: grid-template-columns .28s ease, gap .28s ease, padding-left .28s ease; }
 .sidebar-resizer { position: absolute; z-index: 4; top: 0; bottom: 0; width: 12px; cursor: col-resize; touch-action: none; }
 .sidebar-resizer::after { content: ''; position: absolute; left: 4px; top: 80px; width: 3px; height: 34px; border-radius: 2px; background: var(--line); opacity: 0; transition: opacity .15s ease, background .15s ease; }
 .sidebar-resizer:hover::after, .sidebar-resizer:focus-visible::after, .is-resizing .sidebar-resizer::after { opacity: 1; background: var(--accent); }
 .collection-resizer { right: -6px; }
 .collection-contents:not([open]) + .collection-resizer { display: none; }
-.toc-resizer { left: calc(var(--toc-width) - 6px); }
+.toc-resizer { left: calc(var(--outline-inset, 0px) + var(--toc-width) + 14px); }
 .reading-resizer { right: -6px; }
 .is-resizing { cursor: col-resize; user-select: none; }
 .is-resizing .workspace, .is-resizing .masthead { transition: none; }
@@ -277,8 +303,13 @@ time.has-age { display: inline-grid; cursor: default; }
 :root { --sidebar: color-mix(in srgb, var(--paper) 45%, var(--tint)); }
 @media (min-width: 981px) {
   :root:not([data-design='atlas']) .collection-nav { background: var(--sidebar); border-right: 1px solid var(--line); }
-  :root:not([data-design='atlas']) .reading-layout { padding-left: 24px; }
-  :root:not([data-design='atlas']) .reading-layout::before { content: ''; position: absolute; z-index: -1; inset: 0 auto 0 0; width: calc(24px + var(--toc-width) + 20px); background: var(--sidebar); border-right: 1px solid var(--line); transition: opacity .2s ease; }
+  /* Beside the collection sidebar the outline has a small inset; with the sidebar closed its text starts on the logo's edge. */
+  /* The reading column keeps one margin, --reading-margin, from the outline's shaded pane on the left and from the window on the right,
+     and is centred in the space between them. The pane reaches 20px past the outline column. */
+  :root:not([data-design='atlas']) .reading-layout { --outline-inset: 24px; padding-left: var(--outline-inset); padding-right: var(--reading-margin); column-gap: calc(20px + var(--reading-margin)); }
+  :root:not([data-design='atlas']) .focus-mode .reading-layout { column-gap: 0; padding-left: var(--reading-margin); }
+  .js:not([data-design='atlas']) .site-shell:not(:has(.collection-contents[open])) .reading-layout { --outline-inset: var(--header-inset); }
+  :root:not([data-design='atlas']) .reading-layout::before { content: ''; position: absolute; z-index: -1; inset: 0 auto 0 0; width: calc(var(--outline-inset) + var(--toc-width) + 20px); background: var(--sidebar); border-right: 1px solid var(--line); transition: opacity .2s ease, width .28s ease; }
   :root:not([data-design='atlas']) .focus-mode .reading-layout::before { opacity: 0; }
 }
 .toc-resizer { transition: opacity .2s ease, transform .28s ease, visibility 0s; }
@@ -289,24 +320,25 @@ time.has-age { display: inline-grid; cursor: default; }
 .contents::-webkit-scrollbar, .contents-inner::-webkit-scrollbar { display: none; }
 .contents-inner { scrollbar-width: none; }
 .contents > summary { display: none; }
-.contents-label { display: block; font-size: 13px; margin-bottom: 20px; }
+/* Lifted so its baseline meets the breadcrumbs' and the collection title's. */
+.contents-label { display: block; margin: -5px 0 18px; font-size: 15px; }
 .search-wrap { position: relative; margin-bottom: 12px; }
-.search-wrap input { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 3px; padding: 10px 28px 10px 10px; font-size: 11px; }
+.search-wrap input { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 3px; padding: 10px 28px 10px 10px; font-size: 14px; }
 .search-wrap input:focus-visible { outline-offset: -2px; }
 .search-wrap kbd { position: absolute; right: 10px; top: 10px; color: var(--muted); font-size: 12px; }
-.search-status { color: var(--muted); font-size: 10px; margin-bottom: 20px; }
+.search-status { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
 .toc-document + .toc-document { margin-top: 32px; }
-.toc-document-title { display: block; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); color: var(--article-title-ink); font-size: 12px; font-weight: 550; line-height: 1.5; text-decoration: none; }
+.toc-document-title { display: block; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); color: var(--article-title-ink); font-size: 15px; font-weight: 550; line-height: 1.4; text-decoration: none; }
 .toc-list { list-style: none; padding: 0; margin: 0; }
 .toc-list li { margin: 2px 0; }
-.toc-link { display: block; padding: 7px 6px 7px 12px; border-left: 1px solid var(--line); text-decoration: none; color: var(--muted); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.toc-link { display: block; padding: 6px 6px 6px 12px; border-left: 1px solid var(--line); text-decoration: none; color: var(--muted); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
 .toc-link:hover, .toc-link[aria-current='location'] { border-left-color: var(--accent); color: var(--accent); background: var(--tint); }
 /* Authored chapters and subsections define the outline for every topic. */
 .toc-article > .toc-list > .toc-chapter { margin: 8px 0 0; }
 .toc-article > .toc-list > .toc-chapter:first-child { margin-top: 0; }
-.toc-chapter > .toc-link { border-left: 0; padding: 5px 0; color: var(--ink); font-size: 12px; font-weight: 550; }
+.toc-chapter > .toc-link { border-left: 0; padding: 5px 0; color: var(--ink); font-size: 15px; font-weight: 550; }
 .toc-chapter > .toc-list { margin: 6px 0 0; }
-.toc-chapter > .toc-list .toc-link { font-size: 12px; padding-block: 5px; }
+.toc-chapter > .toc-list .toc-link { font-size: 14px; padding-block: 5px; }
 .js .toc-article .toc-list li[data-subsection='true']:not([hidden]) { display: list-item; }
 .article { min-width: 0; padding-top: 10px; }
 .source-document { margin-bottom: 75px; }
@@ -370,7 +402,8 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 .next-topic p { font-size: 14px; color: var(--muted); }
 :is(.search-dialog, .shortcuts-dialog, .share-dialog) { color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 25px; width: min(620px, calc(100% - 32px)); max-height: 80dvh; box-shadow: 0 25px 90px #0004; }
 /* Modals own scrolling: the page behind them stays put for keys, wheel and touch, and scrolling inside never spills over. */
-html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
+/* The locked page keeps its scrollbar's room, so nothing shifts sideways when a modal opens or closes. */
+html:has(dialog[open], .plates-menu[open]) { overflow: hidden; scrollbar-gutter: stable; }
 :is(.search-dialog, .shortcuts-dialog, .share-dialog, .search-results, .plates-drawer) { overscroll-behavior: contain; }
 :is(.search-dialog, .shortcuts-dialog, .share-dialog)::backdrop { background: #201c1980; backdrop-filter: blur(4px); }
 /* Motion that shows where things come from and go: dialogs scale in and out, panels fade in, and whole-page changes cross-fade. */
@@ -656,7 +689,7 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
   body[data-page='collection'] .collection-list { --entrance-y: -24px; }
 }
 @media (max-width: 1200px) {
-  .site-shell { --header-inset: 35px; --collection-open-width: 200px; --toc-width: 165px; }
+  .site-shell { --header-inset: 35px; --reading-margin: 40px; --collection-open-width: 220px; --toc-width: 195px; }
   .masthead { gap: 24px; }
   body[data-page='collection'] :is(.masthead, .footer) { width: calc(100% - 90px); }
   .collection-page { padding-inline: 45px; }
@@ -680,8 +713,18 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
   .focus-mode .on-page { max-height: 0; margin: 0; transition-delay: 0s, 0s, 0s, 0s, .28s; }
   .focus-mode .reading-layout { row-gap: 0; }
   .contents { position: static; max-height: none; padding: 0; border-bottom: 1px solid var(--line); }
-  .contents > summary { display: list-item; padding: 10px 0; font-size: 12px; color: var(--accent); }
+  .contents > summary { display: list-item; padding: 10px 0; font-size: 14px; color: var(--accent); }
   .contents-inner { max-height: 50dvh; overflow-y: auto; padding-block: 15px; }
+  /* Narrower, the collection sidebar is a disclosure directly above the outline's, so the outline needs no button. */
+  .js .contents .collection-toggle { display: none; }
+  .workspace { display: block; }
+  .collection-nav { max-height: 1000px; overflow: hidden; padding: 15px var(--header-inset) 0; border: 0; transition: max-height .28s ease, padding .28s ease, opacity .2s ease, transform .28s ease, visibility 0s; }
+  .focus-mode .collection-nav { max-height: 0; padding-block: 0; transition-delay: 0s, 0s, 0s, 0s, .28s; }
+  .collection-contents { position: static; max-height: none; border-bottom: 1px solid var(--line); }
+  .collection-contents > summary { padding: 10px 0; }
+  .collection-contents > summary span { display: inline; }
+  .collection-contents nav { padding-block: 10px; width: auto; }
+  .reading-layout { padding-top: 0; }
 }
 @media (max-width: 760px) {
   :root { --header-height: 82px; }
@@ -713,18 +756,12 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
   .card-meta .eyebrow { font-size: 9px; }
   .card-dates { gap: 2px 10px; }
   .topic-copy p { font-size: 14px; }
-  .workspace { display: block; }
-  .collection-nav { max-height: 1000px; overflow: hidden; padding: 15px 22px 0; border: 0; transition: max-height .28s ease, padding .28s ease, opacity .2s ease, transform .28s ease, visibility 0s; }
-  .focus-mode .collection-nav { max-height: 0; padding-block: 0; transition-delay: 0s, 0s, 0s, 0s, .28s; }
-  .collection-contents { position: static; max-height: none; border-bottom: 1px solid var(--line); }
-  .collection-contents > summary { padding: 10px 0; }
-  .collection-contents > summary span { display: inline; }
-  .collection-contents nav { padding-block: 10px; width: auto; }
   .reading-layout { padding: 12px 22px 40px; gap: 25px; }
   .on-page { margin-bottom: 5px; }
   .contents-label { display: none; }
-  .toc-link { font-size: 13px; }
-  .search-wrap input { font-size: 12px; }
+  .toc-link, .toc-chapter > .toc-link, .toc-chapter > .toc-list .toc-link { font-size: 15px; }
+  /* 16px keeps phones from zooming in when the field takes focus. */
+  .search-wrap input { font-size: 16px; }
   .breadcrumbs { font-size: 10px; margin-bottom: 5px; }
   .topic-hero { padding-bottom: 0; }
   .topic-hero h1 { font-size: 42px; }

@@ -7,14 +7,14 @@ export const test = base.extend<{}, { siteURL: string }>({
   // file:// storage semantics are implementation-defined. Persistence and
   // cross-tab tests need a real shared origin, as on the published site.
   siteURL: [async ({}, use) => {
-    const child = spawn(process.execPath, [fileURLToPath(new URL('../scripts/preview.ts', import.meta.url))], { env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [fileURLToPath(new URL('../scripts/server.ts', import.meta.url))], { env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
     try {
       const url = await new Promise<string>((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('Storage-test preview did not start')), 10_000);
         let output = '';
         child.stdout.on('data', chunk => {
           output += String(chunk);
-          const match = output.match(/Preview: (http:\/\/127\.0\.0\.1:\d+\/)/);
+          const match = output.match(/Serving: (http:\/\/127\.0\.0\.1:\d+\/)/);
           if (match) { clearTimeout(timer); resolve(match[1]); }
         });
         child.once('error', error => { clearTimeout(timer); reject(error); });

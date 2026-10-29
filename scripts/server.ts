@@ -2,12 +2,16 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import { resolve, extname, sep } from 'node:path';
+import { resolve, dirname, extname, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
- * The local static server behind `npm run preview` and `npm run dev`. It reads `_site/`
- * from disk on every request with caching disabled, so a rebuild is visible on refresh.
- * `extend` lets the dev server answer its own paths and add its reload script to pages.
+ * The local static server behind `npm run dev`. It reads `_site/` from disk on every
+ * request with caching disabled, so a rebuild is visible on refresh. `extend` lets the
+ * dev server answer its own paths and add its reload script to pages.
+ *
+ * Run directly (`node scripts/server.ts`), it serves the existing `_site/` as built, with
+ * no watching or reload script: the browser tests use it to load exactly what is published.
  */
 
 const types: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.md': 'text/plain; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.json': 'application/json', '.xml': 'application/xml; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.css': 'text/css', '.js': 'text/javascript', '.csv': 'text/csv', '.woff2': 'font/woff2' };
@@ -56,4 +60,10 @@ export function serveSite(directory: string, onListening: (url: string) => void,
   server.on('listening', () => onListening(`http://127.0.0.1:${(server.address() as AddressInfo).port}/`));
   server.listen(requestedPort, '127.0.0.1');
   return server;
+}
+
+if (import.meta.main) {
+  const directory = resolve(dirname(fileURLToPath(import.meta.url)), '../_site');
+  await stat(resolve(directory, 'index.html')).catch(() => { throw new Error('Build the site first: npm run build or npm run build:site'); });
+  serveSite(directory, url => console.log(`Serving: ${url}\nThe current _site/ as built, without watching; for editing, use npm run dev. Press Ctrl+C to stop.`));
 }

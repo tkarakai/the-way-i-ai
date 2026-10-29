@@ -44,7 +44,7 @@ It prints a local address, normally http://127.0.0.1:4173/. Open it and keep the
 - **Saving rebuilds.** Whenever any file under `topics/`, `pages/` or `design-system/` is saved, by you, the agent or the illustration generator, the site rebuilds in about 6 seconds. Open pages then reload by themselves, keeping your scroll position. A small “Rebuilding…” label shows while it works.
 - **Mistakes don't blank the page.** If a change breaks the build (for example a skipped heading level, or a description over 155 characters), the page keeps showing the last version that worked, with a red banner giving the exact error. Fix the file and save; the banner disappears.
 - **Only registered topics appear.** A topic is included once its ID is in `topics/topics.json`. Until then the terminal lists it as “Not in the site yet”.
-- **Sharing images are skipped.** `dev` doesn't render the social sharing images, to keep rebuilds fast. To see those, run `npm run build:site` once, then `npm run preview`, which serves that exact publication build without watching for changes. You don't need `preview` otherwise.
+- **Sharing images are skipped.** `dev` doesn't render the social sharing images, to keep rebuilds fast. To see those as well, start it as `npm run dev -- --site`; each rebuild then takes several seconds longer.
 
 You never need to stop the preview or run builds yourself while it's running.
 

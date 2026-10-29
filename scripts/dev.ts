@@ -9,12 +9,13 @@ import { serveSite } from './server.ts';
 /**
  * `npm run dev`: serves the site and rebuilds it whenever a source changes, then reloads
  * open pages. A failed build keeps the last good site on screen with the error in a banner.
- * Sharing images are not rendered; use `npm run build:site` to see them.
+ * Sharing images are skipped for speed; `npm run dev -- --site` renders them on every build.
  */
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const directory = resolve(root, '_site');
 const watched = ['topics', 'pages', 'design-system', 'scripts'];
+const site = process.argv.includes('--site');
 
 type State = { status: 'building' | 'ready' | 'failed'; message?: string };
 let state: State = { status: 'building' };
@@ -61,7 +62,7 @@ async function build() {
   const started = Date.now();
   const output = await new Promise<{ code: number | null; text: string }>(done => {
     let text = '';
-    const child = spawn(process.execPath, [resolve(root, 'scripts/build.ts')], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [resolve(root, 'scripts/build.ts'), ...(site ? ['--site'] : [])], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.on('data', chunk => { text += chunk; });
     child.stderr.on('data', chunk => { text += chunk; });
     child.on('close', code => done({ code, text }));
@@ -109,7 +110,7 @@ function start() {
     });
   }
 
-  serveSite(directory, url => console.log(`Dev preview: ${url}\nWatching ${watched.join('/, ')}/ — saving a file rebuilds the site and reloads open pages. Press Ctrl+C to stop.`), {
+  serveSite(directory, url => console.log(`Dev preview: ${url}\nWatching ${watched.join('/, ')}/ — saving a file rebuilds the site${site ? ', with sharing images,' : ''} and reloads open pages. Press Ctrl+C to stop.`), {
     handle(pathname, request, response) {
       if (pathname === '/__dev/live-reload.js') {
         response.writeHead(200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-store' });

@@ -134,16 +134,22 @@
   document.addEventListener('home-view-toggle', () => { if (viewChoices.length && design() === 'atlas') applyView(view() === 'list' ? 'browse' : 'list', true); });
 
   /* Home: the paged spread, newest plate first, limited to the chosen category. Images are the cards' own images. */
-  type Plate = { href: string; plate: string; title: string; habitat: string; thesis: string; latin?: string; common?: string; chapters: number; revised?: string; revisedOn?: string };
+  type Plate = { href: string; plate: string; title: string; habitat: string; thesis: string; latin?: string; common?: string; chapters: number; revised?: string; revisedOn?: string; card: HTMLAnchorElement };
   const spread = document.querySelector<HTMLElement>('[data-atlas-spread]');
   const plateData = document.getElementById('atlas-plates');
   if (spread && plateData) {
-    const allPlates = JSON.parse(plateData.textContent ?? '[]') as Plate[];
+    // Each plate is tied to its topic card. The spread's links and images come from the card itself, never from the
+    // embedded data, so it opens exactly what the list links to; the data's href only identifies the card.
+    const cards = [...document.querySelectorAll<HTMLAnchorElement>('.topic-card')];
+    const allPlates = (JSON.parse(plateData.textContent ?? '[]') as Omit<Plate, 'card'>[]).flatMap(data => {
+      const card = cards.find(item => item.getAttribute('href') === data.href);
+      return card ? [{ ...data, card }] : [];
+    });
     let plates = allPlates;
+    const address = (plate: Plate) => plate.card.getAttribute('href') ?? '';
     const status = document.querySelector<HTMLElement>('[data-spread-status]');
     const image = (plate: Plate) => {
-      const card = [...document.querySelectorAll<HTMLAnchorElement>('.topic-card')].find(item => item.getAttribute('href') === plate.href);
-      const source = card?.querySelector<HTMLImageElement>('.editorial-homepage');
+      const source = plate.card.querySelector<HTMLImageElement>('.editorial-homepage');
       const copy = source?.cloneNode() as HTMLImageElement | undefined;
       copy?.removeAttribute('class');
       return copy;
@@ -162,7 +168,7 @@
       const verso = element('div', 'spread-verso');
       // The specimen opens its plate. The title link carries the accessible name, so this one is hidden from assistive technology.
       const plateLink = element('a', 'spread-plate-link');
-      plateLink.href = plate.href;
+      plateLink.href = address(plate);
       plateLink.tabIndex = -1;
       plateLink.setAttribute('aria-hidden', 'true');
       const mount = element('div', 'plate-mount');
@@ -175,7 +181,7 @@
       const recto = element('div', 'spread-recto');
       const heading = element('h3');
       const link = element('a', undefined, plate.title);
-      link.href = plate.href;
+      link.href = address(plate);
       heading.append(link);
       const species = element('p', 'plate-species');
       if (plate.latin) {
@@ -192,7 +198,7 @@
         ageDates(facts);
       }
       const open = element('a', 'spread-open', `Open topic ${plate.plate} `);
-      open.href = plate.href;
+      open.href = address(plate);
       open.append(Object.assign(element('span', undefined, '→'), { ariaHidden: 'true' }));
       recto.append(element('p', 'plate-label', `Topic ${plate.plate} · ${plate.habitat}`), heading);
       if (plate.latin) recto.append(species);
@@ -222,7 +228,7 @@
       spread.append(verso, recto, pager);
       // The spread is one Tab stop: arrows turn it, Enter opens its topic. Its links and buttons stay for pointers.
       spread.querySelectorAll<HTMLElement>('a, button').forEach(control => { control.tabIndex = -1; });
-      spread.dataset.href = plate.href;
+      spread.dataset.href = address(plate);
       // Announce only while the spread has focus; a topic chosen in the list is already read out there.
       if (direction && status && spread.contains(document.activeElement)) status.textContent = `Topic ${plate.plate}, ${plate.title}`;
       // Centre the current thumbnail by scrolling the strip only, never the page.
@@ -255,8 +261,8 @@
       if (event.key !== 'Enter' || event.target !== spread) return;
       event.preventDefault();
       // Like a link: ⌘/Ctrl+Enter opens a new tab.
-      if (event.metaKey || event.ctrlKey) open(plates[current].href, '_blank', 'noopener');
-      else location.href = plates[current].href;
+      if (event.metaKey || event.ctrlKey) open(address(plates[current]), '_blank', 'noopener');
+      else location.href = address(plates[current]);
     });
     // A topic chosen in the list (J/K in reader.ts) turns the spread to the same topic.
     document.addEventListener('topic-select', event => {

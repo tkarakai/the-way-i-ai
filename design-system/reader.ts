@@ -815,18 +815,55 @@
   outlineSize.observe(contents);
   const outlineNav = contents.querySelector('nav');
   if (outlineNav) outlineSize.observe(outlineNav);
-  // On phones the collection sidebar is a disclosure too; on desktop its column animates instead.
-  animateDisclosure(document.querySelector<HTMLDetailsElement>('.collection-contents')!, () => matchMedia('(max-width: 760px)').matches);
+  // Below desktop width the collection sidebar is a disclosure too; on desktop its column animates instead.
+  animateDisclosure(document.querySelector<HTMLDetailsElement>('.collection-contents')!, () => mobile.matches);
   const collectionContents = document.querySelector<HTMLDetailsElement>('.collection-contents')!;
   const collectionSummary = collectionContents.querySelector('summary')!;
+  const collectionToggle = document.querySelector<HTMLButtonElement>('.collection-toggle');
   collectionContents.open = readPreference('collection-open') === 'true';
   const syncCollection = () => {
     collectionSummary.title = `${collectionContents.open ? 'Collapse' : 'Expand'} collection sidebar`;
+    collectionToggle?.setAttribute('aria-expanded', String(collectionContents.open));
+    if (collectionToggle) collectionToggle.title = `${collectionContents.open ? 'Hide' : 'Show'} the collection sidebar (G then T)`;
   };
+  /* On desktop "The collection" is one label that moves: at the top of the outline it opens the sidebar, then it
+     flies into the new sidebar and becomes its title (the native summary, which closes it), and flies back on closing.
+     A fixed copy makes the flight, following its destination as the columns animate; focus moves with it. */
+  let flightStart: DOMRect | undefined;
+  const labelIcon = (element: Element | null) => element?.querySelector('svg')?.getBoundingClientRect();
+  const fly = (start: DOMRect, target: () => DOMRect | undefined, opening: boolean) => {
+    if (!collectionToggle || reducedMotion.matches || mobile.matches) return;
+    const ghost = document.createElement('span');
+    ghost.className = 'collection-ghost';
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.append(...[...collectionToggle.childNodes].map(node => node.cloneNode(true)));
+    document.body.append(ghost);
+    shell.classList.add('collection-flying');
+    const began = performance.now(), duration = 300;
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - began) / duration), eased = 1 - (1 - progress) ** 3;
+      const end = target() ?? start;
+      ghost.style.translate = `${start.left + (end.left - start.left) * eased}px ${start.top + (end.top - start.top) * eased}px`;
+      ghost.style.setProperty('--flip', String(opening ? 1 - 2 * eased : 2 * eased - 1));
+      if (progress < 1) requestAnimationFrame(step);
+      else { ghost.remove(); shell.classList.remove('collection-flying'); }
+    };
+    step(began);
+    requestAnimationFrame(step);
+  };
+  collectionToggle?.addEventListener('click', () => {
+    flightStart = labelIcon(collectionToggle);
+    collectionContents.open = true;
+    if (!mobile.matches) collectionSummary.focus({ preventScroll: true });
+  });
+  collectionSummary.addEventListener('click', () => { flightStart = collectionContents.open ? labelIcon(collectionSummary) : undefined; });
   syncCollection();
   collectionContents.addEventListener('toggle', () => {
     syncCollection();
     writePreference('collection-open', String(collectionContents.open));
+    if (!collectionContents.open && document.activeElement === collectionSummary && !mobile.matches) collectionToggle?.focus({ preventScroll: true });
+    if (flightStart) fly(flightStart, () => labelIcon(collectionContents.open ? collectionSummary : collectionToggle), collectionContents.open);
+    flightStart = undefined;
   });
   const setContents = () => { contents.open = !mobile.matches; };
   setContents();
@@ -870,7 +907,7 @@
     });
   };
   makeResizable(document.querySelector<HTMLElement>('.collection-resizer')!, shell, '--collection-open-width', 'collection-width', 160, 360, () => workspace.getBoundingClientRect().left);
-  makeResizable(document.querySelector<HTMLElement>('.toc-resizer')!, shell, '--toc-width', 'toc-width', 140, 320, () => readingLayout.getBoundingClientRect().left);
+  makeResizable(document.querySelector<HTMLElement>('.toc-resizer')!, shell, '--toc-width', 'toc-width', 140, 320, () => readingLayout.getBoundingClientRect().left + (parseFloat(getComputedStyle(readingLayout).getPropertyValue('--outline-inset')) || 0) + 20);
   makeResizable(document.querySelector<HTMLElement>('.reading-resizer')!, shell, '--reading-width', 'reading-width', 520, 1100, () => {
     const box = readingMain.getBoundingClientRect();
     return box.left + box.width / 2;
@@ -973,8 +1010,9 @@
   const track = () => {
     queued = false;
     // Hysteresis exceeds the header's height delta, avoiding resize/scroll oscillation.
+    // While a saved position is restored the header stays compact, whatever the browser scrolls through first.
     if (scrollY > 120) root.classList.add('is-scrolled');
-    else if (scrollY < 16) root.classList.remove('is-scrolled');
+    else if (scrollY < 16 && !root.classList.contains('restoring-position')) root.classList.remove('is-scrolled');
     let active = -1;
     headings.forEach((heading, index) => { if (heading.getBoundingClientRect().top < innerHeight * .35) active = index; });
     links.forEach((link, index) => {

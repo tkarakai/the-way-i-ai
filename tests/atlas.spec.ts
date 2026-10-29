@@ -50,7 +50,8 @@ test('the design switch changes presentation in place, keeps the reading positio
   await settle();
   expect(Math.abs(await heading.evaluate(node => node.getBoundingClientRect().top) - before)).toBeLessThan(4);
   expect(await page.locator('.article').textContent()).toBe(text);
-  await expect(page.locator('.collection-nav')).toBeVisible();
+  await expect(page.locator('.collection-toggle')).toBeVisible();
+  await expect(page.locator('.plates-menu')).toBeHidden();
   await expect(page.locator('.plate-margin')).toBeHidden();
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-design', 'folio');
@@ -562,13 +563,17 @@ test('modals keep the page behind them still while their own content scrolls', a
     ['share', () => page.locator('body').press('s')],
     ['drawer', async () => { await page.locator('body').press('g'); await page.keyboard.press('t'); }],
   ];
+  const brandLeft = () => page.locator('.brand').evaluate(node => node.getBoundingClientRect().left);
   for (const [name, open] of openers) {
     await page.evaluate(() => scrollTo({ top: 3000, behavior: 'instant' }));
     // The header compacts after a jump and the page settles; measure once it has stopped moving.
     let before = -1;
     await expect.poll(async () => { const now = await page.evaluate(() => scrollY); const settled = now === before; before = now; return settled; }, { intervals: [150] }).toBe(true);
+    const left = await brandLeft();
     await open();
     await expect(page.locator('dialog[open], .plates-menu[open]')).toHaveCount(1);
+    // The locked page keeps its scrollbar's room, so nothing behind the modal shifts sideways.
+    expect(await brandLeft(), name).toBe(left);
     for (let press = 0; press < 8; press++) await page.keyboard.press('ArrowDown');
     await page.keyboard.press('PageDown');
     expect(await page.evaluate(() => scrollY), name).toBe(before);
@@ -651,7 +656,35 @@ test('the Atlas logo, content and GitHub icon share both edges at every width', 
       return [Math.round(box('.brand .wordmark').left) - Math.round(box('.frontis').left), Math.round(box('.repo-link').right) - Math.round(box('.frontis').right)];
     });
     expect(edges, `${width}px`).toEqual([0, 0]);
+    // Below the label card, the outline panel and the margin notes keep the same two edges.
+    const reading = await page.evaluate(() => {
+      const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+      const margin = document.querySelector<HTMLElement>('.plate-margin')!;
+      return [Math.round(box('.on-page').left) - Math.round(box('.frontis').left),
+        margin.offsetParent ? Math.round(box('.plate-margin').right) - Math.round(box('.frontis').right) : 0];
+    });
+    if (width > 980) expect(reading, `${width}px`).toEqual([0, 0]);
   }
+});
+
+test('the topic list drawer sits in the top layer on wide screens and slides in', async ({ page }) => {
+  await page.setViewportSize({ width: 2400, height: 1000 });
+  await page.goto(url(`topics/${registry.topics[1]}/index.html`));
+  await page.locator('.plates-trigger').click();
+  const drawer = page.locator('.plates-drawer');
+  await expect(drawer).toHaveJSProperty('popover', 'manual');
+  expect(await drawer.evaluate(node => node.matches(':popover-open'))).toBe(true);
+  expect(await drawer.evaluate(node => node.getAnimations().some(animation => (animation as CSSAnimation).animationName === 'atlas-drawer'))).toBe(true);
+  await expect.poll(() => drawer.evaluate(node => Math.round(node.getBoundingClientRect().left))).toBe(0);
+  // Nothing on the page covers any part of it.
+  const covered = await drawer.evaluate(node => {
+    const box = node.getBoundingClientRect();
+    return [10, 60, 200, box.width - 10].some(x => !node.contains(document.elementFromPoint(x, box.height / 2)));
+  });
+  expect(covered).toBe(false);
+  // A click on the backdrop closes it.
+  await page.mouse.click(1600, 500);
+  await expect(page.locator('.plates-menu')).not.toHaveAttribute('open', '');
 });
 
 test('dates read as how long ago, with the exact date on hover, and the A–Z index is in every footer', async ({ page }) => {

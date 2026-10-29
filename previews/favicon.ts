@@ -42,7 +42,8 @@ try {
   const image = await page.screenshot({ omitBackground: true });
   const source = `data:image/png;base64,${image.toString('base64')}`;
   const sizes = [16, 32, 48, 180, 192, 512];
-  const files = await page.evaluate(async ({ source, sizes }) => {
+  const renderer = await browser.newPage();
+  const files = await renderer.evaluate(async ({ source, sizes }) => {
     const image = new Image(); image.src = source; await image.decode();
     const probe = document.createElement('canvas');
     probe.width = image.width; probe.height = image.height;

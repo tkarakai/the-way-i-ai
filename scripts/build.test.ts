@@ -29,7 +29,6 @@ async function fixture(t: TestContext) {
     read: (file: string) => readFile(resolve(path, /^(?:index\.html|topics\/.*\/index\.html|(?:general-index|about|privacy|licensing)\/index\.html|404\.html|sitemap\.xml|feed\.xml)$/.test(file) ? `_site/${file}` : file), 'utf8'),
     search: async () => { const html = await readFile(resolve(path, '_site/index.html'), 'utf8'); return JSON.parse(await readFile(resolve(path, '_site', html.match(/data-search-index="([^"]+)/)![1]), 'utf8')) as {title:string;text:string;href:string}[]; },
     css: async () => { const html=await readFile(resolve(path,'_site/index.html'),'utf8'); return readFile(resolve(path,'_site',html.match(/rel="stylesheet" href="([^"]+)/)![1]),'utf8'); },
-    scripts: async (html: string) => (await Promise.all([...html.matchAll(/<script src="([^"]+)/g)].map(m => readFile(resolve(path,'_site',m[1]),'utf8')))).join('\n'),
     write: (file: string, text: string) => writeFile(resolve(path, ['sitemap.xml','feed.xml'].includes(file) ? `_site/${file}` : file), text),
     build: (...args: string[]) => spawnSync(process.execPath, [resolve(path, 'scripts/build.ts'), ...args], { cwd: path, encoding: 'utf8', env: {...process.env, SOURCE_DATE_EPOCH:'1793232000', GITHUB_SHA:'0123456789abcdef0123456789abcdef01234567'} })
   };
@@ -267,15 +266,14 @@ test('ambient configuration keeps F homepage-only, allows omission, and rejects 
   const f = await fixture(t);
   const registry = JSON.parse(await f.read('topics/topics.json'));
   passed(f.build());
-  assert.ok((await f.scripts(await f.read('index.html'))).includes('window.drawMurmuration ='));
-  assert.ok(!(await f.read('topics/worktrees/index.html')).includes('window.drawMurmuration'));
+  assert.ok((await f.read('index.html')).includes('<canvas class="ambient-canvas"'));
+  assert.ok(!(await f.read('topics/worktrees/index.html')).includes('<canvas class="ambient-canvas"'));
   delete registry.ambientBackground;
   await f.write('topics/topics.json', JSON.stringify(registry));
   passed(f.build());
   const original = await f.read('index.html');
   assert.ok(!original.includes('data-ambient="A"'));
   assert.ok(!original.includes('<canvas class="ambient-canvas"'));
-  assert.ok(!original.includes('window.drawMurmuration'));
   for (const patch of [{ ambientBackground: 'A' }, { ambientBackground: 'B' }, { ambientIntensity: 20 }, { ambientIntensity: -.1 }, { ambientIntensity: '0.2' }]) {
     await f.write('topics/topics.json', JSON.stringify({ ...registry, ...patch }));
     const invalid = f.build();

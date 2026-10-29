@@ -19,18 +19,18 @@ You shouldn’t have to configure the same thing on every website, so the site f
 
 ## Settings on this site
 
-Choose **Shortcuts** at the bottom of any page (it’s called **Settings** on touch screens), or press <kbd>?</kbd>. Two switches sit at the top:
+Choose **Shortcuts** at the bottom of any page (it’s called **Settings** on touch screens), or press `?`. Two switches sit at the top:
 
 - **Animations:** turns off moving text, entrances, and logo tricks. If your device already asks for reduced motion, they are off, and the switch says so.
-- **Single-key shortcuts:** turns off the one-letter keys listed below it. This helps if you use speech input or sometimes press keys by accident. <kbd>⌘ K</kbd> or <kbd>Ctrl K</kbd> still opens search.
+- **Single-key shortcuts:** turns off the one-letter keys listed below it. This helps if you use speech input or sometimes press keys by accident. `⌘ K` or `Ctrl K` still opens search.
 
 Your choices are remembered in this browser only. The [privacy page](https://thewayiai.com/privacy/) explains what is stored.
 
 ## Using a keyboard
 
-<kbd>Tab</kbd> moves through links and controls in reading order, with a visible focus outline. On topic pages, “Skip to the text” and “Skip to the outline” links come first. Dialogs and the topic list keep focus inside until you close them with <kbd>Esc</kbd>, and focus returns to where you were.
+`Tab` moves through links and controls in reading order, with a visible focus outline. On topic pages, “Skip to the text” and “Skip to the outline” links come first. Dialogs and the topic list keep focus inside until you close them with `Esc`, and focus returns to where you were.
 
-The shortcut list shows a few faster ways around, such as <kbd>J</kbd> and <kbd>K</kbd> to step through chapters. They are optional; everything also works with ordinary keys.
+The shortcut list shows a few faster ways around, such as `J` and `K` to step through chapters. They are optional; everything also works with ordinary keys.
 
 ## Pictures and colour
 

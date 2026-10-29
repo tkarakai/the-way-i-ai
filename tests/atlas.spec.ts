@@ -551,6 +551,20 @@ test('the share button shows the page’s own card and copies its canonical link
   const link = `https://thewayiai.com/topics/${registry.topics[0]}/`;
   // Copy link is the default action; the link field appears only if copying fails.
   await expect(dialog.locator('[data-copy-link]')).toBeFocused();
+  // Every tile and the close button stay in the Tab order (explicitly, for Safari); arrows, Home and End move between tiles.
+  for (const element of await dialog.locator('.share-tile, [data-close-dialog]').all()) await expect(element).toHaveAttribute('tabindex', '0');
+  await page.keyboard.press('Tab');
+  await expect(dialog.locator('[data-share-target="email"]')).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expect(dialog.locator('[data-share-target="linkedin"]')).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(dialog.locator('[data-share-target="x"]')).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expect(dialog.locator('[data-copy-link]')).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(dialog.locator('[data-share-target="x"]')).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(dialog.locator('[data-copy-link]')).toBeFocused();
   await expect(dialog.locator('#share-url')).toBeHidden();
   await expect(dialog.locator('#share-url')).toHaveValue(link);
   await expect(dialog.locator('[data-share-target="linkedin"]')).toHaveAttribute('href', `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`);

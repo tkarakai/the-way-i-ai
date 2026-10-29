@@ -422,6 +422,16 @@
       native.hidden = false;
       native.addEventListener('click', () => { navigator.share({ title, text: description, url }).catch(() => {}); });
     }
+    // ← → Home End move between the tiles, as well as Tab.
+    const tiles = shareDialog.querySelector<HTMLElement>('.share-targets')!;
+    tiles.addEventListener('keydown', event => {
+      const visible = [...tiles.querySelectorAll<HTMLElement>('.share-tile:not([hidden])')];
+      const index = visible.indexOf(document.activeElement as HTMLElement);
+      const next = { ArrowRight: index + 1, ArrowDown: index + 1, ArrowLeft: index - 1, ArrowUp: index - 1, Home: 0, End: visible.length - 1 }[event.key];
+      if (next === undefined || index < 0) return;
+      event.preventDefault();
+      visible[(next + visible.length) % visible.length].focus();
+    });
     document.querySelectorAll('[data-open-share]').forEach(button => button.addEventListener('click', () => { shareDialog.dispatchEvent(new Event('share-open')); share.open(); }));
   }
   // A tailpiece closes the topic with its own animal, reusing the topic list's thumbnail rather than embedding it twice.

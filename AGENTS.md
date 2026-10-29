@@ -105,7 +105,7 @@ npm test            # Generator, publication, search, and theme contract checks
 npm run test:browser # Offline, responsive, keyboard, and interaction checks
 ```
 
-Run `npm run preview` and open the homepage and new topic in a browser. Check the title, full text, navigation, code examples, keyboard interaction, narrow layout, and operation without third-party network requests.
+Run `npm run dev` (rebuilds and reloads on save) and open the homepage and new topic in a browser. Check the title, full text, navigation, code examples, keyboard interaction, narrow layout, and operation without third-party network requests.
 
 ## Editorial structure and shared presentation
 
@@ -172,7 +172,7 @@ The excerpt is not hidden content. It remains visible in the Markdown document a
 
 `npm run build` creates the local `_site/` bundle without rasterizing sharing cards. `npm run check` validates all sources and links, and checks an existing bundle for staleness using its recorded edition; it can also run on a fresh checkout. `npm run build:site` creates a clean `_site/` bundle for GitHub Pages, including automatically rendered social sharing JPEGs. Install Playwright Chromium first (`npx playwright install chromium`); publication-bundle tests also need it. The approved card layout lives in `design-system/sharing.css`, and `scripts/sharing.ts` derives its copy, artwork, and wordmark from existing sources. Sharing images live only in `_site/assets/sharing/`; their source-addressed URLs are included in generated HTML. Do not author cards in `_site/` or maintain separate article copy. The deployment and downloaded preview use the same generated bundle. Keep all navigation relative so it works under a repository subpath and when the downloaded bundle is served locally over HTTP.
 
-Use `npm run preview` to build and serve the current branch locally. After edits, rebuild with `npm run build:site` and refresh. PR builds upload a complete downloadable preview artifact, linked from the Actions run summary. Preview builds must not deploy the main Pages site.
+Use `npm run dev` while editing: it serves `_site/`, rebuilds on every source change under `topics/`, `pages/`, `design-system/` and `scripts/`, reloads open pages through a same-origin script it adds only to locally served pages, and shows failed builds as a banner over the last good build. It skips sharing images. `npm run preview` serves the full `build:site` bundle without watching. Each build stages output in its own `_site.build-<pid>` folder, so overlapping builds are safe. PR builds upload a complete downloadable preview artifact, linked from the Actions run summary. Preview builds must not deploy the main Pages site.
 
 The Pages workflow checks the source/output contract, builds the publication bundle, and deploys on the default branch or manual dispatch. The custom domain is https://thewayiai.com/. Documentation should lead readers to this rendered site, with a prominent link at the very top of the root README. Use absolute https://thewayiai.com/ URLs for interactive-edition links in Markdown, since GitHub's file viewer displays HTML source. Keep navigation inside HTML relative with explicit `index.html` filenames so the downloaded folder retains native file navigation; use a local HTTP server for full search functionality. Do not include raw Markdown links in rendered pages. Local builds do not publish the current branch.
 

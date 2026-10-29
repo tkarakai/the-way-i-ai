@@ -204,6 +204,10 @@ async function main() {
   const references = (await readdir(resolve(styleDirectory, 'references'))).filter(file => /\.(png|jpe?g|webp)$/i.test(file)).sort().map(file => resolve(styleDirectory, 'references', file));
   if (!references.length) throw new Error('No style references in design-system/illustration-style/references/.');
 
+  // The manifest comes first: the site shows each image as soon as it lands, and missing
+  // images render nothing without moving the others, so `npm run dev` fills in live.
+  await writeFile(manifestPath, `${JSON.stringify(manifestFor(species), null, 2)}\n`);
+
   // The portrait comes first; panoramas then see it, so all five show the same animals.
   for (const spec of selected) {
     const raw = resolve(workspace, 'raw', `${name(spec)}.png`);
@@ -223,11 +227,10 @@ async function main() {
     await writeFile(destination, png);
     console.log(`  ${spec.file}: ${note}`);
   }
-  await writeFile(manifestPath, `${JSON.stringify(manifestFor(species), null, 2)}\n`);
   await writeFile(resolve(workspace, 'review.html'), reviewSheet(topic, species, workspace, stamp));
   console.log(`\nWrote topics/${topic}/assets/illustrations/ (${species}).`);
   console.log(`Review: open .illustrate/${topic}/review.html — earlier versions are in .illustrate/${topic}/previous/.`);
-  console.log('Then run npm run build (or npm run build:site with a preview running) to see them in place.');
+  console.log('With npm run dev running, they are already in the preview; otherwise run npm run build.');
 }
 
 if (import.meta.main) await main().catch(error => { console.error(`illustrate: ${(error as Error).message}`); process.exit(1); });

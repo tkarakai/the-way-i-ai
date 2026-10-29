@@ -448,7 +448,8 @@ if (check) {
 // pages, shared assets and reader-facing topic sources, not build dependencies. Only
 // publication builds (--site) rasterize the sharing JPEGs.
 const sharingImages = site ? await renderSharingCards(cards, assets.files) : new Map<string, Buffer>();
-const stage = resolve(root, '_site.build');
+// Each build stages its own copy, so `npm run dev` and a manual build can overlap safely.
+const stage = resolve(root, `_site.build-${process.pid}`);
 await rm(stage, { recursive: true, force: true });
 await mkdir(resolve(stage, 'topics'), { recursive: true });
 await cp(resolve(root, 'topics/topics.json'), resolve(stage, 'topics/topics.json'));
@@ -476,8 +477,12 @@ const write = async (path: string, data: string | Buffer) => {
 };
 for (const [path, data] of [...sharingImages, ...publicIcons, ...assets.files]) await write(path, data);
 for (const [path, content] of outputs) await write(path, content);
-await rm(outputRoot, { recursive: true, force: true });
-await rename(stage, outputRoot);
+// Another build may finish between removing and renaming; the last one to finish wins.
+for (let attempt = 1; ; attempt++) {
+  await rm(outputRoot, { recursive: true, force: true });
+  try { await rename(stage, outputRoot); break; }
+  catch (error) { if (attempt === 3 || !['ENOTEMPTY', 'EEXIST'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error; }
+}
 if (generatedReadme !== undefined && generatedReadme !== readme) {
   await writeFile(readmePath, generatedReadme);
   console.log('Updated the README.md topic table.');

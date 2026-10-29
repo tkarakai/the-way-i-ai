@@ -16,6 +16,7 @@
     "build:previews": "node previews/build-backgrounds.ts",
     "preview:backgrounds": "npm run build && npm run build:previews",
     "preview": "npm run build:site && node scripts/preview.ts",
+    "dev": "node scripts/dev.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

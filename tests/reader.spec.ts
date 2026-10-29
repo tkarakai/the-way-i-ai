@@ -333,7 +333,9 @@ test('search, section links, code copying, focus and print layout remain usable'
   await expect(page.locator('.on-page')).not.toBeVisible();
   await expect(page.locator('.collection-nav')).not.toBeVisible();
   await expect(page.locator('.brand')).not.toBeVisible();
-  await expect(focus).toHaveAccessibleName('Show navigation');
+  // One constant name; the pressed state says focus mode is on (no name/state contradiction).
+  await expect(focus).toHaveAccessibleName('Focus on reading');
+  await expect(focus).toHaveAttribute('aria-pressed', 'true');
   await expect(focus).toHaveCSS('position', 'fixed');
   await page.waitForTimeout(350);
   const floating = await focus.boundingBox();
@@ -342,7 +344,9 @@ test('search, section links, code copying, focus and print layout remain usable'
   await page.screenshot({ path: 'test-results/folio-focus-mode.png', animations: 'disabled' });
   await page.reload();
   await expect(page.locator('body')).toHaveClass(/focus-mode/);
-  await expect(focus).toHaveAccessibleName('Show navigation');
+  // One constant name; the pressed state says focus mode is on (no name/state contradiction).
+  await expect(focus).toHaveAccessibleName('Focus on reading');
+  await expect(focus).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('Escape');
   const restoreMotion = await page.evaluate(() => [
     document.querySelector('.masthead'), document.querySelector('.collection-nav'), document.querySelector('.workspace'),
@@ -353,6 +357,7 @@ test('search, section links, code copying, focus and print layout remain usable'
   await expect(page.locator('.on-page')).toBeVisible();
   await expect(page.locator('.masthead')).toBeVisible();
   await expect(focus).toHaveAccessibleName('Focus on reading');
+  await expect(focus).toHaveAttribute('aria-pressed', 'false');
   await page.evaluate(() => dispatchEvent(new Event('beforeprint')));
   await expect(page.locator('.prose').first()).toBeVisible();
   await page.evaluate(() => dispatchEvent(new Event('afterprint')));

@@ -2,7 +2,7 @@
 :root {
   color-scheme: light;
   --header-height: 102px;
-  --paper: #f8f5ee; --surface: #fcfaf5; --ink: #332e2c; --muted: #746b64;
+  --paper: #f8f5ee; --surface: #fcfaf5; --ink: #332e2c; --muted: #6b625b;
   --line: #d9d2c5; --accent: #855144; --tint: #eee8db; --accent-ink: #fffaf3;
   --ochre: #9a6336; --code: #f0ebe2; --search-hit: #f1d89a;
   --title-ink: #4b2e4a; --title-accent: #147c86;
@@ -190,8 +190,9 @@ body[data-page='collection'] .footer { width: calc(100% - 120px); max-width: 120
 time.has-age { display: inline-grid; cursor: default; }
 .date-face { grid-area: 1 / 1; white-space: nowrap; transition: opacity .25s ease, transform .3s cubic-bezier(.2, .7, .2, 1); }
 .date-exact { opacity: 0; transform: translateY(.45em); }
-time.has-age:is(:hover, .is-exact) .date-relative { opacity: 0; transform: translateY(-.45em); }
-time.has-age:is(:hover, .is-exact) .date-exact { opacity: 1; transform: none; }
+/* Hover, keyboard focus (on the date, or on the link that holds it) or a tap shows the exact date. */
+:is(time.has-age:is(:hover, :focus-visible, .is-exact), a:focus-visible time.has-age) .date-relative { opacity: 0; transform: translateY(-.45em); }
+:is(time.has-age:is(:hover, :focus-visible, .is-exact), a:focus-visible time.has-age) .date-exact { opacity: 1; transform: none; }
 .card-dates { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; margin: 0; }
 .card-dates div { display: flex; gap: 4px; }
 .card-dates dt { color: var(--muted); }
@@ -365,6 +366,7 @@ diffs-container { display: block; width: 100%; min-width: 0; --diffs-font-family
 @media (max-width: 560px) { .next-topic:has(.next-topic-portrait) { grid-template-columns: minmax(0, 1fr); } .next-topic-portrait { grid-row: auto; margin-bottom: 16px; } }
 .next-topic h2 { font: 450 32px/1.15 var(--serif); margin: 12px 0; }
 .next-topic a { text-decoration: none; }
+.next-topic h2 a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .18em; }
 .next-topic p { font-size: 14px; color: var(--muted); }
 :is(.search-dialog, .shortcuts-dialog, .share-dialog) { color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 25px; width: min(620px, calc(100% - 32px)); max-height: 80dvh; box-shadow: 0 25px 90px #0004; }
 /* Modals own scrolling: the page behind them stays put for keys, wheel and touch, and scrolling inside never spills over. */
@@ -389,9 +391,13 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 .contents nav.is-filtering li:not([hidden]) { animation: arrive .2s ease; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .2s; animation-timing-function: ease; }
 /* Phone bottom bar on topic pages, in both designs: the neighbouring animals and the outline. */
-.plate-bar { display: none; transition: transform .28s ease, opacity .2s ease; }
-.focus-mode .plate-bar { opacity: 0; transform: translateY(110%); pointer-events: none; }
+.plate-bar { display: none; transition: transform .28s ease, opacity .2s ease, visibility 0s; }
+/* Hidden in focus mode for keyboards and screen readers too, after it slides away. */
+.focus-mode .plate-bar { opacity: 0; transform: translateY(110%); pointer-events: none; visibility: hidden; transition: transform .28s ease, opacity .2s ease, visibility 0s .28s; }
 @media (max-width: 760px) {
+  /* Keep focused links and jump targets clear of the fixed bottom bar (WCAG 2.4.11). */
+  html:has(.plate-bar) { scroll-padding-bottom: 76px; }
+  html:has(.focus-mode .plate-bar) { scroll-padding-bottom: 0; }
   .plate-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; position: fixed; z-index: 25; left: 0; right: 0; bottom: 0; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 500 12px/1 var(--sans); }
   .plate-bar a { display: inline-flex; align-items: center; gap: 7px; padding: 4px; text-decoration: none; color: inherit; }
   .plate-bar .plate-bar-next { justify-self: end; }
@@ -425,10 +431,26 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 .share-end button { gap: 8px; color: var(--ink); }
 .share-end svg { width: 16px; height: 16px; }
 @media (max-width: 760px) { .masthead:has(.focus-toggle) .share-trigger { display: none; } }
-/* Keyboard shortcuts: a short list, opened with “?” or from the footer. */
+/* Shortcuts and settings: opened with “?” or from the footer. Touch screens get only the settings, titled “Settings”. */
 .shortcuts-dialog { width: min(480px, calc(100% - 32px)); overflow-y: auto; }
-.shortcut-group h3 { margin: 18px 0 6px; color: var(--accent); font: 500 10.5px/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
-.shortcut-group:first-of-type h3 { margin-top: 0; }
+.for-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .for-keys { display: none !important; } .for-touch { display: inline; }
+  .shortcuts-dialog .preference-group { margin: 0; padding: 0; border: 0; }
+}
+.shortcut-group { break-inside: avoid; margin-bottom: 18px; }
+.shortcut-group:last-child { margin-bottom: 0; }
+.shortcut-group h3 { margin: 0 0 6px; color: var(--accent); font: 500 10.5px/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+/* Wide screens: the groups flow into two balanced columns and the two settings sit side by side, to avoid scrolling. */
+@media (min-width: 900px) {
+  .shortcuts-dialog { width: min(880px, calc(100% - 48px)); max-height: 90dvh; }
+  .shortcut-columns { columns: 2; column-gap: 40px; }
+  .shortcut-columns .shortcut-group { margin-bottom: 14px; }
+  .shortcut-columns .shortcut-list > div { grid-template-columns: 136px 1fr; padding: 5px 0; }
+  .preference-group { display: grid; grid-template-columns: 1fr 1fr; column-gap: 40px; margin-bottom: 16px; padding-bottom: 12px; }
+  .preference-group .preference { padding: 4px 0; }
+  .preference-group h3 { grid-column: 1 / -1; }
+}
 .shortcut-list { display: grid; gap: 0; margin: 0; }
 .shortcut-list > div { display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); }
 .shortcut-list dt { color: var(--muted); font-size: 12px; line-height: 2; }
@@ -439,7 +461,16 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 .footer-shortcuts { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
 .footer-shortcuts:hover { color: var(--ink); }
 .footer-shortcuts kbd { min-width: 0; margin-left: 4px; padding: 0 5px; font-size: 10px; }
-@media (hover: none), (max-width: 760px) { .footer-shortcuts { display: none !important; } }
+/* The panel also holds the animation setting, so it stays available on touch screens; only the key hint goes. */
+@media (hover: none), (max-width: 760px) { .footer-shortcuts kbd { display: none; } }
+.preference-group { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.preference-group h3 { margin: 0 0 10px; color: var(--accent); font: 500 10.5px/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.preference { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; padding: 8px 0; cursor: pointer; }
+.preference input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); cursor: inherit; }
+.preference input:disabled { cursor: default; }
+.preference:has(input:disabled) { cursor: default; }
+.preference strong { display: block; font-weight: 600; }
+.preference small { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; line-height: 1.45; }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
 .dialog-head h2 { font: 500 17px var(--sans); margin: 0; }
 #collection-search { width: 100%; background: none; color: var(--ink); padding: 13px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; font: 400 23px var(--serif); }
@@ -462,6 +493,23 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 .design-switch button:hover { color: var(--ink); }
 .design-switch button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
 .design-switch svg { display: none; }
+/*
+ * Where both labels show, one ink pill slides to the chosen design instead of the fill jumping. The labels are
+ * monospaced with the same length, so the halves are equal. The switch is not part of the page cross-fade:
+ * it keeps its own live layer, so the old pill does not ghost while the new one slides.
+ */
+@media (min-width: 421px) {
+  .design-switch { position: relative; view-transition-name: design-switch; }
+  .design-switch::before { content: ''; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 3px); border-radius: 999px; background: var(--ink); transition: transform .34s cubic-bezier(.3, .8, .2, 1); }
+  :root[data-design='folio'] .design-switch::before { transform: translateX(calc(100% + 2px)); }
+  .design-switch button { position: relative; z-index: 1; transition: color .25s ease; }
+  .design-switch button[aria-pressed='true'] { background: transparent; }
+  /* Switching designs turns other transitions off for one step; the pill is the exception. */
+  .design-switching .design-switch::before { transition: transform .34s cubic-bezier(.3, .8, .2, 1) !important; }
+  .design-switching .design-switch button { transition: color .25s ease !important; }
+}
+::view-transition-old(design-switch) { display: none; }
+::view-transition-new(design-switch) { animation: none; }
 /* The generated General index works in both designs. */
 .index-page { max-width: 1200px; margin-inline: auto; padding: 0 60px 60px; }
 .index-head { display: grid; gap: 14px; padding: 48px 0 24px; border-bottom: 1px solid var(--ink); }
@@ -477,7 +525,7 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 .index-entry { padding: 5px 0; break-inside: avoid; }
 .index-entry a { display: flex; align-items: baseline; gap: 8px; font-size: 15px; line-height: 1.35; text-decoration: none; }
 .index-text { min-width: 0; }
-.index-skip { color: var(--muted); opacity: .75; }
+.index-skip { color: var(--muted); }
 .index-leader { flex: 1; min-width: 12px; border-bottom: 1px dotted var(--line); transform: translateY(-4px); }
 .index-ref { font: 500 11px/1 var(--mono); color: var(--accent); white-space: nowrap; }
 .index-topic { display: block; font-size: 11px; color: var(--muted); }
@@ -504,7 +552,6 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 .info-card { display: grid; align-content: start; gap: 8px; padding: 20px 22px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-decoration: none; transition: transform .3s ease, border-color .3s ease; }
 .info-card:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--ink); }
 .info-card strong { font: 450 25px/1.15 var(--serif); letter-spacing: -.02em; }
-.info-card strong::after { content: ' →'; color: var(--accent); }
 .info-card span { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: var(--muted); font-size: 13px; line-height: 1.55; }
 /* The 404 page: one centred column, then the way back to the topics. */
 .info-missing { grid-template-columns: minmax(0, 960px); text-align: center; }
@@ -686,7 +733,29 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
   .brand { padding-right: 6px; }
   .header-actions { gap: 2px; }
 }
+/* Placeholders are the only visible hint in the search fields, so they get readable contrast. */
+::placeholder { color: var(--muted); opacity: 1; }
+/*
+ * Windows High Contrast and other forced-colour modes replace every colour with the reader's own palette.
+ * States shown only by a fill (pressed buttons, the current item) would vanish, so they use system colours.
+ */
+@media (forced-colors: active) {
+  :is(.design-switch, .habitat-filters, .explorer-controls) button[aria-pressed='true'],
+  .spread-film button[aria-current='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  :is(.toc-link, .nav-topic, .drawer-plate)[aria-current] { forced-color-adjust: none; color: Highlight; outline: 1px solid Highlight; outline-offset: -1px; }
+  .toc-link[aria-current]::before { forced-color-adjust: none; background: Highlight; border-color: Highlight; }
+  .footer-links a[aria-current='page'] { text-decoration: underline 2px; }
+  .focus-toggle[aria-pressed='true'] { outline: 2px solid ButtonText; outline-offset: -2px; }
+  .toast { border: 1px solid CanvasText; }
+  /* The browser's text backplate would hide the y's tail where it crosses the second line; keep the reader's text colour. */
+  .wordmark, .wordmark * { forced-color-adjust: none; color: CanvasText; }
+  /* A see-through masthead lets text show through; forced colours need it solid. */
+  .masthead, .masthead::before, .masthead::after { background: Canvas !important; backdrop-filter: none !important; }
+}
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; animation: none !important; } }
+/* The same, when a reader turns animations off under Settings (data-motion is set before first paint). */
+:root[data-motion='reduce'] { scroll-behavior: auto; }
+:root[data-motion='reduce'] *, :root[data-motion='reduce'] *::before, :root[data-motion='reduce'] *::after { transition: none !important; animation: none !important; }
 @media print {
   :root, :root[data-theme='dark'], :root:not([data-theme]) { --paper: #fff; --surface: #fff; --ink: #111; --muted: #444; --line: #ccc; --accent: #214a35; --tint: #f2f4ef; --code: #f5f5f5; --title-ink: #4b2e4a; --title-accent: #147c86; color-scheme: light; }
   @page { margin: 18mm; }

@@ -42,7 +42,7 @@ async function updateMetadata(f: Awaited<ReturnType<typeof fixture>>, id: string
 // Synthetic artwork covers the generic explorer without retaining retired illustrations.
 async function addExplorer(f: Awaited<ReturnType<typeof fixture>>, id: string) {
   await mkdir(resolve(f.path, `topics/${id}/assets`), { recursive: true });
-  await f.write(`topics/${id}/assets/test-diagram.svg`, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle id="test-node" cx="5" cy="5" r="3"/></svg>');
+  await f.write(`topics/${id}/assets/test-diagram.svg`, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><title>Test diagram</title><circle id="test-node" cx="5" cy="5" r="3"/></svg>');
   await updateMetadata(f, id, metadata => {
     metadata.explorer = {
       title: 'Test explorer', instruction: 'Select a panel', caption: 'Test artwork', controls: 'labels', diagram: 'assets/test-diagram.svg',
@@ -363,11 +363,20 @@ test('a missing SVG highlight target fails instead of silently losing the explan
   assert.match(result.stderr, /missing SVG node/);
 });
 
+test('an authored SVG without a title fails, since it would have no accessible name', async t => {
+  const f = await fixture(t);
+  await addExplorer(f, 'agent-roles');
+  await f.write('topics/agent-roles/assets/test-diagram.svg', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle id="test-node" cx="5" cy="5" r="3"/></svg>');
+  const result = f.build();
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /SVG needs a nonempty <title>/);
+});
+
 test('discovery metadata matches the published inventory and stale sitemap checks fail', async t => {
   const f = await fixture(t);
   passed(f.build());
   const registry = JSON.parse(await f.read('topics/topics.json')) as { topics: string[]; siteUrl: string };
-  const paths = ['index.html', 'general-index/index.html', ...registry.topics.map(id => `topics/${id}/index.html`), 'about/index.html', 'privacy/index.html', 'licensing/index.html'];
+  const paths = ['index.html', 'general-index/index.html', ...registry.topics.map(id => `topics/${id}/index.html`), 'about/index.html', 'privacy/index.html', 'licensing/index.html', 'accessibility/index.html'];
   const xml = await f.read('sitemap.xml');
   const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
   assert.equal(urls.length, paths.length);

@@ -74,7 +74,8 @@ async function renderCode(text: string, lang: string) {
     file: { name: `example.${lang === 'yaml' ? 'yaml' : lang === 'bash' || lang === 'sh' ? 'sh' : 'txt'}`, contents: text, lang: (lang || 'text') as NonNullable<Parameters<typeof preloadFile>[0]['file']['lang']> },
     options: { theme: { light: 'github-light', dark: 'github-dark' }, themeType: 'system', overflow: 'wrap', disableLineNumbers: true, disableFileHeader: true,
       unsafeCSS: ':host { color-scheme: inherit; --diffs-bg: var(--code); --diffs-fg: var(--ink); } [data-code] { padding-block: 12px; }' }
-  }).then(result => result.prerenderedHTML ?? ''));
+  // Wrapped code never scrolls sideways, so it needs no Tab stop; the renderer's own one has no visible focus.
+  }).then(result => (result.prerenderedHTML ?? '').replace(/(<pre\b[^>]*?) tabindex="0"/g, '$1')));
   return codeCache.get(key)!;
 }
 
@@ -88,6 +89,7 @@ async function renderDocument(topic: RenderedTopic, document: SourceDocument, in
   const headings: Heading[] = [];
   const used = new Set();
   let previousLevel = 1;
+  const tableCounts = new Map<string, number>();
   const parser = new Marked({
     async: true, gfm: true,
     async walkTokens(token) {
@@ -110,13 +112,22 @@ async function renderDocument(topic: RenderedTopic, document: SourceDocument, in
         used.add(id);
         const level = token.depth;
         headings.push({ id, text, level, excerpt: '' });
-        return `<h${level} id="${id}"><a class="heading-link" href="#${id}">${content}</a></h${level}>\n`;
+        // The heading's own link is for pointers; keyboard readers reach every section from the outline (or J/K and C),
+        // so it is not a Tab stop between every heading and its text.
+        return `<h${level} id="${id}"><a class="heading-link" href="#${id}" tabindex="-1">${content}</a></h${level}>\n`;
       },
       code(token) {
         const id = `${docId}-code-${++codeIndex}`;
         return `<div class="code-example"><div class="code-toolbar"><span>${escape(token.lang || 'Terminal example')}</span><button class="small-button js-only" data-copy="${id}" aria-label="Copy code example">Copy</button></div><diffs-container><template shadowrootmode="open">${renderedCode.get(token)}</template></diffs-container><script type="application/json" id="${id}">${safeJSON(token.text)}</script></div>\n`;
       },
-      table(token) { return `<div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable reference table">${Renderer.prototype.table.call(this, token)}</div>`; },
+      table(token) {
+        // A scrollable region needs a name of its own: the section it belongs to, numbered if it holds several tables.
+        const section = headings.at(-1)?.text ?? topic.title;
+        const count = (tableCounts.get(section) ?? 0) + 1;
+        tableCounts.set(section, count);
+        const name = `Table${count > 1 ? ` ${count}` : ''}: ${section}`;
+        return `<div class="table-wrap" tabindex="0" role="region" aria-label="${escape(name)}">${Renderer.prototype.table.call(this, token)}</div>`;
+      },
       list(token) {
         const html = Renderer.prototype.list.call(this, token);
         return !token.ordered && token.items.length >= 7 ? html.replace('<ul>', '<ul class="long-list">') : html;
@@ -152,6 +163,7 @@ async function loadSVG(topic: RenderedTopic, file: string, prefix = '') {
   if (/<script\b|<foreignObject\b|\son\w+=|@import\b/i.test(source) || /(?:href|src)=["'](?!#|data:)/i.test(source) || /url\((?!#|['"]?#|data:)/i.test(source)) throw new Error(`${topic.id}/${file}: SVG must be self-contained and script-free`);
   const ids = [...source.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
   if (new Set(ids).size !== ids.length) throw new Error(`${topic.id}/${file}: duplicate SVG ids`);
+  if (!/<title\b[^>]*>\s*[^<\s][^<]*<\/title>/i.test(source)) throw new Error(`${topic.id}/${file}: SVG needs a nonempty <title> for its accessible name`);
   if (!prefix) return source;
   return source.replace(/\bid="([^"]+)"/g, `id="${prefix}$1"`)
     .replace(/(aria-labelledby|aria-describedby)="([^"]+)"/g, (_, name, value) => `${name}="${value.split(/\s+/).map((id: string) => prefix + id).join(' ')}"`)
@@ -185,7 +197,7 @@ for (const topic of topics) {
 
 // Site pages: About, Privacy and Licensing in footer order, plus the GitHub Pages 404 page.
 // GitHub Pages serves 404.html at any missing path, so its links start from the site root.
-const sitePageIds = ['about', 'privacy', 'licensing'];
+const sitePageIds = ['about', 'privacy', 'licensing', 'accessibility'];
 const missingPrefix = new URL(registry.siteUrl).pathname;
 async function renderPage(id: string, prefix: string): Promise<RenderedPage> {
   const file = `pages/${id}.md`;
@@ -215,7 +227,7 @@ async function renderPage(id: string, prefix: string): Promise<RenderedPage> {
         while (used.has(headingId) || headingId === 'page-title') headingId += '-2';
         used.add(headingId);
         headings.push({ id: headingId, text, level: token.depth, excerpt: '' });
-        return `<h${token.depth} id="${headingId}"><a class="heading-link" href="#${headingId}">${content}</a></h${token.depth}>\n`;
+        return `<h${token.depth} id="${headingId}"><a class="heading-link" href="#${headingId}" tabindex="-1">${content}</a></h${token.depth}>\n`;
       }
     }
   });

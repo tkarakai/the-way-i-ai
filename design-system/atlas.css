@@ -133,9 +133,13 @@
 .spread-arrow:hover:not(:disabled) { border-color: var(--ink); }
 .spread-arrow:disabled { opacity: .35; cursor: default; }
 .spread-film { flex: 1; display: flex; justify-content: center; gap: 8px; overflow-x: auto; padding: 5px 2px; scrollbar-width: none; }
-.spread-film button { flex: none; display: grid; gap: 4px; justify-items: center; padding: 3px; border: 1px solid var(--line); background: var(--mount); opacity: .55; transition: opacity .3s, transform .3s var(--atlas-ease), border-color .3s; }
-.spread-film button:hover { opacity: .9; }
-.spread-film button[aria-current='true'] { opacity: 1; border-color: var(--mount-ink); transform: translateY(-3px); }
+/* Other topics recede: a paler mount and a faded image, but their numbers keep full contrast (no opacity on text). */
+.spread-film button { flex: none; display: grid; gap: 4px; justify-items: center; padding: 3px; border: 1px solid var(--line); background: color-mix(in srgb, var(--mount) 55%, var(--paper)); transition: background-color .3s, transform .3s var(--atlas-ease), border-color .3s; }
+.spread-film button img { opacity: .55; transition: opacity .3s; }
+.spread-film button:hover { background: color-mix(in srgb, var(--mount) 90%, var(--paper)); }
+.spread-film button:hover img { opacity: .9; }
+.spread-film button[aria-current='true'] { background: var(--mount); border-color: var(--mount-ink); transform: translateY(-3px); }
+.spread-film button[aria-current='true'] img { opacity: 1; }
 .spread-film img { display: block; width: 64px; height: 40px; object-fit: cover; }
 .spread-film span { padding-bottom: 2px; font: 500 9.5px/1 var(--mono); letter-spacing: .12em; color: var(--mount-ink); }
 .spread-folio { flex: none; min-width: 7ch; text-align: right; font: 400 11.5px/1 var(--mono); color: var(--muted); }
@@ -361,6 +365,9 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
   [data-design='atlas'] .topic-card .topic-copy { grid-column: 2; grid-row: 2; }
   [data-design='atlas'] .topic-copy h3 { font-size: 22px; }
   [data-design='atlas'] .topic-copy p:not(.card-species) { display: none; }
+  /* The dates go below the category when both do not fit, rather than running off narrow screens. */
+  [data-design='atlas'] .card-meta { flex-wrap: wrap; gap: 4px 12px; }
+  [data-design='atlas'] .card-dates { justify-content: flex-start; }
   .spread-film { justify-content: flex-start; }
   .spread-folio { display: none; }
   .plate-turn { grid-template-columns: minmax(0, 1fr); }

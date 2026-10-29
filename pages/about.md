@@ -29,3 +29,5 @@ No particular reason. Sometimes I need to remind myself that nature is out there
 ## Say hello (or point out a mistake)
 
 You can find me on [GitHub as tkarakai](https://github.com/tkarakai). If something here sparks an idea, seems wrong, or could be clearer, that’s the place to start.
+
+For security vulnerabilities, use the [repository's Security page](https://github.com/tkarakai/the-way-i-ai/security) and select **Report a vulnerability**. Reports are private and require a GitHub account and sign-in.

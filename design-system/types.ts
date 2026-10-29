@@ -57,7 +57,7 @@ export interface RenderedTopic extends Topic {
   title: string;
   id: string;
   number: string;
-  /** `thumbnail` is a small data URL of the portrait for navigation to this topic from other pages. */
+  /** `thumbnail` is the URL of a small shared copy of the portrait, for navigation to this topic from other pages. */
   illustrations?: { homepage: string; hero: string; species?: Species; thumbnail?: string };
   coverSVG: string;
   diagramSVG: string;
@@ -66,19 +66,18 @@ export interface RenderedTopic extends Topic {
 /** A wildlife manifest species, split into an optional common name and binomial. */
 export interface Species { common?: string; latin: string }
 /** A site page from `pages/`, such as About or the 404 page: a title, a derived description and authored chapters. */
-export interface RenderedPage { id: string; title: string; description: string; html: string; headings: Heading[] }
+export interface RenderedPage { id: string; title: string; description: string; html: string; headings: Heading[]; markdown: string }
 /** A site page link: `id` is its folder, so `about` links to `about/index.html`. */
-export interface PageLink { id: string; title: string; description: string }
-/** A site page from `pages/`, such as About or the 404 page: its title, a description derived from its first paragraph, and authored chapters. */
-export interface RenderedPage { id: string; title: string; description: string; html: string; headings: Heading[] }
-/** A footer link to a site page; `id` is its folder, so `about` links to `about/index.html`. */
 export interface PageLink { id: string; title: string; description: string }
 export interface SearchEntry { title: string; topic: string; href: string; text: string }
 export interface ShellOptions {
   /** Page title; omitted on the home page, whose title is the collection name alone. */
-  title?: string; description: string; body: string; css: string; js: string;
-  themeJS: string; search: SearchEntry[];
-  fonts: string; collection: Collection; topics: RenderedTopic[]; prefix?: string; page?: string;
+  title?: string; description: string; body: string;
+  /** Shared files, as paths from the site root: the stylesheet, scripts in order, and the search index. */
+  files: { stylesheet: string; scripts: string[]; searchIndex: string };
+  /** Runs inline in the head, before first paint; the Content-Security-Policy allows it by hash. */
+  themeJS: string; csp: string; edition: Edition;
+  collection: Collection; topics: RenderedTopic[]; prefix?: string; page?: string;
   wordmarkBackground?: boolean; created?: string; updated?: string;
   headMetadata?: string;
   /** Site pages linked from every footer. */
@@ -93,3 +92,6 @@ export interface WavePosition {
   cornerOrder: ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'];
   corners: Record<'topLeft' | 'topRight' | 'bottomRight' | 'bottomLeft', { x: number; y: number }>;
 }
+
+/** Which build produced a page: build time (UTC) and source commit, for example 2026.10.28.2244+68b1859. */
+export interface Edition { version: string; built: string; commit?: string }

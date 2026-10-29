@@ -42,6 +42,5 @@ export function waveTransform(position: WavePosition): string {
 
 export function wordmarkStyles(background: string, position?: WavePosition): string {
   if (!background) return '';
-  // One embedded asset per page, shared by the header and collection title.
   return `:root { --wordmark-wave-image: url("${background}"); }\n${position ? `.title-art { left: 0; top: 0; width: 1em; height: 1em; transform-origin: 0 0; transform: ${waveTransform(position)}; }` : ''}`;
 }

@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.ts';
 
-const articleURL = new URL('../_site/topics/just-enough-context/index.html', import.meta.url).href;
+const articleURL = new URL('topics/just-enough-context/index.html', 'http://127.0.0.1:4193/').href;
 const chapterID = 'just-enough-context-doc-1-project-context-intelligence';
 const subsectionID = 'just-enough-context-doc-1-technical-considerations-to-explore';
 
@@ -75,7 +75,7 @@ for (const width of [1440, 390]) {
         }
       }).observe(document, { subtree: true, attributes: true, attributeFilter: ['data-reveal'] });
     });
-    await page.goto(new URL('../_site/topics/worktrees/index.html', import.meta.url).href);
+    await page.goto(new URL('topics/worktrees/index.html', 'http://127.0.0.1:4193/').href);
     const cohort = page.locator('.article-reveal[data-entrance-delay="true"]');
     await expect.poll(() => cohort.count()).toBeGreaterThanOrEqual(3);
     expect(await cohort.locator(':scope > h2,:scope > h3').allTextContents()).toEqual(expect.arrayContaining(['Introduction', 'Overview', 'How it works']));
@@ -101,7 +101,7 @@ for (const width of [1440, 390]) {
   });
 
   test(`article chapters and subsections reveal independently, once, at ${width}px`, async ({ page, context }) => {
-    await context.setOffline(true);
+    await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.goto(articleURL);

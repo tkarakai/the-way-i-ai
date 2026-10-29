@@ -5,7 +5,7 @@ import { topicSource } from '../scripts/markdown-source.ts';
 const root = new URL('../_site/', import.meta.url);
 const registry = JSON.parse(await readFile(new URL('topics/topics.json', root), 'utf8')) as { topics: string[] };
 const topicPath = `topics/${registry.topics[0]}/index.html`;
-const url = (path: string) => new URL(path, root).href;
+const url = (path: string) => new URL(path, 'http://127.0.0.1:4193/').href;
 const topicMetadata = new Map(await Promise.all(registry.topics.map(async id => [id,
   topicSource(await readFile(new URL(`topics/${id}/README.md`, root), 'utf8'), `${id}/README.md`).topic,
 ] as const)));
@@ -13,7 +13,7 @@ const topicMetadata = new Map(await Promise.all(registry.topics.map(async id => 
 for (const width of [1440, 390, 320]) {
   for (const theme of ['light', 'dark'] as const) {
     test(`all pages work offline at ${width}px in ${theme}`, async ({ page, context }) => {
-      await context.setOffline(true);
+      await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
       await page.setViewportSize({ width, height: 1000 });
       await page.emulateMedia({ colorScheme: theme });
       const errors: string[] = [];
@@ -289,7 +289,7 @@ test('topic header shrinks on scroll and restores at the top without oscillating
 });
 
 test('search, section links, code copying, focus and print layout remain usable', async ({ page, context }) => {
-  await context.setOffline(true);
+  await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
   await page.goto(url(topicPath));
   await page.keyboard.press('ControlOrMeta+k');
   const search = page.getByRole('dialog');

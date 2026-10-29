@@ -4,9 +4,11 @@ import { escape } from '../design-system/layout.ts';
 
 // An offline design review, deliberately separate from the publication bundle.
 const root = new URL('../', import.meta.url);
-const source = await readFile(new URL('index.html', root), 'utf8');
-const styles = source.match(/<style>([\s\S]*?)<\/style>/)![1];
+const source = await readFile(new URL('_site/index.html', root), 'utf8');
+const sheet = source.match(/rel="stylesheet" href="([^"]+)/)![1];
+const styles = (await readFile(new URL(`_site/${sheet}`, root), 'utf8')).replace(/url\((["']?)([^"')]+)\1\)/g, (_, quote: string, url: string) => `url(${quote}../_site/assets/${url}${quote})`);
 const collection = source.match(/<main id="main" class="collection-page">[\s\S]*?<\/main>/)![0]
+  .replace(/(src|srcset)="([^"]+)"/g, (_, attr: string, value: string) => `${attr}="${value.replace(/(^|, )assets\//g, '$1../_site/assets/')}"`)
   .replaceAll('id="main"', 'id="sample-main"')
   .replace(/href="[^"]*"/g, 'href="#" tabindex="-1"');
 const brand = `<span class="wordmark" aria-hidden="true">${source.match(/<h1 class="wordmark"[^>]*>([\s\S]*?)<\/h1>/)![1]}</span>`;

@@ -2,11 +2,11 @@ import { readFile, writeFile } from 'node:fs/promises';
 import ts from 'typescript';
 
 const root = new URL('../', import.meta.url);
-const source = await readFile(new URL('index.html', root), 'utf8');
-const styles = source.match(/<style>([\s\S]*?)<\/style>/)![1];
+const source = await readFile(new URL('_site/index.html', root), 'utf8');
+const sheet = source.match(/rel="stylesheet" href="([^"]+)/)![1];
+const styles = (await readFile(new URL(`../_site/${sheet}`, import.meta.url), 'utf8')).replace(/url\((["']?)([^"')]+)\1\)/g, (_, quote: string, url: string) => `url(${quote}../_site/assets/${url}${quote})`);
 const hero = source.match(/<section class="collection-hero">[\s\S]*?<\/section>/)![0];
 const lettering = hero.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)![1].replace(/<span class="title-art"[^>]*>[\s\S]*?<\/span>/, '');
-const edition = source.match(/<div class="edition-line eyebrow">[\s\S]*?<\/div>/)![0];
 const brand = `<span class="wordmark" aria-hidden="true">${hero.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)![1]}</span>`;
 const palettes = [
   { id: 'current', name: 'Current · forest', note: 'The starting point.', light: { top: '#252e29', ai: '#275b43' }, dark: { top: '#eeefe4', ai: '#b4d3ac' } },
@@ -71,7 +71,7 @@ input[type=radio] { width:18px; height:18px; accent-color:var(--ink); margin:0; 
     <div class="selection"><div class="selection-copy"><span class="eyebrow">Selected palette · adjust the colors below</span><h2 id="selection-name">Plum &amp; teal</h2><div class="color-controls"><span id="editing-theme" class="eyebrow">Light mode colors</span><label class="color-control"><input type="color" id="top-color" value="#4b2e4a"><span>the way I</span><output id="top-hex">#4B2E4A</output></label><label class="color-control"><input type="color" id="ai-color" value="#147c86"><span>AI</span><output id="ai-hex">#147C86</output></label></div></div></div>
   </section>
   <div class="context-label"><h2>In context</h2><p>Your selected palette on the collection header.</p></div>
-  <div id="site-preview" class="site-preview"><div class="preview-masthead"><span class="brand">${brand}</span><span>Contents</span></div>${edition}${hero}</div>
+  <div id="site-preview" class="site-preview"><div class="preview-masthead"><span class="brand">${brand}</span><span>Contents</span></div>${hero}</div>
   <p class="review-footer">Uses the site's Newsreader / DM Sans typography, paper and forest backgrounds, and exact letter alignment. Color adjustments stay in this preview.</p>
 </main>
 <script type="application/json" id="palette-data">${JSON.stringify(palettes)}</script><script>${ui.replaceAll('</script', '<\\/script')}</script>

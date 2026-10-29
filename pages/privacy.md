@@ -4,7 +4,7 @@
 
 The Way I AI is a static collection of articles. There are no accounts, advertising trackers, analytics scripts, or tracking cookies in the site’s code.
 
-Fonts, illustrations, and scripts are included in the published pages rather than loaded from third-party font, image, or script services.
+Fonts, illustrations, and scripts are served as shared files from this site rather than loaded from third-party font, image, or script services.
 
 ## What your browser remembers
 
@@ -16,7 +16,7 @@ These settings stay in your browser. You can remove them through your browser’
 
 ## Search
 
-Search runs in your browser using an index included in the page. There is no external search service.
+Search runs in your browser using a shared index downloaded from this site when you focus or hover over the search button, or open search. There is no external search service.
 
 Search terms can appear in the page URL so they can carry over when you open a result. Those URLs may remain in browser history or be included when you share a link. If you load or reload a URL containing search terms, that URL is sent to the hosting provider as part of the page request.
 

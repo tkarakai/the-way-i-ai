@@ -2,7 +2,7 @@
   "name": "the-way-i-ai",
   "version": "1.0.0",
   "private": true,
-  "description": "Related ideas about working with AI, in Markdown and standalone HTML.",
+  "description": "Related ideas about working with AI, in Markdown and optimized static HTML.",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -29,9 +29,12 @@
     "@types/node": "24.19.0",
     "@types/pngjs": "6.0.5",
     "@types/react": "19.3.0",
+    "@xmldom/xmldom": "0.9.12",
+    "entities": "9.0.0",
     "jpeg-js": "0.4.4",
     "marked": "18.0.14",
     "pngjs": "7.0.0",
+    "sharp": "0.35.5",
     "typescript": "5.9.3",
     "yaml": "2.9.1"
   }

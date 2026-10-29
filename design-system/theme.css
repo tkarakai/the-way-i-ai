@@ -668,7 +668,8 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
   .brand { --wordmark-size: 30px; padding: 20px 16px 10px 0; }
   .header-actions { gap: 6px; }
   .search-trigger { width: 36px; height: 40px; padding: 9px; border: 0; background: none; }
-  .search-trigger span { display: none; }
+  /* Visually hidden, still the button's accessible name. */
+  .search-trigger span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .icon-button, .repo-link { width: 36px; padding: 8px; }
   .collection-page { padding: 0 22px 35px; }
   .collection-hero { display: block; padding: 22px 0 28px; }

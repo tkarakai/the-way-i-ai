@@ -27,7 +27,7 @@ Clear paper uses sRGB **`#F8F5EE`**, matching the light theme's `--paper`. The s
 4. Run `npm run build`, or `npm run build:site` and refresh a running preview.
 5. Review desktop/narrow rendering in light and dark themes and run the checks below.
 
-No metadata edits, import script, or generated-page edits are needed. Commit extracted images, manifest, and rebuilt HTML together. Delivery ZIPs are ignored and must not be committed.
+No metadata edits, import script, or generated-page edits are needed. Commit extracted images and manifest; generated output stays ignored. Delivery ZIPs are ignored and must not be committed.
 
 The generator must actually create the images and archive before claiming success. An image-only tool may need a file-capable workspace to write the JSON and ZIP; otherwise download the five individual images and save the supplied manifest yourself. Do not mislabel file formats or assume that renaming an extension converts an image.
 
@@ -38,7 +38,7 @@ The generator must actually create the images and archive before claiming succes
 - Eligible boundaries are authored `##` headings across listed documents in reading order, excluding each document's first chapter. For `N` eligible boundaries, use `K = min(4, N)` slots at zero-based indices `floor(i * N / K)`, for `i = 0…K-1`. Images 1 through K occupy those slots in order. Short articles use fewer panoramas; a document with only one chapter has no interlude boundary. No topic-specific rules or content matching are involved.
 - Slots are assigned before checking file availability, so a missing panorama does not move the others. Missing images add no broken markup. A missing portrait leaves the homepage slot empty; no manifest means no illustrations. Files not named by the active manifest are ignored.
 - Invalid metadata fails validation before output changes. Unknown fields, unsafe or out-of-order filenames, invalid declared ratios, and nonempty decorative alt text are rejected.
-- Artwork is embedded in standalone HTML for offline reading. Dropping in new files requires a rebuild, not just a refresh. The build validates declared dimensions/ratios; browser acceptance checks actual raster dimensions for the delivered JEC assets. Review anatomical quality and actual export dimensions before publishing.
+- Artwork follows the [shared asset delivery contract](../README.md#build-contract). Dropping in new files requires a rebuild, not just a refresh. The build validates declared dimensions/ratios; browser acceptance checks actual raster dimensions for the delivered JEC assets. Review anatomical quality and actual export dimensions before publishing.
 - Older manifest versions 1/2 remain readable for compatibility, but all new deliveries use the species-only version 3 contract. There is no separate legacy generation prompt.
 
 ## JEC reference copies
@@ -72,4 +72,4 @@ npm test
 npm run test:browser
 ```
 
-Inspect the portrait, interlude spacing, full animal silhouettes, native ratios, missing-image behavior, light/dark rendering, narrow screens, offline behavior, and output file size. Commit generated HTML alongside its source changes when ready.
+Inspect the portrait, interlude spacing, full animal silhouettes, native ratios, missing-image behavior, light/dark rendering, narrow screens, offline behavior, and output file size. See the root README for [publication bundle usage](../../README.md#publishing-to-github-pages-notes-to-self).

@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.ts';
 
-const home = new URL('../_site/index.html', import.meta.url).href;
-const topic = new URL('../_site/topics/worktrees/index.html', import.meta.url).href;
+const home = new URL('index.html', 'http://127.0.0.1:4193/').href;
+const topic = new URL('topics/worktrees/index.html', 'http://127.0.0.1:4193/').href;
 const hour = 60 * 60 * 1000;
 const key = 'the-way-i-ai-theme';
 

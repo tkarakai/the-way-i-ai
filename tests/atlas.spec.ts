@@ -3,13 +3,13 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../_site/', import.meta.url);
 const registry = JSON.parse(await readFile(new URL('topics/topics.json', root), 'utf8')) as { topics: string[] };
-const url = (path: string) => new URL(path, root).href;
+const url = (path: string) => new URL(path, 'http://127.0.0.1:4193/').href;
 const pages = ['index.html', 'general-index/index.html', ...registry.topics.map(id => `topics/${id}/index.html`)];
 
 for (const width of [1440, 390, 320]) {
   for (const theme of ['light', 'dark'] as const) {
     test(`Field Atlas is the default and fits at ${width}px in ${theme}`, async ({ page, context }) => {
-      await context.setOffline(true);
+      await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ colorScheme: theme });
       const errors: string[] = [];
@@ -101,6 +101,7 @@ test('topic list drawer, running head and topic turning work on a topic page', a
   await expect(page.locator('[data-running-chapter]')).not.toBeEmpty();
   await page.locator('body').press(']');
   await expect(page).toHaveURL(new RegExp(`topics/${registry.topics[2]}/index.html`));
+    await page.waitForLoadState();
   await page.locator('body').press('[');
   await expect(page).toHaveURL(new RegExp(`topics/${topic}/index.html`));
 });
@@ -123,7 +124,7 @@ for (const design of ['atlas', 'folio'] as const) {
     await page.goto(url(`topics/${registry.topics[1]}/index.html`));
     await expect(page.locator('html')).toHaveAttribute('data-design', design);
     const next = page.locator(design === 'atlas' ? '[data-plate-next] img' : '.next-topic-portrait img');
-    await expect(next).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+    await expect(next).toHaveAttribute('src', /^\.\.\/\.\.\/assets\/.*-360-[a-f0-9]+\.webp$/);
     expect(await next.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(360);
     if (design === 'atlas') await expect(page.locator('[data-plate-previous] img')).toHaveCount(1);
     await page.locator('[data-focus]').click();
@@ -327,7 +328,7 @@ for (const design of ['atlas', 'folio'] as const) {
     await expect(chapters.nth(0)).toHaveAttribute('aria-current', 'location');
     await body.press('c');
     await expect(page.locator('.toast')).toContainText('copied');
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`https://thewayiai.com/topics/${registry.topics[1]}/index.html${await chapters.nth(0).getAttribute('href')}`);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`https://thewayiai.com/topics/${registry.topics[1]}/${await chapters.nth(0).getAttribute('href')}`);
     await body.press('s');
     await expect(page.locator('.share-dialog')).toBeVisible();
     await page.keyboard.press('Escape');
@@ -341,6 +342,7 @@ for (const design of ['atlas', 'folio'] as const) {
     await expect(page.locator('html')).toHaveAttribute('data-design', design);
     await body.press(']');
     await expect(page).toHaveURL(new RegExp(`topics/${registry.topics[2]}/index.html`));
+    await page.waitForLoadState();
     await page.locator('body').press('[');
     await expect(page).toHaveURL(new RegExp(`topics/${registry.topics[1]}/index.html`));
     await page.locator('body').press('g');
@@ -508,7 +510,7 @@ test('the share button shows the page’s own card and copies its canonical link
   await expect(image).toHaveAttribute('src', /^\.\.\/\.\.\/assets\/sharing\/.+\.jpg$/);
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(1200);
   await expect(dialog.locator('.sharing-title')).toHaveText(await page.locator('h1').innerText());
-  const link = `https://thewayiai.com/topics/${registry.topics[0]}/index.html`;
+  const link = `https://thewayiai.com/topics/${registry.topics[0]}/`;
   await expect(dialog.locator('#share-url')).toHaveValue(link);
   await expect(dialog.locator('[data-share-target="linkedin"]')).toHaveAttribute('href', `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`);
   await dialog.locator('[data-copy-link]').click();

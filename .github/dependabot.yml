@@ -1,0 +1,18 @@
+# Weekly update pull requests for the pinned GitHub Actions and the npm build tools.
+# Each pull request runs the full build and test workflow before it can merge.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      build-tools:
+        update-types: [minor, patch]

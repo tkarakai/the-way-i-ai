@@ -2,8 +2,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import ts from 'typescript';
 import { parseWavePosition } from '../design-system/wordmark.ts';
 
-const source = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-const styles = source.match(/<style>([\s\S]*?)<\/style>/)![1];
+const source = await readFile(new URL('../_site/index.html', import.meta.url), 'utf8');
+const sheet = source.match(/rel="stylesheet" href="([^"]+)/)![1];
+const styles = (await readFile(new URL(`../_site/${sheet}`, import.meta.url), 'utf8')).replace(/url\((["']?)([^"')]+)\1\)/g, (_, quote: string, url: string) => `url(${quote}../_site/assets/${url}${quote})`);
 const hero = source.match(/<section class="collection-hero">[\s\S]*?<\/section>/)![0];
 const lettering = hero.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)![1];
 const registry = JSON.parse(await readFile(new URL('../topics/topics.json', import.meta.url), 'utf8')) as { titleBackgroundPosition: string };

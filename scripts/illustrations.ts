@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { RenderedDocument, Species } from '../design-system/types.ts';
 import { escape } from '../design-system/layout.ts';
-import { thumbnail } from './thumbnail.ts';
+import { ROOT, imageAttributes } from './assets.ts';
+import type { Assets } from './assets.ts';
 
 export interface Illustration {
   file: string;
@@ -83,8 +84,17 @@ async function optionalRead(path: string) {
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined; throw error; }
 }
 
+// The slots each image fills, for the browser to choose a width from srcset.
+const sizes = {
+  homepage: '(max-width: 760px) 100vw, 640px',
+  hero: '(max-width: 760px) 100vw, 760px',
+  chapter: '(max-width: 760px) 100vw, 760px'
+};
+/** Navigation that shows other topics' animals uses one small, shared thumbnail, never the full artwork. */
+const thumbnail = async (assets: Assets, file: string) => ROOT + (await assets.image(file, { maxWidth: 360, flatten: true })).src;
+
 /** Wildlife is decorative: spread fixed slots across chapter boundaries, without semantic bindings. */
-async function loadWildlife(directory: string, manifest: WildlifeManifest, documents: RenderedDocument[]) {
+async function loadWildlife(directory: string, manifest: WildlifeManifest, documents: RenderedDocument[], assets: Assets) {
   const boundaries = documents.flatMap(doc => doc.headings.filter(heading => heading.level === 2).slice(1).map(heading => ({ doc, heading })));
   const count = Math.min(4, boundaries.length);
   const slots = Array.from({ length: count }, (_, index) => boundaries[Math.floor(index * boundaries.length / count)]);
@@ -93,17 +103,15 @@ async function loadWildlife(directory: string, manifest: WildlifeManifest, docum
     // Slots depend on declared reading order, never which image files have arrived.
     const slot = index > 0 ? slots[index - 1] : undefined;
     if (index > 0 && !slot) continue;
-    const data = await optionalRead(resolve(directory, image.file));
-    if (!data) continue;
-    const extension = image.file.split('.').at(-1)!;
-    const mime = extension === 'jpg' || extension === 'jpeg' ? 'jpeg' : extension;
-    const attributes = `src="data:image/${mime};base64,${data.toString('base64')}" alt="" width="${image.width}" height="${image.height}" decoding="async"`;
+    const file = resolve(directory, image.file);
+    if (!await optionalRead(file)) continue;
+    const published = await assets.image(file);
     if (index === 0) {
-      homepage = `<img class="editorial-image editorial-homepage" ${attributes}>`;
-      hero = `<img class="editorial-image editorial-hero editorial-portrait" ${attributes}>`;
-      portrait = thumbnail(data, extension) ?? `data:image/${mime};base64,${data.toString('base64')}`;
+      homepage = `<img class="editorial-image editorial-homepage" ${imageAttributes(published, sizes.homepage)} alt="" loading="lazy" decoding="async">`;
+      hero = `<img class="editorial-image editorial-hero editorial-portrait" ${imageAttributes(published, sizes.hero)} alt="" fetchpriority="high" decoding="async">`;
+      portrait = await thumbnail(assets, file);
     } else {
-      const html = `<img class="editorial-image editorial-chapter editorial-wildlife" ${attributes} loading="lazy">`;
+      const html = `<img class="editorial-image editorial-chapter editorial-wildlife" ${imageAttributes(published, sizes.chapter)} alt="" loading="lazy" decoding="async">`;
       const start = slot!.doc.html.indexOf(`<h2 id="${slot!.heading.id}"`);
       slot!.doc.html = slot!.doc.html.slice(0, start) + html + slot!.doc.html.slice(start);
     }
@@ -112,33 +120,32 @@ async function loadWildlife(directory: string, manifest: WildlifeManifest, docum
 }
 
 /** Missing artwork is normal during delivery; invalid metadata is not. */
-export async function loadIllustrations(root: string, topic: string, documents: RenderedDocument[]) {
+export async function loadIllustrations(root: string, topic: string, documents: RenderedDocument[], assets: Assets) {
   const directory = resolve(root, 'topics', topic, 'assets/illustrations');
   const source = await optionalRead(resolve(directory, 'manifest.json'));
   let homepage = '', hero = '', portrait: string | undefined;
   if (!source) return { homepage, hero };
   const manifest = parseManifest(JSON.parse(source.toString('utf8')), topic, documents);
-  if (manifest.version === 3) return loadWildlife(directory, manifest, documents);
+  if (manifest.version === 3) return loadWildlife(directory, manifest, documents, assets);
   // Version 1 deliveries remain usable, but their separate article hero is retired.
   const sharedHero = manifest.images.find(image => image.placement === 'homepage')
     ?? manifest.images.find(image => image.placement === 'hero');
   for (const image of manifest.images) {
     if (image.placement !== 'chapter' && image !== sharedHero) continue;
-    const data = await optionalRead(resolve(directory, image.file));
-    if (!data) continue;
-    const extension = image.file.split('.').at(-1)!;
-    const mime = extension === 'jpg' || extension === 'jpeg' ? 'jpeg' : extension;
-    const html = `<img class="editorial-image editorial-${image.placement}" src="data:image/${mime};base64,${data.toString('base64')}" alt="${escape(image.alt)}" width="${image.width}" height="${image.height}"${image.placement === 'chapter' ? ' loading="lazy"' : ''} decoding="async">`;
+    const file = resolve(directory, image.file);
+    if (!await optionalRead(file)) continue;
+    const published = await assets.image(file);
+    const html = (placement: keyof typeof sizes, extra: string) => `<img class="editorial-image editorial-${placement}" ${imageAttributes(published, sizes[placement])} alt="${escape(image.alt)}"${extra} decoding="async">`;
     if (image === sharedHero) {
-      portrait = thumbnail(data, extension) ?? `data:image/${mime};base64,${data.toString('base64')}`;
-      homepage = html.replace(`editorial-${image.placement}`, 'editorial-homepage');
-      hero = html.replace(`editorial-${image.placement}`, 'editorial-hero');
+      portrait = await thumbnail(assets, file);
+      homepage = html('homepage', ' loading="lazy"');
+      hero = html('hero', ' fetchpriority="high"');
     } else {
       const doc = documents.find(doc => doc.file === image.document)!;
       const heading = doc.headings.find(h => h.level === 2 && h.text === image.heading)!;
       const start = doc.html.indexOf(`id="${heading.id}"`);
       const end = doc.html.indexOf('</h2>', start) + '</h2>'.length;
-      doc.html = doc.html.slice(0, end) + html + doc.html.slice(end);
+      doc.html = doc.html.slice(0, end) + html('chapter', ' loading="lazy"') + doc.html.slice(end);
     }
   }
   return { homepage, hero, ...(portrait ? { thumbnail: portrait } : {}) };

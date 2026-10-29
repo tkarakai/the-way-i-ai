@@ -38,18 +38,18 @@ test('delivered artwork renders offline in both themes, with exact chapter ancho
       await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
       for (const width of [1440, 390, 320]) {
         await page.setViewportSize({ width, height: 1000 });
-        await page.goto(pathToFileURL(resolve(fixture, 'index.html')).href);
+        await page.goto(pathToFileURL(resolve(fixture, '_site/index.html')).href);
         const card = page.locator('.topic-card[href="topics/worktrees/index.html"]');
         await expect(card.locator('img')).toHaveAccessibleName(images[0].alt);
         await expect(page.locator('.no-cover').first()).toBeEmpty();
-        const sharedSource = await card.locator('img').getAttribute('src');
+        const sharedSource = await card.locator('img').evaluate((img: HTMLImageElement) => img.src);
         const cardImage = await card.locator('img').boundingBox();
         expect(Math.abs(cardImage!.width / cardImage!.height - 16 / 9)).toBeLessThan(.01);
         await card.screenshot({ path: `test-results/illustration-card-${theme}-${width}.png` });
         await card.click();
         const hero = page.locator('.editorial-hero');
         await expect(hero).toBeVisible();
-        await expect(hero).toHaveAttribute('src', sharedSource!);
+        expect(await hero.evaluate((img: HTMLImageElement) => img.src)).toBe(sharedSource);
         await expect(page.locator('.topic-hero + .plate-mount > .editorial-hero')).toHaveCount(1);
         const chapter = page.locator('#worktrees-doc-2-working-on-a-task + .editorial-chapter');
         await chapter.scrollIntoViewIfNeeded();
@@ -66,12 +66,12 @@ test('delivered artwork renders offline in both themes, with exact chapter ancho
         await chapter.screenshot({ path: `test-results/illustration-chapter-${theme}-${width}.png` });
       }
     }
-    const before = await readFile(resolve(fixture, 'index.html'), 'utf8');
+    const before = await readFile(resolve(fixture, '_site/index.html'), 'utf8');
     images[1].heading = 'No such chapter';
     await writeFile(resolve(directory, 'manifest.json'), JSON.stringify(manifest));
     const invalid = build();
     expect(invalid.status).not.toBe(0);
     expect(invalid.stderr).toContain('must match exactly once');
-    expect(await readFile(resolve(fixture, 'index.html'), 'utf8')).toBe(before);
+    expect(await readFile(resolve(fixture, '_site/index.html'), 'utf8')).toBe(before);
   } finally { await rm(fixture, { recursive: true, force: true }); }
 });

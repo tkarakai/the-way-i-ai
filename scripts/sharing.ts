@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { chromium } from '@playwright/test';
 import type { Collection, RenderedTopic } from '../design-system/types.ts';
 import { escape, wordmarkContent } from '../design-system/layout.ts';
+import { ROOT } from './assets.ts';
 
 export interface SharingCard {
   path: string;
@@ -37,15 +38,23 @@ export function sharingCard(sources: SharingSources, topic?: RenderedTopic): Sha
   return { path: `assets/sharing/${topic?.id ?? 'collection'}-${hash}.jpg`, html, alt: title, width: 1200, height: 630 };
 }
 
-/** No browser is needed for standalone HTML builds, checks, or metadata tests. */
-export async function renderSharingCards(cards: SharingCard[]): Promise<Map<string, Buffer>> {
+// Cards load the build's shared artwork from this placeholder origin, answered from memory.
+const assetOrigin = 'https://assets.invalid/';
+const types: Record<string, string> = { '.webp': 'image/webp', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
+
+/** No browser is needed for page builds, checks, or metadata tests. */
+export async function renderSharingCards(cards: SharingCard[], files: Map<string, Buffer> = new Map()): Promise<Map<string, Buffer>> {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1, javaScriptEnabled: false, colorScheme: 'light', reducedMotion: 'reduce' });
-    await page.route(/^https?:/, route => route.abort());
+    await page.route(/^https?:/, route => {
+      const url = route.request().url();
+      const data = url.startsWith(assetOrigin) ? files.get(url.slice(assetOrigin.length)) : undefined;
+      return data ? route.fulfill({ body: data, contentType: types[url.slice(url.lastIndexOf('.'))] ?? 'application/octet-stream' }) : route.abort();
+    });
     const images = new Map<string, Buffer>();
     for (const card of cards) {
-      await page.setContent(card.html);
+      await page.setContent(card.html.replaceAll(ROOT, assetOrigin));
       await page.evaluate(async () => {
         await document.fonts.ready;
         await Promise.all([...document.images].map(image => image.decode()));

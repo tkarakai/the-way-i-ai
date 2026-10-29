@@ -1,7 +1,7 @@
 import { test, expect, type Page } from './fixtures.ts';
 
-const home = new URL('../_site/index.html', import.meta.url).href;
-const topic = new URL('../_site/topics/worktrees/index.html', import.meta.url).href;
+const home = new URL('index.html', 'http://127.0.0.1:4193/').href;
+const topic = new URL('topics/worktrees/index.html', 'http://127.0.0.1:4193/').href;
 
 const entranceCount = (page: Page) => page.locator('.collection-page').evaluate(node => node.getAnimations({ subtree: true })
   .filter(animation => animation instanceof CSSAnimation && animation.animationName === 'collection-enter').length);
@@ -30,7 +30,7 @@ async function pauseEntrance(page: Page) {
 for (const width of [1440, 390, 320]) {
   for (const theme of ['light', 'dark'] as const) {
     test(`homepage enters in two ordered stages at ${width}px in ${theme}`, async ({ page, context }) => {
-      await context.setOffline(true);
+      await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
       await page.setViewportSize({ width, height: 1000 });
       await page.emulateMedia({ colorScheme: theme, reducedMotion: 'no-preference' });
       await pauseEntrance(page);
@@ -121,7 +121,7 @@ for (const mode of ['reduced motion', 'print'] as const) {
 test('CSS entrance and immediate keyboard focus work without JavaScript', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false, reducedMotion: 'no-preference' });
   try {
-    await context.setOffline(true);
+    await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
     const page = await context.newPage();
     await page.goto(home);
     await expect(page.locator('.collection-list')).toHaveCSS('animation-name', 'collection-enter');

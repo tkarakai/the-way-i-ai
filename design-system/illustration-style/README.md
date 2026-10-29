@@ -1,8 +1,34 @@
 # The Way I AI — Wildlife illustrations
 
-[The generation prompt](single-topic-illustration-prompt.md) is the sole image-generation prompt. Set **Animal species**, attach your style references (any number, at least one), and request the ZIP. No topic name, article research, GitHub access, or relationship between wildlife and article content is needed. Approved reference examples live in `references/`.
+[The generation prompt](single-topic-illustration-prompt.md) is the sole image-generation prompt and the single source of the style. Approved reference examples live in `references/`. Only the species is a creative input: no topic name, article research, or relationship between wildlife and article content is needed.
 
-## Delivery format
+## Generating with Codex (the usual path)
+
+```sh
+node scripts/illustrate.ts <topic-id> --species "Eurasian otter (Lutra lutra)"
+```
+
+`scripts/illustrate.ts` makes one `codex exec` run per image with Codex's built-in image tool. Codex must be signed in with ChatGPT, so images count against the ChatGPT plan. The script refuses an API-key login unless `--allow-api-billing` is passed.
+
+1. **The brief.** Each run gets the master prompt with only its own `### IMAGE N` section and without section 8 (the delivery package), plus every file in `references/`.
+2. **The portrait first.** The panoramas are drawn with the finished `hero.png` attached, so all five show the same animals.
+3. **Framing.** Codex saves the tool's raw drawing; the script owns everything after that. Image tools return roughly 16:9 or at most about 2.5:1, never 4:1. The script finds the drawing on its paper and uses the largest window at the target ratio that keeps the whole drawing plus a margin. When none fits inside the image, it extends the paper instead. It never crops into the drawing.
+4. **Finishing.** It resizes to exactly 1600 × 900 or 1600 × 400, matches edge-connected paper to `#F8F5EE` (`scripts/paper.ts`, shared with `prepare-paper.ts`), centres the portrait horizontally when there is room, and writes the version 3 manifest.
+5. **Work area.** Raw drawings, prompts, Codex logs, replaced versions and `review.html` stay in the ignored `.illustrate/<topic-id>/`.
+
+Options:
+- `--only hero,panorama-03` redraws specific images.
+- `--reframe` re-processes saved drawings without drawing again.
+- `--force` redraws all five or changes the species.
+- `--list-species` shows the animals already in use.
+
+The species must be written `Common name (Binomial)`; the Field Atlas label shows both. Review every image for anatomy before committing: the script checks sizes and paper, not legs. The [publishing guide](../../docs/publishing-a-topic.md) describes the whole author workflow.
+
+## Manual delivery (fallback)
+
+The prompt can also be used in any image tool that accepts attachments. Set **Animal species**, attach the references (any number, at least one), and request the ZIP described below.
+
+### Delivery format
 
 The ZIP contains six files at its root, without an enclosing directory:
 
@@ -19,13 +45,14 @@ The prompt includes the exact manifest JSON. Its `species` is descriptive metada
 
 Clear paper uses sRGB **`#F8F5EE`**, matching the light theme's `--paper`. The same opaque assets work in both themes. No dark-mode variants, CSS inversion, or runtime rendering dependencies are needed.
 
-## Integrating a delivery
+### Integrating a delivery
 
 1. Inspect the ZIP's file list; it must contain only the expected images and manifest, with no scripts, HTML, or enclosing directory.
 2. Choose the destination topic locally. Back up any prior illustration folder you want to keep.
 3. Extract directly into `topics/<topic-id>/assets/illustrations/`.
-4. Run `npm run build`, or `npm run build:site` and refresh a running preview.
-5. Review desktop/narrow rendering in light and dark themes and run the checks below.
+4. If the delivered paper drifts from `#F8F5EE`, run `node scripts/prepare-paper.ts <topic-id>` (see below).
+5. Run `npm run build`, or `npm run build:site` and refresh a running preview.
+6. Review desktop/narrow rendering in light and dark themes and run the checks below.
 
 No metadata edits, import script, or generated-page edits are needed. Commit extracted images and manifest; generated output stays ignored. Delivery ZIPs are ignored and must not be committed.
 

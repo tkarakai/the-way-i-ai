@@ -20,3 +20,6 @@ playwright-report/
 .DS_Store
 # Generated image delivery archives; commit extracted assets and metadata instead.
 *.zip
+
+# Illustration work area: raw drawings, prompts, logs, earlier versions, review sheet.
+.illustrate/

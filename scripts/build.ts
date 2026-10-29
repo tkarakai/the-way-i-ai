@@ -335,8 +335,8 @@ const cards = [homeCard, ...topicCards.values()];
 
 // Markdown editions for agents and tools, and the same text as HTML for the full-text feed.
 const topicMarkdowns = new Map(topics.map(topic => [topic.id, topicMarkdown(registry, topic, imageURLs)]));
-const feedParser = new Marked({ gfm: true });
-const feedContent = (markdown: string) => (feedParser.parse(markdown.replace(/^# .*\n+(?:> .*\n+)?/, '')) as string).replace(/<!--[\s\S]*?-->/g, '');
+const feedParser = new Marked({ gfm: true, renderer: { html: () => '' } });
+const feedContent = (markdown: string) => feedParser.parse(markdown.replace(/^# .*\n+(?:> .*\n+)?/, '')) as string;
 
 const published: PublishedPage[] = [
   { path: 'index.html', title: registry.title, description: registry.description, kind: 'collection', sharingImage: homeCard },

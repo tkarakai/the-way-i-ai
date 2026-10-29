@@ -26,7 +26,7 @@ async function fixture(t: TestContext) {
   await symlink(resolve(root, 'node_modules'), resolve(path, 'node_modules'), 'dir');
   return {
     path,
-    read: (file: string) => readFile(resolve(path, /^(?:index\.html|topics\/.*\/index\.html|(?:general-index|about|privacy|licensing)\/index\.html|404\.html|sitemap\.xml|feed\.xml)$/.test(file) ? `_site/${file}` : file), 'utf8'),
+    read: (file: string) => readFile(resolve(path, /^(?:index\.html|topics\/.*\/index\.html|(?:general-index|about|privacy|licensing|accessibility)\/index\.html|404\.html|sitemap\.xml|feed\.xml)$/.test(file) ? `_site/${file}` : file), 'utf8'),
     search: async () => { const html = await readFile(resolve(path, '_site/index.html'), 'utf8'); return JSON.parse(await readFile(resolve(path, '_site', html.match(/data-search-index="([^"]+)/)![1]), 'utf8')) as {title:string;text:string;href:string}[]; },
     css: async () => { const html=await readFile(resolve(path,'_site/index.html'),'utf8'); return readFile(resolve(path,'_site',html.match(/rel="stylesheet" href="([^"]+)/)![1]),'utf8'); },
     write: (file: string, text: string) => writeFile(resolve(path, ['sitemap.xml','feed.xml'].includes(file) ? `_site/${file}` : file), text),
@@ -421,6 +421,18 @@ test('discovery metadata matches the published inventory and stale sitemap check
   assert.notEqual(staleFeed.status, 0);
   assert.match(staleFeed.stderr, /feed.xml is out of date/);
   assert.equal(await f.read('feed.xml'), '<stale/>');
+});
+
+test('full-text RSS omits comment tokens while preserving surrounding prose and literal code', async t => {
+  const f = await fixture(t);
+  const file = 'topics/just-enough-context/README.md';
+  await f.write(file, `${await f.read(file)}\n\n<!-- feed-block-comment -->\n\nFeed before <!-- feed-inline-comment -->feed after.\n\n\`<!-- literal-inline-comment -->\`\n\n\`\`\`html\n<!-- literal-block-comment -->\n\`\`\`\n`);
+  passed(f.build());
+  const feed = await f.read('feed.xml');
+  assert.doesNotMatch(feed, /feed-block-comment|feed-inline-comment/);
+  assert.ok(feed.includes('<p>Feed before feed after.</p>'));
+  assert.ok(feed.includes('<code>&lt;!-- literal-inline-comment --&gt;</code>'));
+  assert.ok(feed.includes('<pre><code class="language-html">&lt;!-- literal-block-comment --&gt;\n</code></pre>'));
 });
 
 test('the publication bundle is clean and contains the same standalone pages and their source links', async t => {

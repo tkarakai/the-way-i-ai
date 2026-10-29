@@ -2,13 +2,13 @@
 
 ## Background motion studies
 
-Open **[backgrounds.html](backgrounds.html)** directly in a browser. It is fully offline and separate from the published site.
-
-Rebuild from the current homepage and the authored TypeScript/CSS:
+Generate **[backgrounds.html](backgrounds.html)** from the current homepage and the authored TypeScript/CSS:
 
 ```sh
 npm run preview:backgrounds
 ```
+
+Then open it directly in a browser. Keep the generated `_site/` folder beside `previews/`: the gallery uses its local fonts and artwork for offline review. The gallery is separate from the publication bundle, and its generated HTML is ignored.
 
 The gallery has six animated thumbnails. Click one for a viewport-filling review behind the actual homepage. Light/Dark, Pause/Play, intensity, and background-only controls apply only to the review. Left/right arrows switch studies; Escape returns to the gallery. Hashes such as `backgrounds.html#D` open a study directly.
 
@@ -25,7 +25,7 @@ The gallery has six animated thumbnails. Click one for a viewport-filling review
 
 ## Sources
 
-- `build-backgrounds.ts`: embeds the current homepage's fonts, wordmark and content, review CSS, and compiled TypeScript in one HTML file.
+- `build-backgrounds.ts`: reuses the current `_site/index.html` wordmark and content, inlines the shared stylesheet, review CSS and compiled TypeScript, and points font and image URLs at `_site/assets/`.
 - `backgrounds.css`: gallery and full-screen review presentation, including the preserved A styles, colors, and animations.
 - `backgrounds-ui.ts`: Canvas 2D studies B–E and preview interactions. No remote assets, dependencies or random seed variance.
 - `../design-system/murmuration.ts`: study F's renderer, shared unchanged with the homepage.

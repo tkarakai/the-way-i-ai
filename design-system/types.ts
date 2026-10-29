@@ -67,7 +67,7 @@ export interface RenderedTopic extends Topic {
 export interface Species { common?: string; latin: string }
 /** A site page from `pages/`, such as About or the 404 page: a title, a derived description and authored chapters. */
 export interface RenderedPage { id: string; title: string; description: string; html: string; headings: Heading[]; markdown: string }
-/** A site page link: `id` is its folder, so `about` links to `about/`. */
+/** A site page link: `id` is its folder, so `about` links to `about/index.html`. */
 export interface PageLink { id: string; title: string; description: string }
 export interface SearchEntry { title: string; topic: string; href: string; text: string }
 export interface ShellOptions {

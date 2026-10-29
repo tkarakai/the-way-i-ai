@@ -16,7 +16,7 @@ These settings stay in your browser. You can remove them through your browser’
 
 ## Search
 
-Search runs in your browser using a shared index downloaded from this site when you open search. There is no external search service.
+Search runs in your browser using a shared index downloaded from this site when you focus or hover over the search button, or open search. There is no external search service.
 
 Search terms can appear in the page URL so they can carry over when you open a result. Those URLs may remain in browser history or be included when you share a link. If you load or reload a URL containing search terms, that URL is sent to the hosting provider as part of the page request.
 

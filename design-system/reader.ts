@@ -370,7 +370,7 @@
 
   // Sharing: the page's own Open Graph card, its canonical link to copy, the device's share sheet where there is one,
   // and plain links to email and social sites (nothing loads from them until the reader follows one).
-  // Built bundles hold the card image beside the page; standalone files fall back to the published copy.
+  // Publication builds include the card image; builds without sharing JPEGs fall back to the published copy.
   const meta = (name: string) => document.querySelector<HTMLMetaElement>(`meta[property="${name}"], meta[name="${name}"]`)?.content ?? '';
   const shareDialog = document.querySelector<HTMLDialogElement>('.share-dialog');
   if (shareDialog) {

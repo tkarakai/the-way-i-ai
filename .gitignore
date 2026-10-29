@@ -14,9 +14,6 @@ _site.build/
 /feed.xml
 /favicon*
 /apple-touch-icon.png
-/previews/*.html
-/previews/sharing/
-/previews/favicon/
 test-results/
 playwright-report/
 .lavish/

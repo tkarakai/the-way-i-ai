@@ -10,5 +10,5 @@
     "erasableSyntaxOnly": true,
     "types": ["node"]
   },
-  "include": ["scripts/**/*.ts", "design-system/**/*.ts", "previews/**/*.ts", "tests/**/*.ts", "playwright.config.ts"]
+  "include": ["scripts/**/*.ts", "design-system/**/*.ts", "tests/**/*.ts", "playwright.config.ts"]
 }

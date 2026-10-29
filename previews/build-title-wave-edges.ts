@@ -58,7 +58,7 @@ const html = `<!doctype html>
 </style></head><body><main class="wave-review">
   <header class="review-header"><div><span class="eyebrow">The Way I AI · Wave study</span><h1>${refined ? 'Follow the letter strokes.' : 'Where should the wave begin?'}</h1><p>${refined ? 'Four finer positions between the previous 01 and 02. Compare the wave through the y / A junction; the lettering, wave height, and right edge stay fixed.' : 'Four positions for the left edge. The lettering, wave height, and right edge stay fixed. Compare the options and choose a number.'}</p></div><div class="theme-switch" role="group" aria-label="Preview theme"><button type="button" data-wave-theme="light" aria-pressed="true">Light</button><button type="button" data-wave-theme="dark" aria-pressed="false">Dark</button></div></header>
   <section class="wave-options" aria-label="Four wave edge variations">${cards}</section>
-  <p class="review-footer">The same Plum &amp; teal lettering and embedded wave as the site. This sample is self-contained and opens offline.</p>
+  <p class="review-footer">The same plum &amp; teal lettering and wave as the site. This preview uses shared fonts and artwork from the adjacent _site folder.</p>
 </main><script>${ui.replaceAll('</script', '<\\/script')}</script></body></html>`;
 const output = refined ? 'title-wave-alignment.html' : 'title-wave-edges.html';
 await writeFile(new URL(output, import.meta.url), html);

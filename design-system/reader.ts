@@ -13,6 +13,23 @@
     else update();
   };
   (window as Window & { transitionPage?: typeof transitionPage }).transitionPage = transitionPage;
+  /*
+   * Safari's default Tab order (macOS “Keyboard navigation” off) skips links, buttons, disclosures and checkboxes,
+   * reaching only text fields. An explicit tabindex brings them back, so every control is reachable with Tab in every
+   * browser. Controls that set their own tabindex (-1 for roving focus or mouse-only duplicates) keep it, and controls
+   * added later, such as search results and copy buttons, are included as they appear.
+   */
+  const tabbable = 'a[href], button, summary, input:not([type="hidden"]), select, textarea';
+  const keepTabbable = (scope: ParentNode) => scope.querySelectorAll<HTMLElement>(tabbable).forEach(control => { if (!control.hasAttribute('tabindex')) control.tabIndex = 0; });
+  keepTabbable(document);
+  // Links count once they have an address, which some (the share targets) get only after load.
+  const include = (node: Node) => {
+    if (!(node instanceof HTMLElement)) return;
+    if (node.matches(tabbable) && !node.hasAttribute('tabindex')) node.tabIndex = 0;
+    keepTabbable(node);
+  };
+  new MutationObserver(records => records.forEach(record => { if (record.type === 'attributes') include(record.target); else record.addedNodes.forEach(include); }))
+    .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['href'] });
   /**
    * Dates read as how long ago, to the month (“8 months ago”, “last month”); the exact date appears on hover,
    * and on a tap outside links. This runs in the browser, so generated HTML never depends on the build date;
@@ -422,6 +439,16 @@
       native.hidden = false;
       native.addEventListener('click', () => { navigator.share({ title, text: description, url }).catch(() => {}); });
     }
+    // ← → Home End move between the tiles, as well as Tab.
+    const tiles = shareDialog.querySelector<HTMLElement>('.share-targets')!;
+    tiles.addEventListener('keydown', event => {
+      const visible = [...tiles.querySelectorAll<HTMLElement>('.share-tile:not([hidden])')];
+      const index = visible.indexOf(document.activeElement as HTMLElement);
+      const next = { ArrowRight: index + 1, ArrowDown: index + 1, ArrowLeft: index - 1, ArrowUp: index - 1, Home: 0, End: visible.length - 1 }[event.key];
+      if (next === undefined || index < 0) return;
+      event.preventDefault();
+      visible[(next + visible.length) % visible.length].focus();
+    });
     document.querySelectorAll('[data-open-share]').forEach(button => button.addEventListener('click', () => { shareDialog.dispatchEvent(new Event('share-open')); share.open(); }));
   }
   // A tailpiece closes the topic with its own animal, reusing the topic list's thumbnail rather than embedding it twice.

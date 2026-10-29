@@ -41,7 +41,7 @@ button, a, input, summary { -webkit-tap-highlight-color: transparent; touch-acti
 button, summary { cursor: pointer; }
 a { color: inherit; text-underline-offset: 4px; }
 a:hover { color: var(--accent); }
-button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible, :where([tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 mark.search-hit { padding: .04em .12em; margin-inline: -.02em; border-radius: 2px; background: var(--search-hit); color: inherit; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 [hidden] { display: none !important; }

@@ -492,7 +492,7 @@
    *   moving real focus so Enter, Tab and screen readers follow. Home/End jump to the first or last topic.
    * Open: Enter opens the selected topic (it is a focused link, or the focused spread).
    * Go: G then H home, I A–Z index, T all topics, A About; [ and ] previous or next topic.
-   * Change: T theme, D design, F focus mode, S share, C copies a link to the current section.
+   * Change: T theme, D design, V the Atlas home view, F focus mode, S share, C copies a link to the current section.
    */
   const page = document.body.dataset.page ?? '';
   // Keys that need navigation (find on page, all topics, the outline skip link) leave focus mode first;
@@ -540,6 +540,7 @@
     return true;
   };
   // The home page steps through its topic list; the Field Atlas spread follows the selected topic.
+  // In the Atlas Browse view the list is hidden, so the keys turn the spread instead.
   const spread = document.querySelector<HTMLElement>('[data-atlas-spread]');
   const topicCards = () => [...document.querySelectorAll<HTMLAnchorElement>('.topic-card')].filter(card => !card.hidden && card.offsetParent !== null);
   const selectTopic = (card: HTMLAnchorElement) => {
@@ -549,6 +550,10 @@
   };
   const moveTopic = (to: 1 | -1 | 'first' | 'last') => {
     const cards = topicCards();
+    if (!cards.length && spread && spread.offsetParent !== null) {
+      document.dispatchEvent(new CustomEvent('spread-step', { detail: to }));
+      return true;
+    }
     if (!cards.length) return false;
     const active = document.activeElement;
     let index = active instanceof Element ? cards.indexOf(active.closest<HTMLAnchorElement>('.topic-card')!) : -1;
@@ -608,6 +613,9 @@
     } else if (key === 't') {
       event.preventDefault();
       themeToggle.click();
+    } else if (key === 'v' && page === 'collection' && document.querySelector('.view-switch')?.checkVisibility()) {
+      event.preventDefault();
+      document.dispatchEvent(new Event('home-view-toggle'));
     } else if (key === 'd') {
       const other = document.querySelector<HTMLButtonElement>('[data-design-choice][aria-pressed="false"]');
       if (other) { event.preventDefault(); other.click(); }

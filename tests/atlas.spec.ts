@@ -77,12 +77,55 @@ test('the home spread pages through plates with keys and reuses the card images'
   await expect(spread.locator('.spread-recto h3 a')).toHaveAttribute('href', `topics/${newest}/index.html`);
   // Every topic card remains one native link.
   await expect(page.locator('.topic-card a')).toHaveCount(0);
+});
+
+test('home: Browse and List show one view at a time, share the category filter, and the choice persists', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url('index.html'));
+  const spread = page.locator('[data-atlas-spread]');
+  const cards = page.locator('.topic-card');
+  // Clicks during the collection's entrance land before it arrives.
+  await page.waitForFunction(() => document.querySelector('.collection-list')!.getAnimations().length === 0);
+  // Browse is the default: the spread, not the cards.
+  await expect(page.getByRole('button', { name: 'Browse' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(spread).toBeVisible();
+  await expect(cards.first()).toBeHidden();
+  // A category limits the spread to its topics.
   const filter = page.locator('.habitat-filters button').nth(1);
   await filter.click();
-  const habitat = await filter.getAttribute('data-habitat');
-  for (const card of await page.locator('.topic-card').all()) {
+  const habitat = (await filter.getAttribute('data-habitat'))!;
+  const matching = await page.locator(`.topic-card[data-habitat="${habitat}"]`).count();
+  await expect(spread.locator('.spread-folio')).toHaveText(`1 of ${matching}`);
+  await expect(spread.locator('.spread-film button')).toHaveCount(matching);
+  await expect(spread.locator('.plate-label')).toContainText(habitat);
+  // List keeps the category.
+  await page.getByRole('button', { name: 'List' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-home-view', 'list');
+  await expect(spread).toBeHidden();
+  for (const card of await cards.all()) {
     expect(await card.isVisible()).toBe(await card.getAttribute('data-habitat') === habitat);
   }
+  // V switches back, and the choice survives a reload.
+  await page.locator('body').press('v');
+  await expect(spread).toBeVisible();
+  await page.locator('body').press('v');
+  await expect(spread).toBeHidden();
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-home-view', 'list');
+  await expect(page.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(cards.first()).toBeVisible();
+  await expect(spread).toBeHidden();
+});
+
+test('home without JavaScript: the list only, with no view switch', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(url('index.html'));
+  await expect(page.locator('.topic-card')).toHaveCount(registry.topics.length);
+  for (const card of await page.locator('.topic-card').all()) await expect(card).toBeVisible();
+  await expect(page.locator('.view-switch')).toBeHidden();
+  await expect(page.locator('.atlas-spread-wrap')).toBeHidden();
+  await context.close();
 });
 
 test('topic list drawer, running head and topic turning work on a topic page', async ({ page }) => {
@@ -404,9 +447,28 @@ test('← → browse the topics on the home page without selecting the spread fi
   await expect(title).toHaveText(first);
 });
 
-test('home: J/K select topics in the list, the spread follows, and Enter opens the selection', async ({ page }) => {
+test('home: in Browse, J/K turn the spread and Enter opens its topic', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(url('index.html'));
+  const spread = page.locator('[data-atlas-spread]');
+  await page.locator('body').press('j');
+  await expect(spread).toBeFocused();
+  await expect(spread).toHaveAttribute('data-href', `topics/${registry.topics.at(-2)}/index.html`);
+  await page.keyboard.press('k');
+  await expect(spread).toHaveAttribute('data-href', `topics/${registry.topics.at(-1)}/index.html`);
+  await page.keyboard.press('End');
+  await expect(spread).toHaveAttribute('data-href', `topics/${registry.topics[0]}/index.html`);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new RegExp(`topics/${registry.topics[0]}/index\\.html$`));
+});
+
+test('home: in List, J/K select topics, the spread follows, and Enter opens the selection', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url('index.html'));
+  await page.waitForFunction(() => document.querySelector('.collection-list')!.getAnimations().length === 0);
+  await page.getByRole('button', { name: 'List' }).click();
+  // The switch cross-fades, so the list appears a moment later.
+  await expect(page.locator('html')).toHaveAttribute('data-home-view', 'list');
   const cards = page.locator('.topic-card');
   await page.locator('body').press('j');
   await expect(cards.nth(0)).toBeFocused();
@@ -532,7 +594,7 @@ test('“?” lists this page’s keyboard shortcuts and Esc closes them without
   // The home page lists only the keys it understands.
   await page.goto(url('index.html'));
   await page.locator('.footer-shortcuts').click();
-  await expect(page.locator('.shortcuts-dialog')).toContainText('Browse the topics');
+  await expect(page.locator('.shortcuts-dialog')).toContainText('Browse or List view');
   await expect(page.locator('.shortcuts-dialog')).not.toContainText('Find on this page');
 });
 

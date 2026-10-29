@@ -1,4 +1,4 @@
-// Design switching and Field Atlas behavior: the paged spread, habitat filter,
+// Design switching and Field Atlas behavior: the home view switch, paged spread, habitat filter,
 // plates drawer, running head and plate navigation. Folio ignores all of it.
 (() => {
   'use strict';
@@ -55,7 +55,7 @@
   };
   function replayEntrance() {
     if (reducedMotion.matches) return;
-    document.querySelectorAll<HTMLElement>('.collection-intro, .hero-wordmark .logo-part, .hero-wordmark .title-art, .atlas-spread-wrap, .collection-list').forEach(section => {
+    document.querySelectorAll<HTMLElement>('.collection-intro, .hero-wordmark .logo-part, .hero-wordmark .title-art, .collection-list').forEach(section => {
       section.style.animation = 'none';
       void section.offsetWidth; // Restart the CSS entrance with its original delays.
       section.style.animation = '';
@@ -113,12 +113,33 @@
     document.addEventListener('design-change', () => { if (design() === 'folio') close(false); });
   }
 
-  /* Home: the paged spread, newest plate first. Images are the cards' own images. */
+  /* Home: Browse shows the paged spread, List the cards. The choice persists; design.ts applies it before first paint. */
+  const viewKey = 'the-way-i-ai-home-view';
+  type View = 'browse' | 'list';
+  const view = (): View => root.dataset.homeView === 'list' ? 'list' : 'browse';
+  const viewChoices = [...document.querySelectorAll<HTMLButtonElement>('[data-home-view-choice]')];
+  const syncViews = () => viewChoices.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.homeViewChoice === view())));
+  const applyView = (next: View, persist: boolean) => {
+    if (next === view()) return;
+    if (persist) { try { localStorage.setItem(viewKey, next); } catch { /* The choice still applies to this page. */ } }
+    transitionPage(() => {
+      if (next === 'list') root.dataset.homeView = 'list'; else delete root.dataset.homeView;
+      syncViews();
+    });
+  };
+  syncViews();
+  viewChoices.forEach(button => button.addEventListener('click', () => applyView(button.dataset.homeViewChoice === 'list' ? 'list' : 'browse', true)));
+  addEventListener('storage', event => { if (event.key === viewKey || event.key === null) applyView(event.newValue === 'list' ? 'list' : 'browse', false); });
+  // V switches the view (reader.ts owns the keyboard model).
+  document.addEventListener('home-view-toggle', () => { if (viewChoices.length && design() === 'atlas') applyView(view() === 'list' ? 'browse' : 'list', true); });
+
+  /* Home: the paged spread, newest plate first, limited to the chosen category. Images are the cards' own images. */
   type Plate = { href: string; plate: string; title: string; habitat: string; thesis: string; latin?: string; common?: string; chapters: number; revised?: string; revisedOn?: string };
   const spread = document.querySelector<HTMLElement>('[data-atlas-spread]');
   const plateData = document.getElementById('atlas-plates');
   if (spread && plateData) {
-    const plates = JSON.parse(plateData.textContent ?? '[]') as Plate[];
+    const allPlates = JSON.parse(plateData.textContent ?? '[]') as Plate[];
+    let plates = allPlates;
     const status = document.querySelector<HTMLElement>('[data-spread-status]');
     const image = (plate: Plate) => {
       const card = [...document.querySelectorAll<HTMLAnchorElement>('.topic-card')].find(item => item.getAttribute('href') === plate.href);
@@ -219,7 +240,7 @@
     // they never pull focus away from another control. Focus then rests on the spread, so Enter opens its topic.
     const keys: Record<string, () => number> = { ArrowRight: () => current + 1, ArrowLeft: () => current - 1, Home: () => 0, End: () => plates.length - 1 };
     document.addEventListener('keydown', event => {
-      if (design() !== 'atlas' || !keys[event.key] || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (design() !== 'atlas' || spread.offsetParent === null || !keys[event.key] || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
       if (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable],dialog,.logo-picker')) return;
       // Home/End belong to the spread only while it has focus; elsewhere they scroll the page.
       if ((event.key === 'Home' || event.key === 'End') && document.activeElement !== spread) return;
@@ -241,6 +262,21 @@
     document.addEventListener('topic-select', event => {
       const href = (event as CustomEvent<string>).detail;
       show(plates.findIndex(plate => plate.href === href));
+    });
+    // In Browse, J/K (and Home/End after them) turn the spread itself and focus it, so Enter opens its topic.
+    document.addEventListener('spread-step', event => {
+      const to = (event as CustomEvent<number | 'first' | 'last'>).detail;
+      spread.focus({ preventScroll: true });
+      spread.scrollIntoView({ behavior: reducedMotion.matches ? 'instant' : 'smooth', block: 'nearest' });
+      show(to === 'first' ? 0 : to === 'last' ? plates.length - 1 : current + to);
+    });
+    // A category keeps the current topic when it belongs there; otherwise the spread opens at the category's newest.
+    document.addEventListener('habitat-change', event => {
+      const habitat = (event as CustomEvent<string>).detail;
+      const href = plates[current]?.href;
+      plates = habitat ? allPlates.filter(plate => plate.habitat === habitat) : allPlates;
+      current = Math.max(0, plates.findIndex(plate => plate.href === href));
+      if (plates.length) render();
     });
     let touchX: number | undefined;
     spread.addEventListener('touchstart', event => { touchX = event.touches[0].clientX; }, { passive: true });
@@ -264,6 +300,7 @@
     // The visible count is a status region, so screen readers hear how many topics match.
     const shown = cards.filter(card => !card.hidden).length;
     if (count) count.textContent = `${shown} ${shown === 1 ? 'topic' : 'topics'}`;
+    document.dispatchEvent(new CustomEvent('habitat-change', { detail: habitat }));
   };
   filterButtons.forEach(button => button.addEventListener('click', () => filter(button.dataset.habitat ?? '')));
   document.addEventListener('design-change', () => { if (design() === 'folio') filter(''); });

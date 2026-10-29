@@ -14,9 +14,11 @@ There are three checkpoints: the **structure** (step 1), the **illustrations** (
 - You need the draft's path (and any companion documents). If the author gave a species, keep it for step 2. Ask only for what is missing.
 - Work on a branch, never on `main`. If on `main`, run `git switch -c topic/<id>` once the ID is agreed.
 - If `node_modules/` is missing, run `npm ci`.
-- **Live preview.** Ask whether `npm run dev` is running, and if not, suggest the author start it in their own terminal. You can't keep a server running for them reliably. It rebuilds on every save under `topics/`, `pages/` and `design-system/` and reloads their browser; a failed build shows its error as a banner over the last good version. So:
-  - after each change, point the author to the page to look at (the homepage, or `/topics/<id>/` on the address `dev` printed) rather than describing what changed;
-  - don't run `npm run build` just so they can see a change; `dev` already rebuilds. Build only to validate, as in steps 1 and 4.
+- **Live preview.** The guide has the author start `npm run dev` once, in their own terminal. It rebuilds on every save under `topics/`, `pages/` and `design-system/` and reloads their browser; a failed build shows its error as a banner over the last good version.
+  - Check for it yourself without asking: `pgrep -f scripts/dev.ts`. If it isn't running, mention once, at checkpoint 1, that `npm run dev` gives them a live view. Don't repeat it, and don't start it yourself, because you can't keep it running for them.
+  - When it runs:
+    - after each change, point the author to the page to look at (normally http://127.0.0.1:4173/ for the homepage and http://127.0.0.1:4173/topics/<id>/ for the topic) rather than describing what changed;
+    - don't run `npm run build` just so they can see a change; `dev` already rebuilds. Build only to validate, as in steps 1 and 4.
 
 ## 1. Structure and registration (checkpoint 1)
 
@@ -56,7 +58,7 @@ Show the author:
 
 1. the proposed ID, category, description (with its character count), thesis and dates;
 2. the body diff against the draft: `git diff --no-index <draft> topics/<id>/README.md`, then each removal or heading change in one line; and
-3. where to look in the preview.
+3. where to look in the preview (only if it's running).
 
 Wait for approval. The author may edit `topics/<id>/` themselves at any point; re-read the files before changing them. If the author abandons the topic, remove it: delete `topics/<id>/` and restore `topics/topics.json` and `README.md`.
 

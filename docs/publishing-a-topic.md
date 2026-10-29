@@ -21,7 +21,7 @@ The illustrations are drawn by Codex's built-in image tool, which counts against
 You work with two windows:
 
 - **The agent session** (Claude Code or Codex) in the repository, where you approve and steer.
-- **The live preview** in your browser. Start it with `npm run dev` in a terminal and leave it running for the whole session.
+- **The live preview** in your browser, which shows the site exactly as readers will see it and updates by itself ([started once](#the-live-preview), below).
 
 There are three places a topic's content can be:
 
@@ -35,18 +35,20 @@ Everything else (the web pages, the README's topic list, search, the feed) is ge
 
 ## The live preview
 
+This is the only command you need to remember. Run it once in a terminal in the repository, at any time, even before you have a draft:
+
 ```sh
 npm run dev
 ```
 
-It prints a local address, normally http://127.0.0.1:4173/. Open it and keep the tab open. You can start it at any time, even before you have a draft; it shows the site as it is now.
+It prints a local address, normally http://127.0.0.1:4173/. Open it in your browser. Leave the terminal and the tab open for as long as you're working; everything below assumes the preview is running.
 
 - **Saving rebuilds.** Whenever any file under `topics/`, `pages/` or `design-system/` is saved, by you, the agent or the illustration generator, the site rebuilds in about 6 seconds. Open pages then reload by themselves, keeping your scroll position. A small “Rebuilding…” label shows while it works.
 - **Mistakes don't blank the page.** If a change breaks the build (for example a skipped heading level, or a description over 155 characters), the page keeps showing the last version that worked, with a red banner giving the exact error. Fix the file and save; the banner disappears.
-- **Only registered topics appear.** A topic is included once its ID is in `topics/topics.json`. Until then the terminal lists it as “Not in the site yet”.
-- **Sharing images are skipped.** `dev` doesn't render the social sharing images, to keep rebuilds fast. To see those as well, start it as `npm run dev -- --site`; each rebuild then takes several seconds longer.
+- **Only registered topics appear.** A topic is included once its ID is in `topics/topics.json`, which happens in step 1. Until then the preview's terminal lists it as “Not in the site yet”.
+- **Sharing images are skipped.** `dev` doesn't render the social sharing images, to keep rebuilds fast. If you want to see those too, start the preview with `npm run dev -- --site` instead; each rebuild then takes several seconds longer.
 
-You never need to stop the preview or run builds yourself while it's running.
+You never need to restart the preview or run builds yourself.
 
 ## Write the draft
 
@@ -56,7 +58,7 @@ For a topic with more than one document, keep the companion files next to the dr
 
 ## Publish it, step by step
 
-Start `npm run dev`, then start a session in the repository and ask for it:
+Start an agent session in the repository and ask for it:
 
 ```text
 /publish-topic ~/drafts/my-idea.md --species "Eurasian otter (Lutra lutra)"
@@ -129,7 +131,7 @@ Changes to your original draft do nothing once step 1 has copied it. Edit the co
 
 ## Doing parts by hand
 
-Every step is an ordinary command, so you can also run it yourself. Keep `npm run dev` running and watch each step land:
+Every step is an ordinary command, so you can also run it yourself. The preview shows the result of each one:
 
 ```sh
 node scripts/add-topic.ts my-idea --from ~/drafts/my-idea.md   # copy the draft into topics/my-idea/README.md
@@ -155,18 +157,18 @@ The tool frames each drawing for its slot. The portrait is 16:9 and centred on t
 
 ## Updating a published topic
 
-Run `npm run dev`, then edit `topics/<id>/` yourself or ask an agent for a specific change. For a substantive change, set `updated: YYYY-MM-DD` in the front matter. Then ask the agent to check and open a pull request. To replace artwork, use `illustrate.ts` with `--only` or `--force`.
+Edit `topics/<id>/` yourself, or ask an agent for a specific change, and check the result in the preview. For a substantive change, set `updated: YYYY-MM-DD` in the front matter. Then ask the agent to check and open a pull request. To replace artwork, use `illustrate.ts` with `--only` or `--force`.
 
 ## When something goes wrong
 
 | Symptom | Fix |
 | --- | --- |
 | Red banner in the preview | The message names the file and the problem. Fix it and save. |
-| The new topic doesn't appear in the preview | It isn't registered yet: run `node scripts/add-topic.ts <id>` (the agent does this in step 1). The `dev` terminal lists unregistered topics. |
-| The preview doesn't update | Check that the `dev` terminal is still running and that you saved under `topics/`, not your original draft. |
+| The new topic doesn't appear in the preview | It isn't registered yet: run `node scripts/add-topic.ts <id>` (the agent does this in step 1). The preview's terminal lists unregistered topics. |
+| The preview doesn't update | Check that the preview's terminal is still open (if you closed it, run `npm run dev` again) and that you saved under `topics/`, not your original draft. |
 | “Codex is not signed in with ChatGPT” | `codex logout`, then `codex login` and choose **Sign in with ChatGPT** |
 | “Codex finished without saving …” | Read `.illustrate/<id>/logs/<image>.log`. Usually a plan limit or a refused prompt. Wait, then rerun with `--only <image>`. |
 | An image has an anatomy error or a cut-off animal | Rerun with `--only <image>`. Each run is a fresh drawing. |
 | Running inside Codex, the illustration step fails with sandbox or network errors | Allow the command to run outside the sandbox; it starts its own Codex session. |
-| “The README.md topic table is out of date” | Run `npm run build` (or just save any topic file while `dev` runs). The table is generated; don't edit it by hand. |
+| “The README.md topic table is out of date” | Save any topic file so the preview rebuilds, or run `npm run build`. The table is generated; don't edit it by hand. |
 | “description has N characters” | Keep it to 155 or fewer. The agent will propose a shorter version in your words. |

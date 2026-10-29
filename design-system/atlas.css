@@ -105,6 +105,13 @@
 [data-design='atlas'] .section-label h2 { font: italic 600 30px/1 var(--display); letter-spacing: 0; }
 [data-design='atlas'] .section-label > span { font: 400 11.5px/1.4 var(--mono); }
 
+/* Home: one view of the collection at a time. Browse (the default) shows the spread, List the cards;
+   without JavaScript there is no switch, only the cards. design.ts sets data-home-view before first paint. */
+:root.js[data-design='atlas']:not([data-home-view='list']) .collection-list .topic-grid,
+:root[data-home-view='list'] :is(.atlas-spread-wrap, .spread-keys) { display: none !important; }
+[data-design='atlas'] .section-label { column-gap: 16px; row-gap: 12px; align-items: center; }
+[data-design='atlas'] .section-label [data-topic-count] { margin-left: auto; }
+
 /* Home: the paged spread. JavaScript builds it from the cards, reusing their images. */
 :root:not(.js) .atlas-spread-wrap { display: none !important; }
 .atlas-spread { position: relative; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); border: 1px solid var(--line); background: var(--surface); perspective: 1600px; }
@@ -182,7 +189,8 @@
 .habitat-filters button { transition: background-color .2s, color .2s, border-color .2s; }
 .habitat-filters button { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font: 500 11px/1 var(--mono); letter-spacing: .04em; }
 .habitat-filters button[aria-pressed='true'] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
-.index-link { margin: 22px 0 0; font: 500 12px/1 var(--mono); letter-spacing: .04em; }
+.index-link { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; margin: 22px 0 0; font: 500 12px/1 var(--mono); letter-spacing: .04em; }
+.spread-keys { font-weight: 400; color: var(--muted); }
 .index-link a { color: var(--accent); text-decoration: none; }
 .index-link a:hover { text-decoration: underline; }
 
@@ -337,10 +345,6 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
 [data-design='atlas'] .focus-mode .running-head { opacity: 0; transform: translateY(-110%); pointer-events: none; }
 [data-design='atlas'] .plate-bar { font: 500 12px/1 var(--mono); letter-spacing: .04em; }
 
-
-@media screen and (prefers-reduced-motion: no-preference) {
-  body[data-page='collection'] .atlas-spread-wrap { --entrance-y: -48px; transform-origin: 50% 0; animation: collection-enter 1s ease .5s backwards; }
-}
 @media (max-width: 1280px) {
   [data-design='atlas'] .reading-layout { --atlas-toc: 210px; grid-template-columns: var(--atlas-toc) minmax(0, 1fr); grid-template-areas: 'front front' 'rule rule' 'toc guide' 'toc article' 'end end'; --atlas-gap: 40px; }
   [data-design='atlas'] .plate-margin { display: none !important; }
@@ -395,4 +399,5 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
   .running-head, .plate-bar, .plates-menu, .atlas-stamp, .atlas-spread-wrap, .plate-margin, .plate-end { display: none !important; }
   [data-design='atlas'] .reading-layout, [data-design='atlas'] .frontis { display: block; padding: 0; }
   [data-design='atlas'] .reading-layout::after { display: none; }
+  [data-design='atlas'] .collection-list .topic-grid { display: grid !important; }
 }

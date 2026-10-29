@@ -3,6 +3,8 @@
   try {
     const saved = localStorage.getItem('the-way-i-ai-design');
     if (saved === 'atlas' || saved === 'folio') document.documentElement.dataset.design = saved;
+    // The Field Atlas home page shows Browse (the paged spread) unless the reader chose List.
+    if (localStorage.getItem('the-way-i-ai-home-view') === 'list') document.documentElement.dataset.homeView = 'list';
   } catch { /* Without storage, the generated default design is used. */ }
 })();
 // Motion follows the device's reduced-motion setting; readers can also turn animations off here.

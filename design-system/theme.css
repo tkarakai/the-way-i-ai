@@ -513,28 +513,27 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 /* Two designs share one page. Each design's extra parts stay in the DOM, so switching keeps content and position. */
 :root:not([data-design='atlas']) .atlas-only, :root[data-design='atlas'] .folio-only { display: none !important; }
 .design-switching *, .design-switching *::before, .design-switching *::after { transition: none !important; }
-.design-switch { gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 999px; flex-shrink: 0; }
-.design-switch button { border: 0; border-radius: 999px; background: transparent; color: var(--muted); padding: 6px 11px; font: 500 10.5px/1.2 'IBM Plex Mono', ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
-.design-switch button:hover { color: var(--ink); }
-.design-switch button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
-.design-switch svg { display: none; }
 /*
- * Where both labels show, one ink pill slides to the chosen design instead of the fill jumping. The labels are
- * monospaced with the same length, so the halves are equal. The switch is not part of the page cross-fade:
- * it keeps its own live layer, so the old pill does not ghost while the new one slides.
+ * Segmented switch: two pressed-state buttons in a pill (the design switch, the Atlas home Browse/List view).
+ * One ink pill slides to the chosen option instead of the fill jumping; the options are equal halves.
+ * --segment says which half it covers: the pressed button, or, before scripts sync the buttons, the choice that
+ * design.ts applied to the root before first paint. Each switch is not part of the page cross-fade: it keeps its
+ * own live layer (a view-transition-name), so the old pill does not ghost while the new one slides.
  */
-@media (min-width: 421px) {
-  .design-switch { position: relative; view-transition-name: design-switch; }
-  .design-switch::before { content: ''; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 3px); border-radius: 999px; background: var(--ink); transition: transform .34s cubic-bezier(.3, .8, .2, 1); }
-  :root[data-design='folio'] .design-switch::before { transform: translateX(calc(100% + 2px)); }
-  .design-switch button { position: relative; z-index: 1; transition: color .25s ease; }
-  .design-switch button[aria-pressed='true'] { background: transparent; }
-  /* Switching designs turns other transitions off for one step; the pill is the exception. */
-  .design-switching .design-switch::before { transition: transform .34s cubic-bezier(.3, .8, .2, 1) !important; }
-  .design-switching .design-switch button { transition: color .25s ease !important; }
-}
-::view-transition-old(design-switch) { display: none; }
-::view-transition-new(design-switch) { animation: none; }
+.js .segmented { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 999px; flex-shrink: 0; }
+.segmented button { position: relative; z-index: 1; border: 0; border-radius: 999px; background: transparent; color: var(--muted); padding: 6px 11px; font: 500 10.5px/1.2 'IBM Plex Mono', ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; transition: color .25s ease; }
+.segmented button:hover { color: var(--ink); }
+.segmented button[aria-pressed='true'] { color: var(--paper); }
+.segmented::before { content: ''; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 3px); border-radius: 999px; background: var(--ink); transform: translateX(calc(var(--segment, 0) * (100% + 2px))); transition: transform .34s cubic-bezier(.3, .8, .2, 1); }
+.segmented:has(> button:last-child[aria-pressed='true']), :root[data-design='folio'] .design-switch, :root[data-home-view='list'] .view-switch { --segment: 1; }
+/* Switching designs turns other transitions off for one step; the pill is the exception. */
+.design-switching .segmented::before { transition: transform .34s cubic-bezier(.3, .8, .2, 1) !important; }
+.design-switching .segmented button { transition: color .25s ease !important; }
+.design-switch { view-transition-name: design-switch; }
+.view-switch { view-transition-name: view-switch; }
+::view-transition-old(design-switch), ::view-transition-old(view-switch) { display: none; }
+::view-transition-new(design-switch), ::view-transition-new(view-switch) { animation: none; }
+.design-switch svg { display: none; }
 /* The generated General index works in both designs. */
 .index-page { max-width: 1200px; margin-inline: auto; padding: 0 60px 60px; }
 .index-head { display: grid; gap: 14px; padding: 48px 0 24px; border-bottom: 1px solid var(--ink); }
@@ -747,7 +746,8 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 }
 /* On phones the switch is one icon button that changes to the other design; its name stays the design's. */
 @media (max-width: 420px) {
-  .design-switch { padding: 0; border: 0; }
+  .design-switch { padding: 0; border: 0; view-transition-name: none; }
+  .design-switch::before { content: none; }
   .design-switch button[aria-pressed='true'] { display: none; }
   .design-switch button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 40px; padding: 8px; border-radius: 5px; }
   .design-switch button:hover { background: var(--tint); }
@@ -766,7 +766,7 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
  * States shown only by a fill (pressed buttons, the current item) would vanish, so they use system colours.
  */
 @media (forced-colors: active) {
-  :is(.design-switch, .habitat-filters, .explorer-controls) button[aria-pressed='true'],
+  :is(.segmented, .habitat-filters, .explorer-controls) button[aria-pressed='true'],
   .spread-film button[aria-current='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
   :is(.toc-link, .nav-topic, .drawer-plate)[aria-current] { forced-color-adjust: none; color: Highlight; outline: 1px solid Highlight; outline-offset: -1px; }
   .toc-link[aria-current]::before { forced-color-adjust: none; background: Highlight; border-color: Highlight; }

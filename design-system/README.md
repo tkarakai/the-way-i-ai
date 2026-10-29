@@ -39,6 +39,7 @@ Both designs animate opening and closing: disclosures animate their height (`rea
 - `ambient.ts`: homepage-only canvas lifecycle; capped pixel density and 30 fps, a still frame for reduced motion, and suspension in background tabs, cached pages, and print.
 - `search.ts`: creates the shared collection-wide index, loaded on demand from rendered prose and original code; result URLs remain relative.
 - `layout.ts`: collection and reader layouts; receives all collection and topic copy from source metadata.
+- `code-theme.ts`: build-time GitHub syntax themes with comment and light-mode keyword colours adjusted for accessible contrast on both designs' code surfaces.
 - `wordmark.ts`: validates the saved wave geometry and generates its scalable, static CSS projection.
 - `explorers.ts`: a generic SVG-and-panels renderer. It resolves Markdown section/excerpt references and highlights named SVG nodes.
 
@@ -104,7 +105,7 @@ Both designs aim at WCAG 2.2 AA; `tests/accessibility.spec.ts` guards the behavi
 - **Names:** a control's accessible name contains its visible text (close buttons read “Close (Esc)”). Toggle buttons keep one name and report state with `aria-pressed`.
 - **Tab stops:** heading self-links are `tabindex="-1"` (the outline reaches every section); wrapped code blocks are not focusable; scrollable tables are named regions (“Table: <section>”). Dates outside links are focusable and show the exact date on focus.
 - **Forced colours** (Windows High Contrast): states shown by a fill use system colours (`Highlight`) in the `forced-colors` block at the end of `theme.css`; the wordmark opts out of the text backplate.
-- **Contrast:** text is at least 4.5:1 on every surface, including muted text on code and tint backgrounds. Don't dim text with `opacity`; fade images or backgrounds instead.
+- **Contrast:** text must be at least 4.5:1 on every surface, including muted text on code and tint backgrounds. The code renderer uses the shared `reader-light`/`reader-dark` themes registered by `code-theme.ts`; comment and light-mode keyword colours differ from GitHub's syntax palette. `tests/code-contrast.spec.ts` measures actual shadow-root syntax contrast against each design's code background, including manual theme changes against the device preference. Don't dim text with `opacity`; fade images or backgrounds instead.
 
 ## Language and collection title rules
 

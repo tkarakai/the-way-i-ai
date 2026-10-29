@@ -14,47 +14,49 @@ This guide is for the author. The rules the agent follows are in [`AGENTS.md`](.
 | Codex CLI, signed in with ChatGPT | `npm i -g @openai/codex`, then `codex login` and choose **Sign in with ChatGPT**. `codex login status` should say “Logged in using ChatGPT”. |
 | GitHub CLI (for the pull request) | `gh auth status` |
 
-The illustrations are drawn by Codex's built-in image tool, which counts against your ChatGPT plan, not the OpenAI API. The tool refuses to run if Codex is signed in with an API key, so it can't bill the API by accident. Plans have image limits; if you hit one, wait and continue with `--only` (see [Illustration options](#illustration-options)).
+Codex draws the illustrations with its built-in image tool, which counts against your ChatGPT plan, not the OpenAI API. The illustration step refuses to run if Codex is signed in with an API key, so it can't bill the API by accident.
 
 ## How it fits together
 
 You work with two windows:
 
 - **The agent session** (Claude Code or Codex) in the repository, where you approve and steer.
-- **The live preview** in your browser, which shows the site exactly as readers will see it and updates by itself ([started once](#the-live-preview), below).
+- **The live preview** in your browser, which shows the site exactly as readers will see it and updates by itself.
 
-There are three places a topic's content can be:
+Each topic has an **ID**: a short name in lowercase words joined by hyphens, such as `small-decisions`. It names the topic's folder and appears in its web address (`/topics/small-decisions/`). The agent proposes one at the start, and you can change it.
+
+A topic's content lives in three places:
 
 | File | Role |
 | --- | --- |
 | Your draft, for example `~/drafts/my-idea.md` | The input. It's copied into the repository once, at the start, and never read again. |
 | `topics/<id>/README.md` (plus any companion documents) | **The topic from then on.** Every edit, by you or the agent, happens here. |
-| `topics/<id>/assets/illustrations/` | The five images and their manifest, written by the illustration generator. |
+| `topics/<id>/assets/illustrations/` | The five wildlife images and their manifest. The agent creates them with the illustration generator. |
 
 Everything else (the web pages, the README's topic list, search, the feed) is generated from these files.
-
-## The live preview
-
-This is the only command you need to remember. Run it once in a terminal in the repository, at any time, even before you have a draft:
-
-```sh
-npm run dev
-```
-
-It prints a local address, normally http://127.0.0.1:4173/. Open it in your browser. Leave the terminal and the tab open for as long as you're working; everything below assumes the preview is running.
-
-- **Saving rebuilds.** Whenever any file under `topics/`, `pages/` or `design-system/` is saved, by you, the agent or the illustration generator, the site rebuilds in about 6 seconds. Open pages then reload by themselves, keeping your scroll position. A small “Rebuilding…” label shows while it works.
-- **Mistakes don't blank the page.** If a change breaks the build (for example a skipped heading level, or a description over 155 characters), the page keeps showing the last version that worked, with a red banner giving the exact error. Fix the file and save; the banner disappears.
-- **Only registered topics appear.** A topic is included once its ID is in `topics/topics.json`, which happens in step 1. Until then the preview's terminal lists it as “Not in the site yet”.
-- **Sharing images are skipped.** `dev` doesn't render the social sharing images, to keep rebuilds fast. If you want to see those too, start the preview with `npm run dev -- --site` instead; each rebuild then takes several seconds longer.
-
-You never need to restart the preview or run builds yourself.
 
 ## Write the draft
 
 Write ordinary Markdown anywhere. Only one thing is required: a single `#` title, then your text with `##` chapters and `###` subsections. You don't need front matter, dates or other formatting; the agent adds those and shows you every change.
 
 For a topic with more than one document, keep the companion files next to the draft and say so when you start.
+
+## Open the live preview
+
+Before you start publishing, run this once in a terminal in the repository:
+
+```sh
+npm run dev
+```
+
+It prints a local address, normally http://127.0.0.1:4173/. Open it in your browser. It shows the site as it is now; your topic joins it during step 1. Leave the terminal and the tab open for as long as you're working. Everything below assumes the preview is running.
+
+- **Saving rebuilds.** Whenever any file under `topics/`, `pages/` or `design-system/` is saved, by you, the agent or the illustration generator, the site rebuilds in about 6 seconds. Open pages then reload by themselves, keeping your scroll position. A small “Rebuilding…” label shows while it works.
+- **Mistakes don't blank the page.** If a change breaks the build (for example a skipped heading level, or a description over 155 characters), the page keeps showing the last version that worked, with a red banner giving the exact error. Fix the file and save; the banner disappears.
+- **Only registered topics appear.** A topic is included once its ID is in `topics/topics.json`, which the agent does in step 1. Until then the preview's terminal lists it as “Not in the site yet”.
+- **Sharing images are skipped.** The preview doesn't render the social sharing images, to keep rebuilds fast. If you want to see those too, start it with `npm run dev -- --site` instead; each rebuild then takes several seconds longer.
+
+You never need to restart the preview or run builds yourself.
 
 ## Publish it, step by step
 
@@ -64,12 +66,12 @@ Start an agent session in the repository and ask for it:
 /publish-topic ~/drafts/my-idea.md --species "Eurasian otter (Lutra lutra)"
 ```
 
-In Codex, use `$publish-topic`, or just say “publish ~/drafts/my-idea.md as a new topic”. Leave out the species to get three suggestions.
+In Codex, use `$publish-topic`, or just say “publish ~/drafts/my-idea.md as a new topic”. The species is optional; write it as the common name followed by the scientific name in brackets, as above. Leave it out to get three suggestions in step 2.
 
 ### 1. Structure (checkpoint 1)
 
 **The agent:**
-- copies your draft to `topics/<id>/README.md`;
+- proposes an ID and copies your draft to `topics/<id>/README.md`;
 - prepares its structure:
   - front matter: category, description, thesis and `created` date;
   - an `## Introduction` heading if your opening has none;
@@ -91,55 +93,59 @@ The preview reloads after each save. Approve when it looks right. Nothing is com
 
 ### 2. Species
 
-You named one, or you choose from three suggestions. Suggestions are animals the collection doesn't use yet, with visible young for the last two images.
+If you gave a species in your request, the agent uses it. Otherwise it suggests three animals the collection doesn't use yet, all with visible young (the last two images show young animals), and you choose.
 
 ### 3. Illustrations (checkpoint 2)
 
-The generator draws the portrait, then the four panoramas, each in about 1–2 minutes (5–10 in total). Every finished image appears in the preview as soon as it's done:
+The agent runs the illustration generator. It draws the portrait first, then the four panoramas with the portrait as reference, so all five show the same animals. Each image takes about 1–2 minutes (5–10 in total) and appears in the preview as soon as it's done:
 - **the portrait** on the homepage card and at the top of the topic;
 - **each panorama** at a chapter break.
 
 You can keep reading and editing the text meanwhile; text edits and image generation don't interfere.
 
-When all five are done, the agent reports anything wrong it sees (an extra leg, a cut-off tail) and opens a review sheet with all five on light and dark backgrounds. **Approve, or ask for specific images again** (“redo the cubs image, one has three legs”). Only those images are redrawn, and the preview updates as each one lands.
-
 Panoramas sit just before `##` chapters, never before a document's first chapter. A one-chapter topic shows only the portrait; a topic with fewer than five chapters shows fewer panoramas.
+
+When all five are done, the agent reports anything wrong it sees (an extra leg, a cut-off tail) and opens a review sheet with all five on light and dark backgrounds. **Approve, or ask for specific images again** (“redo the cubs image, one has three legs”). Only those images are redrawn, and the preview updates as each one lands. If your plan's image limit stops the generator partway, wait and ask the agent to finish the missing images.
 
 ### 4. Checks
 
-The agent runs the type checks, the link and structure checks, and the unit and browser tests. It looks at both designs (Atlas and Folio), in light and dark, on desktop and phone widths, and reports anything that fails. Your text and images are already final at this point; this step only verifies them.
+The agent runs the type checks, the link and structure checks, and the unit and browser tests. It also looks at both designs (Atlas and Folio), in light and dark, on desktop and phone widths, and reports anything that fails. This step creates nothing new; it verifies what you've approved.
 
 ### 5. Pull request (checkpoint 3)
 
-The agent lists the files it will commit and asks first. The pull request's CI run builds a downloadable copy of the whole site. **Merging publishes the topic** at https://thewayiai.com/.
+The agent lists the files it will commit and asks for your go-ahead before committing. It then opens a pull request, whose CI run repeats the checks and builds a downloadable copy of the whole site. **Merging publishes the topic** at https://thewayiai.com/.
 
-Until you merge, you can still change anything. Edit, check the live preview, and ask the agent to commit the change to the same pull request.
+Until you merge, you can still change anything: edit, check the preview, and ask the agent to add the change to the same pull request.
 
 ## What you can change, and when
 
-| You want to change | Where | When | How it shows |
+| You want to change | How | When | Shows in the preview |
 | --- | --- | --- | --- |
-| Wording, headings, code examples | `topics/<id>/*.md` | Any time | Preview reloads on save |
-| Title | The `#` line in `topics/<id>/README.md` | Any time | Preview reloads on save |
-| Description, thesis, category, dates | The front matter at the top of `topics/<id>/README.md` | Any time | Preview reloads on save |
-| One or more images | Ask the agent, or `node scripts/illustrate.ts <id> --only panorama-03` | After step 2 | Each image appears when done |
-| The animal | `node scripts/illustrate.ts <id> --species "…" --force` | After step 2 | All five are redrawn |
-| The topic ID (its web address) | Ask the agent | Before merging | The topic moves to `/topics/<new-id>/` |
-| A published topic | Same files, in a new pull request | After merging | Live after that PR is merged |
+| Wording, headings, code examples | Edit `topics/<id>/*.md`, or ask the agent | From step 1 | On save |
+| Title | The `#` line in `topics/<id>/README.md` | From step 1 | On save |
+| Description, thesis, category, dates | The front matter at the top of `topics/<id>/README.md` | From step 1 | On save |
+| The topic ID (its web address) | Ask the agent | Until you merge | The topic moves to `/topics/<new-id>/` |
+| One or more images | Ask the agent which ones to redraw | From step 3 | Each image as it's done |
+| The animal | Ask the agent for a different species | From step 3 | All five are redrawn |
+| A published topic | Any of the above, in a new pull request | After merging | On save; live once that pull request is merged |
 
 Changes to your original draft do nothing once step 1 has copied it. Edit the copy in `topics/<id>/`.
 
-## Doing parts by hand
+## Updating a published topic
 
-Every step is an ordinary command, so you can also run it yourself. The preview shows the result of each one:
+Edit `topics/<id>/` yourself, or ask an agent for a specific change, and check the result in the preview. For a substantive change, set `updated: YYYY-MM-DD` in the front matter. Then ask the agent to run the checks and open a pull request. To replace artwork, ask it to redraw specific images or the whole set.
+
+## Doing it by hand
+
+Everything the agent does is an ordinary command, so you can also run the steps yourself. The preview shows the result of each one:
 
 ```sh
-node scripts/add-topic.ts my-idea --from ~/drafts/my-idea.md   # copy the draft into topics/my-idea/README.md
+node scripts/add-topic.ts my-idea --from ~/drafts/my-idea.md   # step 1: copy the draft into topics/my-idea/README.md
 # …add front matter and fix the structure in topics/my-idea/README.md…
-node scripts/add-topic.ts my-idea                              # validate front matter and register: now in the preview
-node scripts/illustrate.ts --list-species                      # animals already in use
-node scripts/illustrate.ts my-idea --species "Eurasian otter (Lutra lutra)"
-npm run check && npm test && npm run test:browser              # before committing
+node scripts/add-topic.ts my-idea                              # step 1: validate the front matter and register; now in the preview
+node scripts/illustrate.ts --list-species                      # step 2: animals already in use
+node scripts/illustrate.ts my-idea --species "Eurasian otter (Lutra lutra)"   # step 3
+npm run check && npm test && npm run test:browser              # step 4
 ```
 
 ### Illustration options
@@ -153,22 +159,18 @@ npm run check && npm test && npm run test:browser              # before committi
 
 Each image's drawing as generated, its prompt and the Codex log are kept in the ignored `.illustrate/<id>/` folder, along with `review.html` and every replaced version in `previous/`. To go back to an earlier image, copy it from `previous/` over the file in `topics/<id>/assets/illustrations/`.
 
-The tool frames each drawing for its slot. The portrait is 16:9 and centred on the animal; each panorama is 4:1. The tool trims plain paper or extends it, never cuts into the drawing, and matches the paper to the site's background. You never need to resize or edit the files.
-
-## Updating a published topic
-
-Edit `topics/<id>/` yourself, or ask an agent for a specific change, and check the result in the preview. For a substantive change, set `updated: YYYY-MM-DD` in the front matter. Then ask the agent to check and open a pull request. To replace artwork, use `illustrate.ts` with `--only` or `--force`.
+The generator frames each drawing for its slot. The portrait is 16:9 and centred on the animal; each panorama is 4:1. It trims plain paper or extends it, never cuts into the drawing, and matches the paper to the site's background. You never need to resize or edit the files.
 
 ## When something goes wrong
 
 | Symptom | Fix |
 | --- | --- |
 | Red banner in the preview | The message names the file and the problem. Fix it and save. |
-| The new topic doesn't appear in the preview | It isn't registered yet: run `node scripts/add-topic.ts <id>` (the agent does this in step 1). The preview's terminal lists unregistered topics. |
+| The new topic doesn't appear in the preview | It isn't registered yet; the agent does this in step 1 (by hand: `node scripts/add-topic.ts <id>`). The preview's terminal lists unregistered topics. |
 | The preview doesn't update | Check that the preview's terminal is still open (if you closed it, run `npm run dev` again) and that you saved under `topics/`, not your original draft. |
 | “Codex is not signed in with ChatGPT” | `codex logout`, then `codex login` and choose **Sign in with ChatGPT** |
-| “Codex finished without saving …” | Read `.illustrate/<id>/logs/<image>.log`. Usually a plan limit or a refused prompt. Wait, then rerun with `--only <image>`. |
-| An image has an anatomy error or a cut-off animal | Rerun with `--only <image>`. Each run is a fresh drawing. |
+| “Codex finished without saving …” | Read `.illustrate/<id>/logs/<image>.log`. Usually a plan limit or a refused prompt. Wait, then redraw that image (`--only <image>`). |
+| An image has an anatomy error or a cut-off animal | Ask the agent to redraw it (`--only <image>`). Each run is a fresh drawing. |
 | Running inside Codex, the illustration step fails with sandbox or network errors | Allow the command to run outside the sandbox; it starts its own Codex session. |
 | “The README.md topic table is out of date” | Save any topic file so the preview rebuilds, or run `npm run build`. The table is generated; don't edit it by hand. |
 | “description has N characters” | Keep it to 155 or fewer. The agent will propose a shorter version in your words. |

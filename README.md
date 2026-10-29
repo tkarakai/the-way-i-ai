@@ -144,7 +144,7 @@ Worktree installation paths changed when the topic moved. Existing shell functio
 npm run dev
 ```
 
-This serves the current checkout at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`; if another worktree is using that port, the server chooses an available one). Saving any file under `topics/`, `pages/`, `design-system/` or `scripts/` rebuilds the site in a few seconds and reloads open pages. A failed build keeps the last good version on screen with the error in a banner. See [Publishing a topic](docs/publishing-a-topic.md#the-live-preview).
+This serves the current checkout at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`; if another worktree is using that port, the server chooses an available one). Saving any file under `topics/`, `pages/`, `design-system/` or `scripts/` rebuilds the site in a few seconds and reloads open pages. A failed build keeps the last good version on screen with the error in a banner. See [Publishing a topic](docs/publishing-a-topic.md#open-the-live-preview).
 
 `npm run dev` skips the social sharing images to keep rebuilds fast. To see them, run `npm run dev -- --site`, which builds the full publication bundle each time (install Playwright Chromium first with `npx playwright install chromium`).
 

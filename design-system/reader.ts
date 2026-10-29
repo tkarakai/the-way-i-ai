@@ -315,7 +315,7 @@
     return { open, close };
   };
   /*
-   * Single-key shortcuts can be turned off in the “Shortcuts and settings” panel (WCAG 2.1.4), for speech input and
+   * Single-key shortcuts can be turned off in the Settings panel (WCAG 2.1.4), for speech input and
    * anyone who presses keys by accident. Modifier shortcuts (⌘/Ctrl K) and keys inside a focused control stay.
    */
   const shortcutsKey = 'shortcuts';
@@ -551,7 +551,7 @@
     if (event.shiftKey || typing(event) || overlayOpen()) return;
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     const go = (href?: string) => { if (href) { event.preventDefault(); location.href = href; } };
-    if (performance.now() - pressedG < 1200 && ['h', 'i', 't', 'a'].includes(key)) {
+    if (pressedG > 0 && performance.now() - pressedG < 1200 && ['h', 'i', 't', 'a'].includes(key)) {
       pressedG = 0;
       event.preventDefault();
       if (key === 'h') go(homeHref());

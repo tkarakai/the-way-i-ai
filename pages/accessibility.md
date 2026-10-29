@@ -19,10 +19,10 @@ You shouldn’t have to configure the same thing on every website, so the site f
 
 ## Settings on this site
 
-Choose **Shortcuts** at the bottom of any page (it’s called **Settings** on touch screens), or press `?`. Two switches sit at the top:
+Choose **Settings** at the bottom of any page, or press `?` while shortcuts are on. Two switches sit at the top:
 
 - **Animations:** turns off moving text, entrances, and logo tricks. If your device already asks for reduced motion, they are off, and the switch says so.
-- **Single-key shortcuts:** turns off the one-letter keys listed below it. This helps if you use speech input or sometimes press keys by accident. `⌘ K` or `Ctrl K` still opens search.
+- **Single-key shortcuts:** turns off the one-letter keys listed below it, including `?`. This helps if you use speech input or sometimes press keys by accident. To turn them back on, choose **Settings** at the bottom of any page. `⌘ K` or `Ctrl K` still opens search.
 
 Your choices are remembered in this browser only. The [privacy page](https://thewayiai.com/privacy/) explains what is stored.
 

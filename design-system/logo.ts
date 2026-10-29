@@ -578,6 +578,11 @@
     document.body.append(picker);
     const buttons = [...picker.querySelectorAll<HTMLButtonElement>('[data-pick]')];
     buttons[0].focus();
+    // WebKit can blur the focused item on mouse-down without focusing the clicked button.
+    // Keep focus inside until click handles the choice, otherwise focusout removes it first.
+    picker.addEventListener('mousedown', event => {
+      if (event.target instanceof Element && event.target.closest('button')) event.preventDefault();
+    });
     // Not modal: leaving it with Tab or a click closes it.
     picker.addEventListener('focusout', event => { if (picker && !(event.relatedTarget instanceof Node && picker.contains(event.relatedTarget))) { returnFocus = null; closePicker(); } });
     picker.addEventListener('click', event => {

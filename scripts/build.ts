@@ -23,6 +23,7 @@ import type { PublishedImage } from './assets.ts';
 import { assertSafeMarkdown, assertSafeSVG } from './safety.ts';
 import { buildEdition, topicMarkdown, pageMarkdown, llmsIndex, llmsFull, securityTxt } from './agents.ts';
 import { topicTable, withTopicTable } from './topic-registry.ts';
+import { registerCodeThemes } from '../design-system/code-theme.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // build writes _site/; --site also renders the sharing JPEGs (needs Playwright Chromium);
@@ -75,6 +76,7 @@ const embeddedFonts = fontCSS(font => `data:font/woff2;base64,${font.data.toStri
 const slug = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').trim().replace(/\s+/g, '-');
 const plain = (text: string) => text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
 const safeJSON = (value: unknown) => JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
+registerCodeThemes();
 const codeCache = new Map<string, Promise<string>>();
 const renderedCode = new WeakMap<Tokens.Code, string>();
 async function topicAsset(topic: string, path: string) {
@@ -96,7 +98,7 @@ async function renderCode(text: string, lang: string) {
   const key = `${lang}\n${text}`;
   if (!codeCache.has(key)) codeCache.set(key, preloadFile({
     file: { name: `example.${lang === 'yaml' ? 'yaml' : lang === 'bash' || lang === 'sh' ? 'sh' : 'txt'}`, contents: text, lang: (lang || 'text') as NonNullable<Parameters<typeof preloadFile>[0]['file']['lang']> },
-    options: { theme: { light: 'github-light', dark: 'github-dark' }, themeType: 'system', overflow: 'wrap', disableLineNumbers: true, disableFileHeader: true,
+    options: { theme: { light: 'reader-light', dark: 'reader-dark' }, themeType: 'system', overflow: 'wrap', disableLineNumbers: true, disableFileHeader: true,
       unsafeCSS: ':host { color-scheme: inherit; --diffs-bg: var(--code); --diffs-fg: var(--ink); } [data-code] { padding-block: 12px; }' }
   }).then(result => (result.prerenderedHTML ?? '').replace(/(<pre\b[^>]*?) tabindex="0"/g, '$1').replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (_, css: string) => `<link rel="stylesheet" href="${ROOT}${assets.add('code.css', css)}">`)));
   return codeCache.get(key)!;

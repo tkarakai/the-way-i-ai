@@ -12,7 +12,7 @@ test('readers can turn animations off; the choice applies before first paint and
   await expect(page.locator('html')).not.toHaveAttribute('data-motion', 'reduce');
   await page.locator('.footer-shortcuts').click();
   const dialog = page.locator('.shortcuts-dialog');
-  await expect(dialog).toHaveAccessibleName('Shortcuts and settings');
+  await expect(dialog).toHaveAccessibleName('Settings');
   const animations = dialog.getByRole('switch', { name: /Animations/ });
   await expect(animations).toBeChecked();
   await animations.uncheck();
@@ -53,6 +53,22 @@ test('single-key shortcuts can be turned off; modifier shortcuts keep working', 
   await expect(page.locator('.shortcuts-dialog')).toBeHidden();
   await page.keyboard.press('ControlOrMeta+k');
   await expect(page.locator('.search-dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.search-dialog')).toBeHidden();
+  // Settings remain discoverable and usable after disabling their own shortcut and navigating.
+  await page.goto(url('index.html'));
+  const settings = page.getByRole('button', { name: 'Settings', exact: true });
+  await expect(settings).toBeVisible();
+  await expect(settings.locator('kbd')).toBeHidden();
+  await settings.click();
+  await expect(page.getByRole('dialog', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('switch', { name: /Single-key shortcuts/ })).not.toBeChecked();
+  await page.getByRole('switch', { name: /Single-key shortcuts/ }).check();
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await expect(page.locator('html')).not.toHaveAttribute('data-shortcuts');
+  await page.locator('body').press('?');
+  await expect(page.getByRole('dialog', { name: 'Settings', exact: true })).toBeVisible();
 });
 
 test('the Atlas topic drawer is modal: Tab stays inside and single keys do nothing behind it', async ({ page }) => {

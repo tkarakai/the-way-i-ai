@@ -297,6 +297,42 @@ test('secret: triple-click plays the next trick; typing “ai” opens a menu th
 });
 
 for (const design of ['atlas', 'folio'] as const) {
+  test(`${design}: every logo menu choice plays with the mouse, and keyboard selection and dismissal work`, async ({ page, context }) => {
+    await context.addInitScript(choice => localStorage.setItem('the-way-i-ai-design', choice), design);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(url('index.html'));
+    const logo = page.locator('.hero-wordmark .wordmark');
+    const picker = page.getByRole('dialog', { name: 'Logo tricks' });
+    for (const trick of tricks) {
+      await page.locator('body').press('a');
+      await page.keyboard.press('i');
+      await picker.locator(`[data-pick="${trick}"]`).click();
+      await expect(picker).toHaveCount(0);
+      await expect(logo).toHaveAttribute('data-trick', trick);
+      expect(await logo.evaluate(node => node.getAnimations({ subtree: true }).some(animation => animation.playState === 'running'))).toBe(true);
+      // Finish each performance so every choice starts from rest, on the real browser clock.
+      await logo.evaluate(node => node.parentElement!.getAnimations({ subtree: true }).filter(animation => animation.effect?.getComputedTiming().endTime !== Infinity).forEach(animation => animation.finish()));
+      await expect(logo).not.toHaveAttribute('data-trick');
+    }
+    await page.keyboard.type('ai');
+    await page.keyboard.press('ArrowDown');
+    await expect(picker.locator('[data-pick="glow"]')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(logo).toHaveAttribute('data-trick', 'glow');
+    await expect(picker).toHaveCount(0);
+    await page.keyboard.type('ai');
+    // Tab away from the final item dismisses the nonmodal menu.
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Tab');
+    await expect(picker).toHaveCount(0);
+    await page.locator('body').press('a');
+    await page.keyboard.press('i');
+    await page.keyboard.press('Escape');
+    await expect(picker).toHaveCount(0);
+  });
+}
+
+for (const design of ['atlas', 'folio'] as const) {
   test(`${design}: F turns focus mode on and off, and is ignored while typing`, async ({ page, context }) => {
     await context.addInitScript(choice => localStorage.setItem('the-way-i-ai-design', choice), design);
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -345,9 +381,11 @@ for (const design of ['atlas', 'folio'] as const) {
     await page.waitForLoadState();
     await page.locator('body').press('[');
     await expect(page).toHaveURL(new RegExp(`topics/${registry.topics[1]}/index.html`));
+    await page.waitForLoadState();
     await page.locator('body').press('g');
     await page.locator('body').press('i');
     await expect(page).toHaveURL(/general-index\/index\.html$/);
+    await page.waitForLoadState();
     await page.locator('body').press('g');
     await page.locator('body').press('h');
     await expect(page).toHaveURL(/\/index\.html$/);

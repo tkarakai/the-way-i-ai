@@ -454,7 +454,7 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 .share-end button { gap: 8px; color: var(--ink); }
 .share-end svg { width: 16px; height: 16px; }
 @media (max-width: 760px) { .masthead:has(.focus-toggle) .share-trigger { display: none; } }
-/* Shortcuts and settings: opened with “?” or from the footer. Touch screens get only the settings, titled “Settings”. */
+/* Settings: always available from the footer, or with “?” while shortcuts are on. */
 .shortcuts-dialog { width: min(480px, calc(100% - 32px)); overflow-y: auto; }
 .for-touch { display: none; }
 @media (hover: none) and (pointer: coarse) {
@@ -462,6 +462,7 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
   .shortcuts-dialog .preference-group { margin: 0; padding: 0; border: 0; }
 }
 .shortcut-group { break-inside: avoid; margin-bottom: 18px; }
+.shortcut-heading { margin: 0 0 16px; font-size: 16px; }
 .shortcut-group:last-child { margin-bottom: 0; }
 .shortcut-group h3 { margin: 0 0 6px; color: var(--accent); font: 500 10.5px/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
 /* Wide screens: the groups flow into two balanced columns and the two settings sit side by side, to avoid scrolling. */
@@ -484,6 +485,7 @@ html:has(dialog[open], .plates-menu[open]) { overflow: hidden; }
 .footer-shortcuts { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
 .footer-shortcuts:hover { color: var(--ink); }
 .footer-shortcuts kbd { min-width: 0; margin-left: 4px; padding: 0 5px; font-size: 10px; }
+:root[data-shortcuts='off'] .footer-shortcuts kbd { display: none; }
 /* The panel also holds the animation setting, so it stays available on touch screens; only the key hint goes. */
 @media (hover: none), (max-width: 760px) { .footer-shortcuts kbd { display: none; } }
 .preference-group { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }

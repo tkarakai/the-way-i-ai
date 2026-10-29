@@ -187,7 +187,7 @@ The collection name, when shown on two lines, must be “the way I” / “AI”
 
 Use the shared `.wordmark` component; do not recreate the lettering or reintroduce the asterisk. See the [design-system guide](design-system/README.md#build-contract) for wordmark placement and sizing. Other brand mentions, such as the footer, remain on one line.
 
-The optional `titleBackground` in `topics/topics.json` references a local image relative to `topics/`. Keep its source in `topics/assets/`; the generator publishes one shared image referenced by the stylesheet and reused by every wordmark. The optional `titleBackgroundPosition` references the wave editor's JSON export, currently `assets/title-wave-position.json`. Preserve its exact corner coordinates in title-relative em units. The generator produces a static CSS projection, so the wave and letters scale together without JavaScript or separate mobile offsets. Preserve offline rendering and verify both themes at large and miniature sizes.
+The optional `titleBackground` in `topics/topics.json` references a local image relative to `topics/`. Keep its source in `topics/assets/`; the generator publishes one shared image referenced by the stylesheet and reused by every wordmark. The optional `titleBackgroundPosition` references positioning JSON, currently `assets/title-wave-position.json`. Preserve its exact corner coordinates in title-relative em units. The generator produces a static CSS projection, so the wave and letters scale together without JavaScript or separate mobile offsets. Preserve offline rendering and verify both themes at large and miniature sizes.
 
 ### Two designs: Field Atlas (default) and Folio
 

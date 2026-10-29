@@ -144,10 +144,6 @@ Install Playwright Chromium first with `npx playwright install chromium`. Public
 
 This builds the current checkout into `_site/` and serves it at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`). If another worktree is using that port, the server chooses an available one. After editing, run `npm run build:site` in another terminal and refresh the browser. This full-site preview uses the publication content and theme.
 
-For the title color study, run `node previews/build-title-colors.ts` after `npm run build`, then open `previews/title-colors.html` locally. Its color controls affect only the study. The generator stays in the repository; generated preview HTML is ignored and excluded from the publication bundle.
-
-For the draggable wave editor, run `node previews/build-title-wave-editor.ts` after building, then open `previews/title-wave-editor.html`. Its four corners are measured in title-relative em units. Save an approved export to `topics/assets/title-wave-position.json` and rebuild to apply it to the collection title and every miniature header wordmark. The static comparison pages can be rebuilt with `node previews/build-title-wave-edges.ts` and its `--refine` option.
-
 Every pull request also produces a **site-preview-pr-N** artifact in its **Publish collection** workflow run. Follow the download link in the run summary, unzip the artifact, and serve its folder over HTTP (for example, with `npx serve`). The artifact includes the complete offline site and supporting source files, expires after 14 days, and does not change the public Pages site.
 
 ## Publishing to GitHub Pages (notes to self)

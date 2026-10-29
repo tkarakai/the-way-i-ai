@@ -28,6 +28,7 @@ const icons = {
   focus: icon('<path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/>'),
   navigation: icon('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>'),
   design: icon('<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.7 1.8-1.6 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7H16a5 5 0 0 0 5-5c0-4.3-4-7.3-9-7.3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>'),
+  link: icon('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
   share: icon('<path d="M12 15V3m-4 4 4-4 4 4"/><path d="M7 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1"/>'),
   plates: icon('<rect x="3" y="4" width="7.5" height="7" rx="1"/><rect x="13.5" y="4" width="7.5" height="7" rx="1"/><rect x="3" y="13" width="7.5" height="7" rx="1"/><rect x="13.5" y="13" width="7.5" height="7" rx="1"/>'),
 };
@@ -87,10 +88,22 @@ function shortcutsDialog(page: string, isTopic: boolean) {
   // so the accessible name always matches what is shown.
   return `<dialog class="shortcuts-dialog" aria-labelledby="shortcuts-title"><div class="dialog-head"><h2 id="shortcuts-title"><span class="for-keys">Shortcuts and settings</span><span class="for-touch">Settings</span></h2><button type="button" class="small-button" data-close-dialog aria-label="Close (Esc)">Esc</button></div>${preferences}<div class="shortcut-columns for-keys">${groups.map(([title, rows]) => `<section class="shortcut-group"><h3>${title}</h3><dl class="shortcut-list">${rows.map(([keys, action, className]) => `<div${className ? ` class="${className}"` : ''}><dt>${keys}</dt><dd>${escape(action)}</dd></div>`).join('')}</dl></section>`).join('')}</div></dialog>`;
 }
-/** Filled from the page's own Open Graph tags by reader.ts; the device share button appears only where supported. */
+// Network marks from Simple Icons (CC0), drawn in the current colour; each tile takes its network's colour on hover.
+const mark = (path: string) => `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${path}"/></svg>`;
+const shareMarks: Record<string, string> = {
+  email: icon('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>'),
+  linkedin: mark('M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.23 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z'),
+  bluesky: mark('M12 10.8C10.91 8.69 7.95 4.75 5.2 2.8 2.57.94 1.56 1.27.9 1.57.14 1.91 0 3.08 0 3.77c0 .69.38 5.65.62 6.48.82 2.74 3.71 3.66 6.38 3.36-3.91.58-7.39 2.01-2.83 7.08 5.01 5.19 6.87-1.11 7.83-4.31.95 3.2 2.05 9.27 7.73 4.31 4.27-4.31 1.17-6.5-2.74-7.08 2.67.3 5.57-.62 6.38-3.36.25-.83.63-5.79.63-6.48 0-.69-.14-1.86-.9-2.2-.66-.3-1.67-.62-4.3 1.24C16.05 4.75 13.09 8.69 12 10.8z'),
+  x: mark('M18.9 1.15h3.68l-8.04 9.19L24 22.85h-7.4l-5.8-7.59-6.64 7.59H.47l8.6-9.83L0 1.15h7.59l5.24 6.93 6.07-6.93zm-1.29 19.5h2.04L6.49 3.24H4.3l13.31 17.41z'),
+};
+/**
+ * Filled from the page's own Open Graph tags by reader.ts. A row of icon tiles: Copy link first and focused on open,
+ * the device share sheet where supported, then email and social sites. The link field appears only if copying fails.
+ */
 function shareDialog(isTopic: boolean) {
   const targets = [['email', 'Email'], ['linkedin', 'LinkedIn'], ['bluesky', 'Bluesky'], ['x', 'X']];
-  return `<dialog class="share-dialog" aria-labelledby="share-title"><div class="dialog-head"><h2 id="share-title">Share this ${isTopic ? 'topic' : 'page'}</h2><button type="button" class="small-button" data-close-dialog aria-label="Close (Esc)">Esc</button></div><span class="sr-only" role="status" data-copy-status></span><figure class="sharing-card" data-share-card><img alt="" decoding="async"><figcaption><span class="sharing-site"></span><span class="sharing-title"></span><span class="sharing-description"></span></figcaption></figure><div class="share-link"><label class="sr-only" for="share-url">Link</label><input id="share-url" type="url" readonly><button type="button" class="small-button share-primary" data-copy-link>Copy link</button></div><div class="share-targets"><button type="button" class="small-button" data-share-native hidden>Share…</button>${targets.map(([target, label]) => `<a class="small-button" data-share-target="${target}"${target === 'email' ? '' : ' target="_blank" rel="noopener noreferrer"'}>${label}</a>`).join('')}</div></dialog>`;
+  const tile = (glyph: string, label: string) => `<span class="share-disc">${glyph}</span><span class="share-label">${label}</span>`;
+  return `<dialog class="share-dialog" aria-labelledby="share-title"><div class="dialog-head"><h2 id="share-title">Share this ${isTopic ? 'topic' : 'page'}</h2><button type="button" class="small-button" data-close-dialog aria-label="Close (Esc)">Esc</button></div><span class="sr-only" role="status" data-copy-status></span><figure class="sharing-card" data-share-card><img alt="" decoding="async"><figcaption><span class="sharing-site"></span><span class="sharing-title"></span><span class="sharing-description"></span></figcaption></figure><div class="share-targets"><button type="button" class="share-tile share-copy" data-copy-link autofocus>${tile(icons.link, 'Copy link')}</button><button type="button" class="share-tile" data-share-native hidden>${tile(icons.share, 'More…')}</button>${targets.map(([target, label]) => `<a class="share-tile" data-share-target="${target}"${target === 'email' ? '' : ` target="_blank" rel="noopener noreferrer" aria-label="${label} (opens in a new tab)"`}>${tile(shareMarks[target], label)}</a>`).join('')}</div><div class="share-link" hidden><label class="sr-only" for="share-url">Link</label><input id="share-url" type="url" readonly></div></dialog>`;
 }
 /** The build's edition: when it was built, from which commit. Not an authored content date. */
 function editionStamp(edition: Edition, prefix: string) {

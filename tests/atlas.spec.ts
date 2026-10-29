@@ -511,6 +511,9 @@ test('the share button shows the page’s own card and copies its canonical link
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(1200);
   await expect(dialog.locator('.sharing-title')).toHaveText(await page.locator('h1').innerText());
   const link = `https://thewayiai.com/topics/${registry.topics[0]}/`;
+  // Copy link is the default action; the link field appears only if copying fails.
+  await expect(dialog.locator('[data-copy-link]')).toBeFocused();
+  await expect(dialog.locator('#share-url')).toBeHidden();
   await expect(dialog.locator('#share-url')).toHaveValue(link);
   await expect(dialog.locator('[data-share-target="linkedin"]')).toHaveAttribute('href', `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`);
   await dialog.locator('[data-copy-link]').click();

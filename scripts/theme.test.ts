@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
-import ts from 'typescript';
+import { stripTypeScriptTypes } from 'node:module';
 
 const source = await readFile(new URL('../design-system/theme.ts', import.meta.url), 'utf8');
-const script = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.None } }).outputText;
+const script = stripTypeScriptTypes(source);
 const hour = 60 * 60 * 1000;
 const start = 1_000_000_000_000;
 const key = 'the-way-i-ai-theme';

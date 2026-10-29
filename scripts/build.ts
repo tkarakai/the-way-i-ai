@@ -1,10 +1,10 @@
-import ts from 'typescript';
 import type { Collection, RenderedTopic, SourceDocument, RenderedDocument, RenderedPage, PageLink, Heading } from '../design-system/types.ts';
 import type { Tokens } from 'marked';
 import { readFile, writeFile, access, mkdir, rm, cp, rename, realpath, readdir, lstat } from 'node:fs/promises';
 import { dirname, resolve, relative, basename, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { stripTypeScriptTypes } from 'node:module';
 import { Marked, Renderer } from 'marked';
 import { preloadFile } from '@pierre/diffs/ssr';
 import { shell, collectionBody, readerBody, indexBody, pageBody, escape } from '../design-system/layout.ts';
@@ -36,7 +36,7 @@ const outputRoot = resolve(root, '_site');
 const existingEdition = check ? await readFile(resolve(outputRoot, 'version.json'), 'utf8').then(text => JSON.parse(text) as import('../design-system/types.ts').Edition, () => undefined) : undefined;
 const edition = existingEdition ?? buildEdition(root);
 const read = (path: string) => readFile(resolve(root, path), 'utf8');
-const compile = (path: string) => read(path).then(source => ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.None } }).outputText);
+const compile = (path: string) => read(path).then(source => stripTypeScriptTypes(source));
 const [registry, css, js, themeJS] = await Promise.all([
   read('topics/topics.json').then(text => JSON.parse(text) as Collection),
   // Folio is the base stylesheet; the Field Atlas (default) is scoped to :root[data-design="atlas"].

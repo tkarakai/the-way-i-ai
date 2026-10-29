@@ -13,6 +13,23 @@
     else update();
   };
   (window as Window & { transitionPage?: typeof transitionPage }).transitionPage = transitionPage;
+  /*
+   * Safari's default Tab order (macOS “Keyboard navigation” off) skips links, buttons, disclosures and checkboxes,
+   * reaching only text fields. An explicit tabindex brings them back, so every control is reachable with Tab in every
+   * browser. Controls that set their own tabindex (-1 for roving focus or mouse-only duplicates) keep it, and controls
+   * added later, such as search results and copy buttons, are included as they appear.
+   */
+  const tabbable = 'a[href], button, summary, input:not([type="hidden"]), select, textarea';
+  const keepTabbable = (scope: ParentNode) => scope.querySelectorAll<HTMLElement>(tabbable).forEach(control => { if (!control.hasAttribute('tabindex')) control.tabIndex = 0; });
+  keepTabbable(document);
+  // Links count once they have an address, which some (the share targets) get only after load.
+  const include = (node: Node) => {
+    if (!(node instanceof HTMLElement)) return;
+    if (node.matches(tabbable) && !node.hasAttribute('tabindex')) node.tabIndex = 0;
+    keepTabbable(node);
+  };
+  new MutationObserver(records => records.forEach(record => { if (record.type === 'attributes') include(record.target); else record.addedNodes.forEach(include); }))
+    .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['href'] });
   /**
    * Dates read as how long ago, to the month (“8 months ago”, “last month”); the exact date appears on hover,
    * and on a tap outside links. This runs in the browser, so generated HTML never depends on the build date;

@@ -111,3 +111,21 @@ test('controls are named by their visible text, and Escape in the outline find n
   await page.keyboard.press('Escape');
   await expect(page.locator('#outline')).toBeFocused();
 });
+
+test('every control is in the Tab order, even with Safari’s default keyboard setting, and overlays close with an X', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // Search loads its index over HTTP, so this page comes from the test server.
+  await page.goto(new URL(`topics/${registry.topics[1]}/index.html`, 'http://127.0.0.1:4193/').href);
+  const untabbable = () => page.evaluate(() => [...document.querySelectorAll('a[href], button, summary, input:not([type="hidden"]), select, textarea')].filter(control => !control.hasAttribute('tabindex')).map(control => control.outerHTML.slice(0, 80)));
+  expect(await untabbable()).toEqual([]);
+  // Controls added later are included too.
+  await page.locator('[data-open-search]').click();
+  await page.locator('#collection-search').fill('worktree');
+  await expect(page.locator('.search-result').first()).toBeVisible();
+  expect(await untabbable()).toEqual([]);
+  for (const close of await page.locator('[data-close-dialog], [data-close-search], [data-close-plates]').all()) {
+    await expect(close).toHaveAttribute('aria-label', /^Close/);
+    await expect(close.locator('svg')).toHaveCount(1);
+    await expect(close).toHaveText('');
+  }
+});

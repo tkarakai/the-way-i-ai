@@ -404,15 +404,18 @@
     };
     shareDialog.querySelectorAll<HTMLAnchorElement>('[data-share-target]').forEach(link => { link.href = targets[link.dataset.shareTarget!]; });
     const copy = shareDialog.querySelector<HTMLButtonElement>('[data-copy-link]')!;
+    const copyLabel = copy.querySelector<HTMLElement>('.share-label')!;
     let copiedTimer: ReturnType<typeof setTimeout>;
     const copyStatus = shareDialog.querySelector<HTMLElement>('[data-copy-status]')!;
     copy.addEventListener('click', async () => {
       let copied = true;
-      try { await navigator.clipboard.writeText(url); } catch { field.focus(); field.select(); copied = document.execCommand('copy'); }
-      copy.textContent = copied ? 'Copied ✓' : 'Copy failed';
+      // Where the clipboard is unavailable, the link field appears, selected, so it can still be copied by hand.
+      try { await navigator.clipboard.writeText(url); } catch { field.parentElement!.hidden = false; field.focus(); field.select(); copied = document.execCommand('copy'); }
+      copyLabel.textContent = copied ? 'Copied ✓' : 'Copy failed';
+      copy.classList.toggle('is-copied', copied);
       speak(copyStatus, copied ? 'Link copied' : 'Copy failed. The link is selected; copy it with your keyboard.');
       clearTimeout(copiedTimer);
-      copiedTimer = setTimeout(() => { copy.textContent = 'Copy link'; }, 2000);
+      copiedTimer = setTimeout(() => { copyLabel.textContent = 'Copy link'; copy.classList.remove('is-copied'); }, 2000);
     });
     const native = shareDialog.querySelector<HTMLButtonElement>('[data-share-native]')!;
     if (typeof navigator.share === 'function') {

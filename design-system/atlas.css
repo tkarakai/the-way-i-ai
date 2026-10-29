@@ -281,7 +281,9 @@ a.turn-card:hover .turn-portrait { transform: scale(1.05); }
 [data-design='atlas'] .explorer-head h2, [data-design='atlas'] .explorer-panel h3 { font-family: var(--display); font-weight: 600; }
 [data-design='atlas'] :is(.search-dialog, .shortcuts-dialog, .share-dialog) { border-radius: 0; }
 [data-design='atlas'] :is(.sharing-card, .share-link input) { border-radius: 0; }
-[data-design='atlas'] :is(.share-targets, .share-end, .share-link) .small-button { border-radius: 999px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; }
+[data-design='atlas'] .share-label { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; }
+@media (max-width: 480px) { [data-design='atlas'] .share-label { font-size: 10px; letter-spacing: 0; } }
+[data-design='atlas'] .share-end .small-button { border-radius: 999px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; }
 [data-design='atlas'] .dialog-head h2 { font: italic 600 24px/1 var(--display); }
 [data-design='atlas'] .search-result small { font-family: var(--mono); letter-spacing: .06em; }
 

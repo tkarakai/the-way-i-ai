@@ -37,6 +37,18 @@ test('the README topic table lists canonical order, source documents and the liv
   assert.match(table, /<!-- topics:end -->$/);
 });
 
+test('backslashes cannot unescape a table separator or link bracket', () => {
+  const table = topicTable('https://thewayiai.com/', [
+    { id: 'paths', number: '01', title: 'C:\\|temp', description: 'Ends in \\', documents: [{ file: 'README.md', title: 'x' }, { file: 'B.md', title: 'a\\]b' }] }
+  ]);
+  const row = table.split('\n').find(line => line.startsWith('| **01'))!;
+  assert.ok(row.includes('**01 · C:\\\\\\|temp**'), row);
+  assert.ok(row.includes('| Ends in \\\\ |'), row);
+  assert.ok(row.includes('[a\\\\\\]b](topics/paths/B.md)'), row);
+  // Only the row's two borders and three column separators remain unescaped.
+  assert.equal(row.replace(/\\./g, '').split('|').length - 1, 5);
+});
+
 test('the generated table replaces exactly one marked block', () => {
   const readme = 'Intro\n\n<!-- topics:start -->\nold\n<!-- topics:end -->\n\nAfter\n';
   assert.equal(withTopicTable(readme, 'NEW'), 'Intro\n\nNEW\n\nAfter\n');

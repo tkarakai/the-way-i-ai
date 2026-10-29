@@ -12,6 +12,8 @@ export interface PublishedPage {
   created?: string;
   updated?: string;
   sharingImage?: { path: string; alt: string; width: number; height: number };
+  /** The complete article as HTML with absolute links, for the full-text feed. */
+  content?: string;
 }
 
 export function validatePublication(collection: Collection): void {
@@ -25,6 +27,10 @@ export function validatePublication(collection: Collection): void {
   }
   const author = new URL(collection.author.url);
   if (author.protocol !== 'https:' || author.username || author.password) throw new Error('author.url must be an HTTPS profile URL.');
+  if (collection.repositoryUrl) {
+    const repository = new URL(collection.repositoryUrl);
+    if (repository.protocol !== 'https:' || repository.username || repository.password) throw new Error('repositoryUrl must be an HTTPS URL.');
+  }
 }
 
 export function canonicalURL(siteUrl: string, path: string): string {
@@ -32,7 +38,8 @@ export function canonicalURL(siteUrl: string, path: string): string {
     throw new Error(`Invalid publication path: ${path}`);
   }
   const base = new URL(siteUrl);
-  const url = new URL(path === 'index.html' ? './' : path, base);
+  // Pages are published as folder URLs: topics/worktrees/index.html is topics/worktrees/.
+  const url = new URL(path.replace(/(?:^|\/)index\.html$/, match => match.startsWith('/') ? '/' : '') || './', base);
   if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) throw new Error(`Publication path escapes siteUrl: ${path}`);
   return url.href;
 }
@@ -41,8 +48,10 @@ export function pageMetadata(collection: Collection, page: PublishedPage): strin
   const url = canonicalURL(collection.siteUrl, page.path);
   const home = canonicalURL(collection.siteUrl, 'index.html');
   const author = { '@type': 'Person', name: collection.author.name, url: collection.author.url };
+  const publisher = { '@type': 'Organization', name: collection.title, url: home,
+    logo: { '@type': 'ImageObject', url: canonicalURL(collection.siteUrl, 'favicon-512.png'), width: 512, height: 512 } };
   const image = page.sharingImage ? { '@type': 'ImageObject', url: canonicalURL(collection.siteUrl, page.sharingImage.path), width: page.sharingImage.width, height: page.sharingImage.height, caption: page.sharingImage.alt } : undefined;
-  const website = { '@type': 'WebSite', '@id': `${home}#website`, url: home, name: collection.title, description: collection.description, author, inLanguage: 'en', ...(image && page.kind === 'collection' ? { image } : {}) };
+  const website = { '@type': 'WebSite', '@id': `${home}#website`, url: home, name: collection.title, description: collection.description, author, publisher, inLanguage: 'en', ...(image && page.kind === 'collection' ? { image } : {}) };
   const entity = {
     '@context': 'https://schema.org',
     ...(page.kind === 'collection' ? website : {
@@ -55,8 +64,14 @@ export function pageMetadata(collection: Collection, page: PublishedPage): strin
       inLanguage: 'en',
       isPartOf: { '@type': 'WebSite', '@id': website['@id'], url: home, name: collection.title },
       ...(page.created ? { datePublished: page.created } : {}),
-      ...(page.updated ? { dateModified: page.updated } : {})
+      ...(page.updated ? { dateModified: page.updated } : {}),
+      ...(page.kind === 'article' ? { publisher } : {})
     })
+  };
+  // Where the page sits: the collection, then the page itself.
+  const breadcrumbs = page.kind === 'collection' ? undefined : {
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+    itemListElement: [{ name: collection.title, item: home }, { name: page.title, item: url }].map((entry, index) => ({ '@type': 'ListItem', position: index + 1, ...entry }))
   };
   const meta = (name: string, content: string, attribute = 'property') => `<meta ${attribute}="${xml(name)}" content="${xml(content)}">`;
   return `<link rel="canonical" href="${xml(url)}">`
@@ -67,7 +82,7 @@ export function pageMetadata(collection: Collection, page: PublishedPage): strin
     + (image ? meta('og:image', image.url) + meta('og:image:type', 'image/jpeg') + meta('og:image:width', String(image.width)) + meta('og:image:height', String(image.height)) + meta('og:image:alt', page.sharingImage!.alt)
       + meta('twitter:image', image.url, 'name') + meta('twitter:image:alt', page.sharingImage!.alt, 'name') : '')
     + (page.kind === 'article' ? meta('author', collection.author.name, 'name') + meta('article:author', collection.author.url) + (page.category ? meta('article:section', page.category) : '') : '')
-    + `<script type="application/ld+json">${safeJSON(entity)}</script>`;
+    + `<script type="application/ld+json">${safeJSON(breadcrumbs ? [entity, breadcrumbs] : entity)}</script>`;
 }
 
 export function sitemap(collection: Collection, pages: PublishedPage[]): string {

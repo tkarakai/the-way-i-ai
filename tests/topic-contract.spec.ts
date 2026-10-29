@@ -21,13 +21,13 @@ const sources = await Promise.all(registry.topics.map(async id => {
 for (const width of [1440, 390, 320]) {
   for (const theme of ['light', 'dark'] as const) {
     test(`every topic follows the same Markdown publishing contract at ${width}px in ${theme}`, async ({ page, context }) => {
-      await context.setOffline(true);
+      await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
       await page.setViewportSize({ width, height: 1000 });
       await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
       const errors: string[] = [];
       page.on('pageerror', error => errors.push(error.message));
       for (const { id, topic, documents } of sources) {
-        await page.goto(new URL(`topics/${id}/index.html`, root).href);
+        await page.goto(new URL(`topics/${id}/index.html`, 'http://127.0.0.1:4193/').href);
         await page.evaluate(() => document.fonts.ready);
         await expect(page.locator('h1')).toHaveText(documents[0].title);
         await expect(page.locator('h1')).toHaveCount(1);
@@ -54,7 +54,7 @@ for (const width of [1440, 390, 320]) {
 
 test('multipart companion chapters reveal on scroll and remain searchable', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto(new URL('topics/worktrees/index.html', root).href);
+  await page.goto(new URL('topics/worktrees/index.html', 'http://127.0.0.1:4193/').href);
   const companion = page.locator('.prose[data-source="WORKFLOW.md"]');
   await expect(companion.locator('.article-reveal').first()).toHaveAttribute('data-reveal', 'pending');
   const chapter = companion.locator('.article-reveal').first();

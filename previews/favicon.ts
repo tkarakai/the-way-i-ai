@@ -1,4 +1,4 @@
-// An unwired favicon study, derived from the current wordmark. Run with Node 24.
+// Regenerate the approved favicon assets from the current wordmark. Run with Node 24.
 import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -11,7 +11,7 @@ await mkdir(assets, { recursive: true });
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage({ viewport: { width: 1000, height: 1000 }, javaScriptEnabled: false });
-  await page.goto(pathToFileURL(resolve('index.html')).href);
+  await page.goto(pathToFileURL(resolve('_site/index.html')).href);
   await page.evaluate(async () => {
     await document.fonts.ready;
     const original = document.querySelector<HTMLElement>('.hero-wordmark .wordmark')!;

@@ -1,9 +1,10 @@
+import { PNG } from 'pngjs';
 import { test, expect } from './fixtures.ts';
 
-const home = new URL('../_site/index.html', import.meta.url).href;
+const home = new URL('index.html', 'http://127.0.0.1:4193/').href;
 
 test('Murmuration renders offline at 20%, responds to themes, and suspends motion', async ({ page, context }) => {
-  await context.setOffline(true);
+  await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.goto(home);
@@ -52,18 +53,9 @@ for (const width of [1440, 390, 320]) {
     await page.evaluate(() => document.fonts.ready);
     for (const selector of ['.hero-wordmark .wordmark']) {
       const image = await page.locator(selector).screenshot();
-      const minimum = await page.evaluate(async data => {
-        const image = new Image(); image.src = data; await image.decode();
-        const canvas = document.createElement('canvas');
-        canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
-        const ctx = canvas.getContext('2d')!; ctx.drawImage(image, 0, 0);
-        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-        const channels = [255, 255, 255];
-        for (let i = 0; i < pixels.length; i += 4) {
-          channels.forEach((value, channel) => { channels[channel] = Math.min(value, pixels[i + channel]); });
-        }
-        return channels;
-      }, `data:image/png;base64,${image.toString('base64')}`);
+      const pixels = PNG.sync.read(image).data;
+      const minimum = [255, 255, 255];
+      for (let i = 0; i < pixels.length; i += 4) minimum.forEach((value, channel) => { minimum[channel] = Math.min(value, pixels[i + channel]); });
       // All dark-theme ink is lighter than the paper (#24221f). An inverted
       // white/grey matte used to leave pixels substantially darker than it.
       [36, 34, 31].forEach((paper, channel) => expect(minimum[channel]).toBeGreaterThanOrEqual(paper - 2));

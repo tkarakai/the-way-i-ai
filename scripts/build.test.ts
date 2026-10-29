@@ -26,9 +26,12 @@ async function fixture(t: TestContext) {
   await symlink(resolve(root, 'node_modules'), resolve(path, 'node_modules'), 'dir');
   return {
     path,
-    read: (file: string) => readFile(resolve(path, file), 'utf8'),
-    write: (file: string, text: string) => writeFile(resolve(path, file), text),
-    build: (...args: string[]) => spawnSync(process.execPath, [resolve(path, 'scripts/build.ts'), ...args], { cwd: path, encoding: 'utf8' })
+    read: (file: string) => readFile(resolve(path, /^(?:index\.html|topics\/.*\/index\.html|(?:general-index|about|privacy|licensing)\/index\.html|404\.html|sitemap\.xml|feed\.xml)$/.test(file) ? `_site/${file}` : file), 'utf8'),
+    search: async () => { const html = await readFile(resolve(path, '_site/index.html'), 'utf8'); return JSON.parse(await readFile(resolve(path, '_site', html.match(/data-search-index="([^"]+)/)![1]), 'utf8')) as {title:string;text:string;href:string}[]; },
+    css: async () => { const html=await readFile(resolve(path,'_site/index.html'),'utf8'); return readFile(resolve(path,'_site',html.match(/rel="stylesheet" href="([^"]+)/)![1]),'utf8'); },
+    scripts: async (html: string) => (await Promise.all([...html.matchAll(/<script src="([^"]+)/g)].map(m => readFile(resolve(path,'_site',m[1]),'utf8')))).join('\n'),
+    write: (file: string, text: string) => writeFile(resolve(path, ['sitemap.xml','feed.xml'].includes(file) ? `_site/${file}` : file), text),
+    build: (...args: string[]) => spawnSync(process.execPath, [resolve(path, 'scripts/build.ts'), ...args], { cwd: path, encoding: 'utf8', env: {...process.env, SOURCE_DATE_EPOCH:'1793232000', GITHUB_SHA:'0123456789abcdef0123456789abcdef01234567'} })
   };
 }
 function passed(result: SpawnSyncReturns<string>) { assert.equal(result.status, 0, result.stderr || result.stdout); }
@@ -51,7 +54,7 @@ async function addExplorer(f: Awaited<ReturnType<typeof fixture>>, id: string) {
   });
 }
 
-test('an ordinary new topic builds without renderer changes; its image is embedded and navigation is relative', async t => {
+test('an ordinary new topic builds without renderer changes; its image is shared and navigation is relative', async t => {
   const f = await fixture(t);
   const registry = JSON.parse(await f.read('topics/topics.json'));
   registry.topics.push('new-idea');
@@ -69,17 +72,17 @@ test('an ordinary new topic builds without renderer changes; its image is embedd
   assert.match(index, new RegExp(`class="topic-number">${String(registry.topics.length).padStart(2, '0')}<`));
   assert.ok(html.includes('This complete paragraph belongs to the source.'));
   assert.ok(html.includes('href="../../index.html"'));
-  const embedded = html.match(/src="data:image\/svg\+xml;base64,([^"]+)"/);
-  assert.ok(embedded, 'The generated standalone edition must embed the image');
-  assert.equal(Buffer.from(embedded[1], 'base64').toString(), diagram);
+  const shared = html.match(/src="(\.\.\/\.\.\/assets\/example-[^"]+\.svg)"/);
+  assert.ok(shared, 'Artwork is a shared file');
+  assert.equal(await readFile(resolve(f.path, '_site/topics/new-idea', shared[1]), 'utf8'), diagram);
   assert.ok(!html.includes('data-explorer aria-'), 'An explorer is optional');
   assert.ok(!html.includes('article:published_time'), 'Missing authored dates omit creation metadata');
   assert.ok(!html.includes('class="topic-dates"'), 'Missing authored dates omit the visible date block');
   assert.ok(!html.includes('min read'), 'Reading-time estimates are not rendered');
-  const search = JSON.parse(index.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { title: string; text: string; href: string }[];
+  const search = await f.search();
   assert.ok(search.some(entry => entry.title === 'The premise' && entry.text.includes('This complete paragraph belongs to the source.') && entry.href === 'topics/new-idea/index.html#new-idea-doc-1-the-premise'));
-  const nestedSearch = JSON.parse(html.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { href: string }[];
-  assert.ok(nestedSearch.every(entry => entry.href.startsWith('../../topics/')));
+  const nestedSearch = await f.search();
+  assert.ok(nestedSearch.every(entry => entry.href.startsWith('topics/')));
   passed(f.build('--check'));
 });
 
@@ -105,7 +108,7 @@ test('all topics derive titles and nested outlines from Markdown, preserving aut
   assert.ok(!multipart.includes('class="source-heading"'));
   assert.equal((multipart.match(/class="toc-document-title"/g) ?? []).length, 2);
   assert.equal((multipart.match(/class="document-title"/g) ?? []).length, 1, 'Only companion documents need an additional title boundary');
-  const entries = JSON.parse(html.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { title: string; text: string; href: string }[];
+  const entries = await f.search();
   assert.ok(entries.some(entry => entry.title === 'A source-owned title' && entry.text.includes('Opening prose') && entry.href.endsWith('#just-enough-context-doc-1-title')));
   passed(f.build('--check'));
 
@@ -219,12 +222,11 @@ test('the shared wordmark embeds its background once per page and missing assets
   assert.ok(!index.includes('Explore the collection'));
   assert.ok(index.includes('data-ambient="F"'));
   assert.ok(index.includes('class="ambient-canvas" aria-hidden="true" style="--ambient-intensity:0.2"'));
-  const source = await readFile(resolve(f.path, 'topics/assets/logo-bg.png'));
+  const css = await f.css();
+  assert.match(css, /--wordmark-wave-image: url\("logo-bg-1200-[^"]+\.webp"\)/);
   for (const file of ['index.html', 'topics/worktrees/index.html', 'topics/agent-roles/index.html']) {
     const html = await f.read(file);
-    const images = [...html.matchAll(/--wordmark-wave-image: url\("data:image\/png;base64,([^"]+)"\)/g)];
-    assert.equal(images.length, 1, 'The standalone page embeds one shared copy of the wave');
-    assert.deepEqual(Buffer.from(images[0][1], 'base64'), source);
+    assert.doesNotMatch(html, /data:image/);
     const header = html.match(/<header class="masthead">[\s\S]*?<\/header>/)![0];
     if (file === 'index.html') {
       assert.ok(!header.includes('class="brand"'), 'The homepage hero makes a masthead wordmark redundant');
@@ -265,7 +267,7 @@ test('ambient configuration keeps F homepage-only, allows omission, and rejects 
   const f = await fixture(t);
   const registry = JSON.parse(await f.read('topics/topics.json'));
   passed(f.build());
-  assert.ok((await f.read('index.html')).includes('window.drawMurmuration ='));
+  assert.ok((await f.scripts(await f.read('index.html'))).includes('window.drawMurmuration ='));
   assert.ok(!(await f.read('topics/worktrees/index.html')).includes('window.drawMurmuration'));
   delete registry.ambientBackground;
   await f.write('topics/topics.json', JSON.stringify(registry));
@@ -331,7 +333,7 @@ test('a named Markdown excerpt is shared by the full reader and visual explorer;
   const html = await f.read('topics/agent-roles/index.html');
   const visibleHTML = html.replace(/<script type="application\/json" id="collection-search-data">[\s\S]*?<\/script>/, '');
   assert.equal(visibleHTML.split('This source paragraph is reused in the explorer and full reader.').length - 1, 2);
-  const search = JSON.parse(html.match(/<script type="application\/json" id="collection-search-data">([\s\S]*?)<\/script>/)![1]) as { text: string }[];
+  const search = await f.search();
   assert.ok(search.some(entry => entry.text.includes('This source paragraph is reused in the explorer and full reader.')));
   passed(f.build('--check'));
 });
@@ -386,8 +388,9 @@ test('discovery metadata matches the published inventory and stale sitemap check
     assert.equal(canonical.length, 1);
     assert.ok(canonical[0].includes(`href="${urls[index]}"`));
     const data = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
-    assert.equal(data.url, urls[index]);
-    assert.equal(data['@type'], index === 0 ? 'WebSite' : index === 1 ? 'CollectionPage' : path.startsWith('topics/') ? 'Article' : 'WebPage');
+    const entity = Array.isArray(data) ? data[0] : data;
+    assert.equal(entity.url, urls[index]);
+    assert.equal(entity['@type'], index === 0 ? 'WebSite' : index === 1 ? 'CollectionPage' : path.startsWith('topics/') ? 'Article' : 'WebPage');
     assert.match(html, /rel="alternate" type="application\/rss\+xml"/);
     assert.ok(html.includes(`href="${new URL('feed.xml', registry.siteUrl).href}"`));
   }
@@ -433,11 +436,10 @@ test('the publication bundle is clean and contains the same standalone pages and
   }
   assert.equal(await f.read('_site/topics/worktrees/README.md'), await f.read('topics/worktrees/README.md'));
   assert.equal(await f.read('_site/topics/agent-roles/README.md'), await f.read('topics/agent-roles/README.md'));
-  assert.deepEqual(await readFile(resolve(f.path, '_site/topics/assets/logo-bg.png')), await readFile(resolve(f.path, 'topics/assets/logo-bg.png')));
+  assert.match(await f.css(), /logo-bg-1200-.*\.webp/);
   assert.equal(await f.read('_site/topics/assets/title-wave-position.json'), await f.read('topics/assets/title-wave-position.json'));
   for (const file of ['favicon.ico', 'favicon-16.png', 'favicon-32.png', 'favicon-48.png', 'apple-touch-icon.png', 'favicon-192.png', 'favicon-512.png']) {
     const approved = await readFile(resolve(f.path, 'design-system/assets/favicon', file));
-    assert.deepEqual(await readFile(resolve(f.path, file)), approved);
     assert.deepEqual(await readFile(resolve(f.path, '_site', file)), approved);
   }
   const sharingPaths = new Set<string>();
@@ -457,7 +459,7 @@ test('the publication bundle is clean and contains the same standalone pages and
   const topicHead = (await f.read('_site/topics/worktrees/index.html')).split('</head>')[0];
   assert.match(topicHead, /href="\.\.\/\.\.\/favicon.ico"/);
   assert.match(topicHead, /href="\.\.\/\.\.\/apple-touch-icon.png"/);
-  assert.match(topicHead, /rel="icon" type="image\/png" sizes="32x32" href="data:image\/png;base64,/);
+  assert.match(topicHead, /rel="icon" type="image\/png" sizes="32x32" href="\.\.\/\.\.\/favicon-32\.png/);
   await access(resolve(f.path, '_site/.nojekyll'));
   await assert.rejects(access(resolve(f.path, '_site/stale.html')));
   await assert.rejects(access(resolve(f.path, '_site/node_modules')));
@@ -536,4 +538,20 @@ test('site pages render from pages/ with footer links, and the 404 page links fr
   for (const [, href] of missing.matchAll(/\bhref="([^"#]+)"/g)) assert.ok(/^(?:\/|https:|data:)/.test(href), `404 links must work at any depth: ${href}`);
   await f.write('pages/privacy.md', '# Privacy\n\nOpening.\n\n### Skipped');
   assert.match(f.build().stderr, /headings must not skip levels/);
+});
+
+test('unsafe Markdown and symlinked source files fail without replacing a valid bundle', async t => {
+  const f = await fixture(t);
+  passed(f.build());
+  const original = await f.read('topics/just-enough-context/README.md');
+  const before = await f.read('index.html');
+  await f.write('topics/just-enough-context/README.md', `${original}\n[x](jav&#x61;script:alert%281%29)\n`);
+  const unsafe = f.build();
+  assert.notEqual(unsafe.status, 0); assert.match(unsafe.stderr, /unsupported link/);
+  assert.equal(await f.read('index.html'), before);
+  await f.write('topics/just-enough-context/README.md', original);
+  await symlink(resolve(f.path, 'package.json'), resolve(f.path, 'topics/just-enough-context/outside.json'));
+  const linked = f.build();
+  assert.notEqual(linked.status, 0); assert.match(linked.stderr, /must not be symbolic links/);
+  assert.equal(await f.read('index.html'), before);
 });

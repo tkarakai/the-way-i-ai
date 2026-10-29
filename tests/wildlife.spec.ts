@@ -27,19 +27,19 @@ test('species-only ZIP contents integrate without topic bindings, preserve portr
     await writeFile(resolve(directory, 'manifest.json'), JSON.stringify(manifest));
     const build = () => spawnSync(process.execPath, [resolve(fixture, 'scripts/build.ts')], { cwd: fixture, encoding: 'utf8' });
     const result = build(); expect(result.status, result.stderr).toBe(0);
-    const article = pathToFileURL(resolve(fixture, 'topics/worktrees/index.html')).href;
+    const article = pathToFileURL(resolve(fixture, '_site/topics/worktrees/index.html')).href;
     await context.setOffline(true);
     for (const theme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
       for (const width of [1440, 390, 320]) {
         await page.setViewportSize({ width, height: 1000 });
-        await page.goto(pathToFileURL(resolve(fixture, 'index.html')).href);
+        await page.goto(pathToFileURL(resolve(fixture, '_site/index.html')).href);
         const card = page.locator('.topic-card[href="topics/worktrees/index.html"]');
-        await expect(card).toHaveAccessibleName('Git Worktrees for Claude Code');
-        const src = await card.locator('img').getAttribute('src');
+        await expect(card).toHaveAccessibleName(/Git Worktrees for Claude Code/);
+        const src = await card.locator('img').evaluate((img: HTMLImageElement) => img.src);
         await card.click();
         const portrait = page.locator('.editorial-portrait');
-        await expect(portrait).toHaveAttribute('src', src!);
+        expect(await portrait.evaluate((img: HTMLImageElement) => img.src)).toBe(src);
         await expect(portrait).toHaveCSS('object-fit', 'contain');
         const portraitBox = await portrait.boundingBox();
         expect(Math.abs(portraitBox!.width / portraitBox!.height - 16 / 9)).toBeLessThan(.01);
@@ -48,7 +48,9 @@ test('species-only ZIP contents integrate without topic bindings, preserve portr
         for (const strip of await strips.all()) {
           await strip.scrollIntoViewIfNeeded();
           await expect(strip).toBeVisible();
-          expect(await strip.evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight])).toEqual([1600, 400]);
+          await expect.poll(() => strip.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+          const natural = await strip.evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight]);
+          expect(natural[0]).toBeGreaterThan(0); expect(natural[0] / natural[1]).toBeCloseTo(4, 1);
           expect(await strip.evaluate(img => (img.nextElementSibling ?? img.closest('.article-reveal')?.nextElementSibling?.firstElementChild)?.tagName)).toBe('H2');
           const box = await strip.boundingBox(); expect(Math.abs(box!.width / box!.height - 4)).toBeLessThan(.01);
         }
@@ -65,10 +67,10 @@ test('species-only ZIP contents integrate without topic bindings, preserve portr
       await expect(staticPage.locator('.editorial-portrait')).toBeVisible();
       await expect(staticPage.locator('.editorial-wildlife')).toHaveCount(4);
     } finally { await noJS.close(); }
-    const before = await readFile(resolve(fixture, 'index.html'), 'utf8');
+    const before = await readFile(resolve(fixture, '_site/index.html'), 'utf8');
     manifest.images[1].file = '../bad.png';
     await writeFile(resolve(directory, 'manifest.json'), JSON.stringify(manifest));
     expect(build().status).not.toBe(0);
-    expect(await readFile(resolve(fixture, 'index.html'), 'utf8')).toBe(before);
+    expect(await readFile(resolve(fixture, '_site/index.html'), 'utf8')).toBe(before);
   } finally { await rm(fixture, { recursive: true, force: true }); }
 });

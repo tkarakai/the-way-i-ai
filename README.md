@@ -1,3 +1,5 @@
+<p><strong><a href="https://thewayiai.com/">Read The Way I AI →</a></strong></p>
+
 <h1 align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="topics/assets/readme-logo-dark.png">
@@ -29,16 +31,16 @@ Each topic has authoritative source documents and assets, plus a complete, inter
 
 | Topic | Idea | Markdown | Interactive edition |
 | --- | --- | --- | --- |
-| **01 · Git Worktrees for Claude Code** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Read online](https://thewayiai.com/topics/worktrees/index.html) |
-| **02 · A Framework for Defining AI Agent Roles in an Agentic Organization** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Read online](https://thewayiai.com/topics/agent-roles/index.html) |
-| **03 · A web app starter kit built for the long run** | Architect the starter to stay useful when downstream applications replace its design, without making future improvements undo their product choices. | [The architecture](topics/web-app-starter-kit/README.md) · [Original notes](topics/web-app-starter-kit/web_app_starter_upgrade_notes.md) | [Read online](https://thewayiai.com/topics/web-app-starter-kit/index.html) |
-| **04 · Just Enough Context (JEC)** | Give specialist agents focused context and humans small, timely decisions, backed by reusable project knowledge. | [The concept](topics/just-enough-context/README.md) | [Read online](https://thewayiai.com/topics/just-enough-context/index.html) |
+| **01 · Git Worktrees for Claude Code** | Give every development task its own branch, working directory, and AI session. | [Tools and setup](topics/worktrees/README.md) · [Workflow](topics/worktrees/WORKFLOW.md) | [Read online](https://thewayiai.com/topics/worktrees/) |
+| **02 · A Framework for Defining AI Agent Roles in an Agentic Organization** | Define agents through professional context, operational capabilities, and discoverable profiles. | [Framework](topics/agent-roles/README.md) | [Read online](https://thewayiai.com/topics/agent-roles/) |
+| **03 · A web app starter kit built for the long run** | Architect the starter to stay useful when downstream applications replace its design, without making future improvements undo their product choices. | [The architecture](topics/web-app-starter-kit/README.md) · [Original notes](topics/web-app-starter-kit/web_app_starter_upgrade_notes.md) | [Read online](https://thewayiai.com/topics/web-app-starter-kit/) |
+| **04 · Just Enough Context (JEC)** | Give specialist agents focused context and humans small, timely decisions, backed by reusable project knowledge. | [The concept](topics/just-enough-context/README.md) | [Read online](https://thewayiai.com/topics/just-enough-context/) |
 
 ## About this repository
 
 This is a personal publication, not a template or a product. I keep the repository public so the ideas and the way they are presented can be seen together: the Markdown sources, the small generator that turns them into the site, and the design system behind both designs are all here to read.
 
-It is not meant to be cloned or forked and run as-is. The generator, checks, and design system are shaped around this one collection: its two designs, its artwork, its domain, and whatever I changed my mind about last week. If you want to build something similar, start a new repository of your own and borrow only the ideas that help, such as Markdown as the single source of truth, self-contained pages that also work offline, or sharing cards generated from the same sources.
+It is not meant to be cloned or forked and run as-is. The generator, checks, and design system are shaped around this one collection: its two designs, its artwork, its domain, and whatever I changed my mind about last week. If you want to build something similar, start a new repository of your own and borrow only the ideas that help, such as Markdown as the single source of truth, static pages with shared, cacheable assets, or sharing cards generated from the same sources.
 
 Everything below about building, checking, previewing, and publishing is a set of notes to myself, and to the AI agents that help me maintain the site. The notes are accurate for my setup, but they are not a supported way for anyone else to run it.
 
@@ -52,7 +54,6 @@ Reuse terms are on the [licensing page](https://thewayiai.com/licensing/index.ht
 AGENTS.md                      Primary guide for maintaining content and presentation
 CLAUDE.md                      Points to AGENTS.md
 README.md                      Collection overview and maintenance notes
-index.html                     Generated contents page
 package.json                   Build commands and development dependencies
 package-lock.json              Pinned dependency tree
 topics/
@@ -63,20 +64,16 @@ topics/
     assets/illustrations/      Optional generated images and placement manifest
     worktree-new.sh             wwt tool
     worktree-done.sh            wwtd tool
-    index.html                 Generated edition of both documents
   agent-roles/
     README.md                  Topic metadata, complete role framework, and excerpts
     assets/illustrations/      Optional generated images and placement manifest
-    index.html                 Generated edition
   web-app-starter-kit/
     README.md                  Topic metadata and long-lived starter architecture
     web_app_starter_upgrade_notes.md  Original notes, preserved unchanged
     assets/illustrations/      Optional generated images and placement manifest
-    index.html                 Generated edition of the complete article
   just-enough-context/
     README.md                  Topic metadata and complete JEC article
     assets/illustrations/      Optional generated images and placement manifest
-    index.html                 Generated edition
 design-system/                Shared visual language and generic reader components
 scripts/                       Generator and contract checks
 .github/workflows/pages.yml    GitHub Pages build and deployment
@@ -89,7 +86,7 @@ Diagrams, when authored, are content: their SVG sources live with their topic, w
 
 ## Reading offline
 
-Read the collection on the [live site](https://thewayiai.com/). Every generated HTML file embeds its styles, scripts, fonts, diagrams, and complete text. Cards, contents links, and next-topic links use relative paths with explicit `index.html` filenames, so navigation works through `file://` when the folder structure is kept intact. An individual topic HTML file also works offline when copied on its own, but links to other pages need those files alongside it in their original locations.
+Read the collection on the [live site](https://thewayiai.com/). The publication is a folder of small HTML pages and shared local assets. The former single-file edition is retired to reduce mobile data use. Download a workflow preview artifact, unzip it, and serve the folder locally (for example, run `npx serve` inside it). Once a local server is available, reading, search, themes and navigation work without internet access. Keep the complete folder; an isolated HTML file no longer includes its fonts, scripts or artwork.
 
 GitHub's repository file viewer shows HTML source; the [live site](https://thewayiai.com/) serves the interactive edition. Documentation links lead to that live site, while navigation inside the generated HTML stays relative for both hosted and local reading. The rendered pages contain no links to raw Markdown; source documents remain available in the repository.
 
@@ -105,7 +102,7 @@ In both designs, the header’s share icon (on phones, the button at the end of 
 
 Use Node.js 24 or newer for building. Node.js and npm are not needed for reading.
 
-Topic dates are authored in the main README's optional `created` and `updated` front-matter fields, not derived from Git history or the build clock. Full checkouts, shallow clones, and source archives produce the same HTML; squash merges do not invalidate generated output. See the [date metadata contract](design-system/README.md#build-contract).
+Topic dates are authored in the main README's optional `created` and `updated` front-matter fields, not derived from Git history or the build clock. Authored dates survive squash merges and source archives unchanged. A separate build edition records the UTC build date and source revision. Set `SOURCE_DATE_EPOCH` and `GITHUB_SHA` to reproduce a specific edition. See the [date metadata contract](design-system/README.md#build-contract).
 
 ```sh
 npm ci
@@ -122,7 +119,7 @@ For browser acceptance tests (also run before deployment):
 npm run test:browser
 ```
 
-These tests build `_site/` and exercise standalone offline pages, narrow layouts, keyboard controls, themes, sidebar behavior, and header scrolling. Screenshots and failure traces are written to the ignored `test-results/` directory.
+These tests build `_site/` and exercise pages served locally without external network access, narrow layouts, keyboard controls, themes, sidebar behavior, and header scrolling. Screenshots and failure traces are written to the ignored `test-results/` directory.
 
 `package.json` defines these commands and the development-only dependencies: TypeScript checking/compilation, Markdown parsing, code rendering, fonts, and Playwright tests. `package-lock.json` makes installation reproducible.
 
@@ -143,15 +140,15 @@ Worktree installation paths changed when the topic moved. Existing shell functio
 npm run preview
 ```
 
-Install Playwright Chromium first with `npx playwright install chromium`. Publication builds automatically render the social sharing images from the current titles, artwork, and shared card design; standalone HTML builds and output checks do not require a browser.
+Install Playwright Chromium first with `npx playwright install chromium`. Publication builds automatically render the social sharing images from the current titles, artwork, and shared card design; local builds without sharing-card rasterization and output checks do not require a browser.
 
 This builds the current checkout into `_site/` and serves it at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`). If another worktree is using that port, the server chooses an available one. After editing, run `npm run build:site` in another terminal and refresh the browser. This full-site preview uses the publication content and theme.
 
-For the standalone title color study, open `previews/title-colors.html` locally. Its color controls affect only the study, not the site's theme. Regenerate it with `node previews/build-title-colors.ts` after `npm run build`. The study stays in the repository and is excluded from the publication bundle.
+For the title color study, run `node previews/build-title-colors.ts` after `npm run build`, then open `previews/title-colors.html` locally. Its color controls affect only the study. The generator stays in the repository; generated preview HTML is ignored and excluded from the publication bundle.
 
-For the draggable wave editor, open `previews/title-wave-editor.html`; regenerate it with `node previews/build-title-wave-editor.ts`. Its four corners are measured in title-relative em units. Save an approved export to `topics/assets/title-wave-position.json` and rebuild to apply it to the collection title and every miniature header wordmark. The static comparison pages can be rebuilt with `node previews/build-title-wave-edges.ts` and its `--refine` option.
+For the draggable wave editor, run `node previews/build-title-wave-editor.ts` after building, then open `previews/title-wave-editor.html`. Its four corners are measured in title-relative em units. Save an approved export to `topics/assets/title-wave-position.json` and rebuild to apply it to the collection title and every miniature header wordmark. The static comparison pages can be rebuilt with `node previews/build-title-wave-edges.ts` and its `--refine` option.
 
-Every pull request also produces a **site-preview-pr-N** artifact in its **Publish collection** workflow run. Follow the download link in the run summary, unzip the artifact, and open `index.html`. The artifact includes the complete offline site and supporting source files, expires after 14 days, and does not change the public Pages site.
+Every pull request also produces a **site-preview-pr-N** artifact in its **Publish collection** workflow run. Follow the download link in the run summary, unzip the artifact, and serve its folder over HTTP (for example, with `npx serve`). The artifact includes the complete offline site and supporting source files, expires after 14 days, and does not change the public Pages site.
 
 ## Publishing to GitHub Pages (notes to self)
 
@@ -163,10 +160,14 @@ To prepare the publication bundle locally:
 npm run build:site
 ```
 
-This recreates `_site/` from the same sources, including supporting topic files. Open `_site/index.html` locally to inspect it.
+This recreates `_site/` from the same sources, including supporting topic files. Use `npm run preview` to inspect it over HTTP. Generated HTML, shared assets, feeds and icons are ignored by Git; the workflow uploads the deployment artifact directly to Pages. Old generated files remain in Git history, which is not rewritten.
 
 Pull requests run the same checks and build, without deployment. Pushes to `main` and manual runs of **Publish collection** from `main` deploy after checks pass. Local builds and branch previews do not publish the current branch.
 
 See [Reading offline](#reading-offline) for navigation behavior and [AGENTS.md](AGENTS.md#building-and-publishing) for the link-authoring contract.
 
 Reference: [GitHub's custom Pages workflow guide](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
+Architecture, configuration, build, deployment, monitoring and recovery are in [the operations SOP](docs/operations.md). Reusable per-project setup and acceptance steps are in [the operational readiness checklist](docs/operational-readiness.md). Agents can start at [llms.txt](https://thewayiai.com/llms.txt); complete Markdown editions are published beside each topic as `index.md`.
+
+Report security vulnerabilities through the [repository's Security page](https://github.com/tkarakai/the-way-i-ai/security) using **Report a vulnerability**. Reports are private and require a GitHub account and sign-in. See [SECURITY.md](SECURITY.md) for the policy.

@@ -203,8 +203,20 @@
   const results = searchDialog.querySelector<HTMLElement>('.search-results')!;
   const resultStatus = searchDialog.querySelector<HTMLElement>('.search-result-status')!;
   type SearchEntry = { title: string; topic: string; href: string; text: string };
-  const index = JSON.parse(document.querySelector('#collection-search-data')!.textContent!) as SearchEntry[];
-  const searchableEntries = index.map(entry => ({ ...entry, searchable: `${entry.title} ${entry.topic} ${entry.text}`.toLocaleLowerCase(), heading: entry.title.toLocaleLowerCase() }));
+  // One shared index file for every page, fetched the first time search opens. Its links start at the site root.
+  type SearchableEntry = SearchEntry & { searchable: string; heading: string };
+  let searchableEntries: SearchableEntry[] | undefined;
+  let searchIndex: Promise<void> | undefined;
+  let searchFailed = false;
+  const loadSearchIndex = () => searchIndex ??= fetch(collectionInput.dataset.searchIndex!)
+    .then(response => { if (!response.ok) throw new Error(String(response.status)); return response.json() as Promise<SearchEntry[]>; })
+    .then(index => {
+      const root = collectionInput.dataset.searchRoot ?? '';
+      searchableEntries = index.map(entry => ({ ...entry, href: root + entry.href, searchable: `${entry.title} ${entry.topic} ${entry.text}`.toLocaleLowerCase(), heading: entry.title.toLocaleLowerCase() }));
+    })
+    // A failed load is retried the next time search opens.
+    .catch(() => { searchFailed = true; searchIndex = undefined; })
+    .then(() => { if (searchDialog.open) showResults(); });
   const termsOf = (value: string) => value.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
   const appendHighlightedText = (element: HTMLElement, text: string, terms: string[]) => {
     if (!terms.length) { element.textContent = text; return; }
@@ -224,6 +236,11 @@
     return `${path}${path.includes('?') ? '&' : '?'}q=${encodeURIComponent(query)}${hash}`;
   };
   const showResults = () => {
+    if (!searchableEntries) {
+      results.replaceChildren();
+      resultStatus.textContent = searchFailed ? 'Search could not load. Check your connection and try again.' : 'Loading search…';
+      return;
+    }
     const terms = termsOf(collectionInput.value);
     const matches = terms.length ? searchableEntries.filter(entry => terms.every(term => entry.searchable.includes(term))) : searchableEntries.filter(entry => !entry.href.includes('#'));
     matches.sort((a, b) => Number(terms.every(term => b.heading.includes(term))) - Number(terms.every(term => a.heading.includes(term))));
@@ -244,9 +261,12 @@
   const openSearch = () => {
     searchReturnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : searchTrigger;
     searchDialog.classList.remove('is-closing');
+    searchFailed = false; void loadSearchIndex();
     showResults(); if (!searchDialog.open) searchDialog.showModal(); collectionInput.focus();
   };
   searchTrigger.addEventListener('click', openSearch);
+  // Start loading when the reader reaches for search, so results are usually ready on open.
+  ['pointerenter', 'focus'].forEach(type => searchTrigger.addEventListener(type, () => void loadSearchIndex(), { once: true }));
   document.querySelector('[data-close-search]')!.addEventListener('click', closeSearch);
   searchDialog.addEventListener('click', event => {
     const rect = searchDialog.getBoundingClientRect();

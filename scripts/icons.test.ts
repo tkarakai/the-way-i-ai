@@ -13,11 +13,8 @@ test('approved favicon files are loaded intact and linked at every page depth', 
     const html = iconMetadata(icons, path);
     assert.ok(html.includes(`href="${prefix}favicon.ico"`));
     assert.ok(html.includes(`href="${prefix}apple-touch-icon.png"`));
-    for (const size of [16, 32]) {
-      const data = html.match(new RegExp(`sizes="${size}x${size}" href="data:image/png;base64,([^"]+)"`));
-      assert.ok(data);
-      assert.deepEqual(Buffer.from(data[1], 'base64'), icons.get(`favicon-${size}.png`));
-    }
+    for (const size of [16, 32]) assert.ok(html.includes(`sizes="${size}x${size}" href="${prefix}favicon-${size}.png"`));
+    assert.doesNotMatch(html, /data:/);
   }
   assert.throws(() => iconMetadata(new Map(), 'index.html'), /Missing approved/);
 });

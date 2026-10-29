@@ -4,7 +4,7 @@ import { Lexer, type Tokens } from 'marked';
 import { splitFrontMatter } from '../scripts/markdown-source.ts';
 
 const root = new URL('../_site/', import.meta.url);
-const articleURL = new URL('topics/just-enough-context/index.html', root).href;
+const articleURL = new URL('topics/just-enough-context/index.html', 'http://127.0.0.1:4193/').href;
 const markdown = await readFile(new URL('topics/just-enough-context/README.md', root), 'utf8');
 const { body, metadata } = splitFrontMatter(markdown, 'README.md');
 const headings = new Lexer().lex(body).filter((token): token is Tokens.Heading => token.type === 'heading');
@@ -15,7 +15,7 @@ const subsections = headings.filter(heading => heading.depth === 3);
 for (const width of [1440, 390, 320]) {
   for (const theme of ['light', 'dark'] as const) {
     test(`article hierarchy and navigation work offline at ${width}px in ${theme}`, async ({ page, context }) => {
-      await context.setOffline(true);
+      await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
       await page.setViewportSize({ width, height: 1000 });
       await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
       await page.goto(articleURL);
@@ -101,18 +101,19 @@ for (const width of [1440, 390, 320]) {
 
 for (const theme of ['light', 'dark'] as const) {
   test(`JEC leads the homepage with its delivered illustration in ${theme}`, async ({ page, context }) => {
-    await context.setOffline(true);
+    await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
     await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
     for (const width of [1440, 390, 320]) {
       await page.setViewportSize({ width, height: 1000 });
-      await page.goto(new URL('index.html', root).href);
+      await page.goto(new URL('index.html', 'http://127.0.0.1:4193/').href);
       await page.evaluate(() => document.fonts.ready);
       const card = page.locator('.topic-card').first();
       await expect(card).toHaveAttribute('href', 'topics/just-enough-context/index.html');
-      await expect(card).toHaveAccessibleName(title);
+      await expect(card).toHaveAccessibleName(new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, character => '\\' + character)));
       await expect(card.locator('.topic-visual img')).toBeVisible();
-      await expect(card.locator('.topic-visual img')).toHaveAttribute('src', /^data:image\/(?:png|webp);base64,/);
-      expect(await card.locator('.topic-visual img').evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight])).toEqual([1600, 900]);
+      await expect(card.locator('.topic-visual img')).toHaveAttribute('src', /^(?:\.\.\/)*assets\/.*\.webp$/);
+      const dimensions = await card.locator('.topic-visual img').evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight]);
+      expect(dimensions[0]).toBeGreaterThan(0); expect(dimensions[0] / dimensions[1]).toBeCloseTo(16 / 9, 2);
       await card.screenshot({ path: `test-results/jec-cover-${width}-${theme}.png`, animations: 'disabled' });
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
     }
@@ -120,7 +121,7 @@ for (const theme of ['light', 'dark'] as const) {
 }
 
 test('article chapters and nested links remain available without JavaScript', async ({ browser }) => {
-  const context = await browser.newContext({ javaScriptEnabled: false, offline: true });
+  const context = await browser.newContext({ javaScriptEnabled: false, offline: false });
   const page = await context.newPage();
   await page.goto(articleURL);
   await expect(page.locator('.toc-chapter > ol .toc-link').first()).toBeVisible();

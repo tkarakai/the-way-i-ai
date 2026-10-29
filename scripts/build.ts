@@ -1,8 +1,8 @@
 import ts from 'typescript';
 import type { Collection, RenderedTopic, SourceDocument, RenderedDocument, RenderedPage, PageLink, Heading } from '../design-system/types.ts';
 import type { Tokens } from 'marked';
-import { readFile, writeFile, access, mkdir, rm, cp } from 'node:fs/promises';
-import { dirname, resolve, relative } from 'node:path';
+import { readFile, writeFile, access, mkdir, rm, cp, rename, realpath, readdir, lstat } from 'node:fs/promises';
+import { dirname, resolve, relative, basename, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { Marked, Renderer } from 'marked';
@@ -18,11 +18,22 @@ import type { PublishedPage } from './discovery.ts';
 import { loadIcons, iconMetadata } from './icons.ts';
 import { sharingCard, renderSharingCards } from './sharing.ts';
 import { feedLink, rssFeed } from './feed.ts';
+import { Assets, ROOT, imageAttributes } from './assets.ts';
+import type { PublishedImage } from './assets.ts';
+import { assertSafeMarkdown, assertSafeSVG } from './safety.ts';
+import { buildEdition, topicMarkdown, pageMarkdown, llmsIndex, llmsFull, securityTxt } from './agents.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// build writes _site/; --site also renders the sharing JPEGs (needs Playwright Chromium);
+// --check validates every source and page without writing anything.
 const check = process.argv.includes('--check');
 const site = process.argv.includes('--site');
 if (check && site) throw new Error('Use --check and --site separately.');
+const assets = new Assets();
+const outputRoot = resolve(root, '_site');
+// A check of an existing bundle uses its recorded provenance, not a new build clock.
+const existingEdition = check ? await readFile(resolve(outputRoot, 'version.json'), 'utf8').then(text => JSON.parse(text) as import('../design-system/types.ts').Edition, () => undefined) : undefined;
+const edition = existingEdition ?? buildEdition(root);
 const read = (path: string) => readFile(resolve(root, path), 'utf8');
 const compile = (path: string) => read(path).then(source => ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.None } }).outputText);
 const [registry, css, js, themeJS] = await Promise.all([
@@ -52,30 +63,41 @@ const fontFaces: [name: string, path: string, style: string, weight: string][] =
   ['IBM Plex Mono', '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2', 'normal', '400'],
   ['IBM Plex Mono', '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2', 'normal', '500'],
 ];
-const fonts = `/* Embedded font, icon, and code-renderer licenses:\n${fontLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/\n` + (await Promise.all(fontFaces.map(async ([name, path, style, weight]) => {
-  const data = await readFile(resolve(root, `node_modules/${path}`));
-  return `@font-face{font-family:'${name}';font-style:${style};font-weight:${weight};font-display:swap;src:url(data:font/woff2;base64,${data.toString('base64')}) format('woff2');}`;
-}))).join('\n');
+const licenses = `/* Font, icon, and code-renderer licenses:\n${fontLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/\n`;
+const fontFiles = await Promise.all(fontFaces.map(async ([name, path, style, weight]) => ({ name, style, weight, file: basename(path), data: await readFile(resolve(root, `node_modules/${path}`)) })));
+const fontCSS = (source: (font: typeof fontFiles[number]) => string) => licenses + fontFiles.map(font => `@font-face{font-family:'${font.name}';font-style:${font.style};font-weight:${font.weight};font-display:swap;src:url(${source(font)}) format('woff2');}`).join('\n');
+// Pages share font files beside the stylesheet; browsers fetch only the faces a design uses.
+const siteFonts = fontCSS(font => posix.relative('assets', assets.add(font.file, font.data, 'assets/fonts')));
+// Sharing cards render offline in a browser at build time, so they embed their fonts.
+const embeddedFonts = fontCSS(font => `data:font/woff2;base64,${font.data.toString('base64')}`);
 
 const slug = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').trim().replace(/\s+/g, '-');
 const plain = (text: string) => text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
 const safeJSON = (value: unknown) => JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
 const codeCache = new Map<string, Promise<string>>();
 const renderedCode = new WeakMap<Tokens.Code, string>();
+async function topicAsset(topic: string, path: string) {
+  const directory = resolve(root, 'topics', topic);
+  const actual = await realpath(path);
+  if (!actual.startsWith(`${directory}/`)) throw new Error(`${topic}: assets must stay inside their topic folder.`);
+  return actual;
+}
 async function embedImage(imagePath: string) {
   const extension = imagePath.split('.').at(-1)!.toLowerCase();
   const mime = ({ svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' } as Record<string, string>)[extension];
   if (!mime) throw new Error(`Unsupported image format: ${imagePath}`);
   return `data:${mime};base64,${(await readFile(imagePath)).toString('base64')}`;
 }
+// Markdown images: each published once, with responsive widths, and their source URLs for the Markdown editions.
+const markdownImages = new WeakMap<Tokens.Image, PublishedImage>();
+const imageURLs = new Map<string, string>();
 async function renderCode(text: string, lang: string) {
   const key = `${lang}\n${text}`;
   if (!codeCache.has(key)) codeCache.set(key, preloadFile({
     file: { name: `example.${lang === 'yaml' ? 'yaml' : lang === 'bash' || lang === 'sh' ? 'sh' : 'txt'}`, contents: text, lang: (lang || 'text') as NonNullable<Parameters<typeof preloadFile>[0]['file']['lang']> },
     options: { theme: { light: 'github-light', dark: 'github-dark' }, themeType: 'system', overflow: 'wrap', disableLineNumbers: true, disableFileHeader: true,
       unsafeCSS: ':host { color-scheme: inherit; --diffs-bg: var(--code); --diffs-fg: var(--ink); } [data-code] { padding-block: 12px; }' }
-  // Wrapped code never scrolls sideways, so it needs no Tab stop; the renderer's own one has no visible focus.
-  }).then(result => (result.prerenderedHTML ?? '').replace(/(<pre\b[^>]*?) tabindex="0"/g, '$1')));
+  }).then(result => (result.prerenderedHTML ?? '').replace(/(<pre\b[^>]*?) tabindex="0"/g, '$1').replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (_, css: string) => `<link rel="stylesheet" href="${ROOT}${assets.add('code.css', css)}">`)));
   return codeCache.get(key)!;
 }
 
@@ -93,14 +115,23 @@ async function renderDocument(topic: RenderedTopic, document: SourceDocument, in
   const parser = new Marked({
     async: true, gfm: true,
     async walkTokens(token) {
+      assertSafeMarkdown(token, `${topic.id}/${document.file}`);
       if (token.type === 'code') renderedCode.set(token as Tokens.Code, await renderCode(token.text, token.lang?.split(/\s/)[0] || 'text'));
-      if (token.type === 'image' && !token.href.startsWith('data:')) {
+      if (token.type === 'image' && !markdownImages.has(token as Tokens.Image)) {
         if (/^(?:[a-z]+:|\/\/)/i.test(token.href)) throw new Error(`Download remote images into ${topic.id}/ before building: ${token.href}`);
-        const imagePath = resolve(root, 'topics', topic.id, dirname(document.file), decodeURIComponent(token.href));
-        token.href = await embedImage(imagePath);
+        const imagePath = await topicAsset(topic.id, resolve(root, 'topics', topic.id, dirname(document.file), decodeURIComponent(token.href)));
+        const published = await assets.image(imagePath);
+        markdownImages.set(token as Tokens.Image, published);
+        const page = new URL(`topics/${topic.id}/`, registry.siteUrl);
+        imageURLs.set(new URL(token.href, new URL(document.file, page)).href, new URL(published.src, registry.siteUrl).href);
       }
     },
     renderer: {
+      image(token) {
+        const published = markdownImages.get(token);
+        if (!published) throw new Error(`${topic.id}/${document.file}: unpublished image ${token.href}`);
+        return `<img ${imageAttributes(published, '(max-width: 760px) 100vw, 760px')} alt="${escape(token.text)}"${token.title ? ` title="${escape(token.title)}"` : ''} loading="lazy" decoding="async">`;
+      },
       heading(token) {
         if (token.depth === 1) throw new Error(`${topic.id}/${document.file}: each document requires exactly one level-one title.`);
         if (token.depth > previousLevel + 1) throw new Error(`${topic.id}/${document.file}: headings must not skip levels.`);
@@ -158,9 +189,9 @@ async function renderDocument(topic: RenderedTopic, document: SourceDocument, in
 }
 
 async function loadSVG(topic: RenderedTopic, file: string, prefix = '') {
-  const source = await read(`topics/${topic.id}/${file}`);
+  const source = await readFile(await topicAsset(topic.id, resolve(root, 'topics', topic.id, file)), 'utf8');
   if (!source.trim().startsWith('<svg') || !/viewBox=/.test(source)) throw new Error(`${topic.id}/${file}: expected a standalone SVG with a viewBox`);
-  if (/<script\b|<foreignObject\b|\son\w+=|@import\b/i.test(source) || /(?:href|src)=["'](?!#|data:)/i.test(source) || /url\((?!#|['"]?#|data:)/i.test(source)) throw new Error(`${topic.id}/${file}: SVG must be self-contained and script-free`);
+  assertSafeSVG(source, `${topic.id}/${file}`);
   const ids = [...source.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
   if (new Set(ids).size !== ids.length) throw new Error(`${topic.id}/${file}: duplicate SVG ids`);
   if (!/<title\b[^>]*>\s*[^<\s][^<]*<\/title>/i.test(source)) throw new Error(`${topic.id}/${file}: SVG needs a nonempty <title> for its accessible name`);
@@ -173,8 +204,23 @@ async function loadSVG(topic: RenderedTopic, file: string, prefix = '') {
 
 const ids = new Set();
 const topics: RenderedTopic[] = [];
+const publishedSources = new Set<string>(['topics/topics.json']);
+async function validateSourceTree(directory: string): Promise<void> {
+  if ((await lstat(directory)).isSymbolicLink()) throw new Error(`Published sources must not be symbolic links: ${directory}`);
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    const path = resolve(directory, entry.name);
+    if (entry.isSymbolicLink()) throw new Error(`Published sources must not be symbolic links: ${path}`);
+    if (entry.isDirectory()) await validateSourceTree(path);
+    else {
+      if (path.endsWith('.svg')) assertSafeSVG(await readFile(path, 'utf8'), path);
+      if (!path.endsWith('.html') && !relative(root, path).includes('/assets/illustrations/')) publishedSources.add(relative(root, path));
+    }
+  }
+}
 for (const [index, id] of registry.topics.entries()) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error(`Invalid topic id: ${id}`);
+  await validateSourceTree(resolve(root, 'topics', id));
   const json = await read(`topics/${id}/topic.json`).catch((error: NodeJS.ErrnoException) => {
     if (error.code === 'ENOENT') return undefined;
     throw error;
@@ -192,7 +238,7 @@ for (const topic of topics) {
   topic.rendered = [];
   for (const [index, document] of topic.documents.entries()) topic.rendered.push(await renderDocument(topic, document, index));
   topic.title = topic.rendered[0].title;
-  topic.illustrations = await loadIllustrations(root, topic.id, topic.rendered);
+  topic.illustrations = await loadIllustrations(root, topic.id, topic.rendered, assets);
 }
 
 // Site pages: About, Privacy and Licensing in footer order, plus the GitHub Pages 404 page.
@@ -209,12 +255,10 @@ async function renderPage(id: string, prefix: string): Promise<RenderedPage> {
   const parser = new Marked({
     gfm: true,
     walkTokens(token) {
+      assertSafeMarkdown(token, file);
       if (token.type === 'image') throw new Error(`${file}: site pages do not embed images.`);
-      // Links to the published site stay relative, so previews and downloaded copies stay local.
-      if (token.type === 'link' && token.href.startsWith(registry.siteUrl)) {
-        const target = token.href.slice(registry.siteUrl.length);
-        token.href = prefix + (!target || target.endsWith('/') ? `${target}index.html` : target);
-      }
+      // Links to the published site stay relative, so previews work under any address.
+      if (token.type === 'link' && token.href.startsWith(registry.siteUrl)) token.href = prefix + (token.href.slice(registry.siteUrl.length) || 'index.html');
     },
     renderer: {
       heading(token) {
@@ -239,7 +283,7 @@ async function renderPage(id: string, prefix: string): Promise<RenderedPage> {
   if (!title.trim() || !paragraph) throw new Error(`${file} needs a title and an opening paragraph.`);
   const html = parser.parse(markdown.replace(tokens[first].raw, '')) as string;
   // The opening paragraph doubles as the search and sharing description.
-  return { id, title, description: plain(parser.parseInline(paragraph.text) as string).replace(/\s+/g, ' ').trim(), html, headings };
+  return { id, title, description: plain(parser.parseInline(paragraph.text) as string).replace(/\s+/g, ' ').trim(), html, headings, markdown };
 }
 const sitePages = await Promise.all(sitePageIds.map(id => renderPage(id, '../')));
 const pageLinks: PageLink[] = sitePages.map(({ id, title, description }) => ({ id, title, description }));
@@ -249,128 +293,178 @@ const publicIcons = await loadIcons(root);
 const outputs = new Map<string, string>();
 const titleBackgroundPath = registry.titleBackground ? resolve(root, 'topics', registry.titleBackground) : undefined;
 if (titleBackgroundPath && !titleBackgroundPath.startsWith(`${resolve(root, 'topics')}/`)) throw new Error('The title background must be a local image inside topics/.');
-const titleBackground = titleBackgroundPath ? await embedImage(titleBackgroundPath) : '';
-const positionPath = titleBackground && registry.titleBackgroundPosition ? resolve(root, 'topics', registry.titleBackgroundPosition) : undefined;
+if (titleBackgroundPath) await access(titleBackgroundPath);
+const positionPath = titleBackgroundPath && registry.titleBackgroundPosition ? resolve(root, 'topics', registry.titleBackgroundPosition) : undefined;
 if (positionPath && !positionPath.startsWith(`${resolve(root, 'topics')}/`)) throw new Error('The wave positioning must be a local JSON file inside topics/.');
+if (positionPath) publishedSources.add(relative(root, positionPath));
 const wavePosition = positionPath ? parseWavePosition(JSON.parse(await readFile(positionPath, 'utf8'))) : undefined;
 if (wavePosition && resolve(root, wavePosition.source) !== titleBackgroundPath) throw new Error('The wave positioning source must match titleBackground.');
-const pageCSS = `${css}\n${wordmarkStyles(titleBackground, wavePosition)}`;
+// The wave never displays wider than about 600 CSS pixels; 1200 covers high-density screens.
+const titleBackground = titleBackgroundPath ? posix.relative('assets', (await assets.image(titleBackgroundPath, { maxWidth: 1200 })).src) : '';
 const wordmarkBackground = Boolean(titleBackground);
-const search = collectionSearch(topics);
-const sharingSources = { collection: registry, fonts, css: pageCSS, sharingCSS: await read('design-system/sharing.css'), wordmarkBackground };
+const stylesheet = assets.add('site.css', `${siteFonts}\n${css}\n${wordmarkStyles(titleBackground, wavePosition)}`);
+const searchIndex = assets.add('search.json', JSON.stringify(collectionSearch(topics)));
+const readerScript = assets.add('reader.js', js);
+const scripts = (page: string) => [...(page === 'collection' && ambientJS ? [assets.add('ambient.js', ambientJS)] : []), readerScript];
+const files = (page = 'collection') => ({ stylesheet, scripts: scripts(page), searchIndex });
+
+// The theme script runs inline before first paint; every other script is a shared file.
+// The policy is a meta tag because GitHub Pages cannot send headers, which also means
+// frame-ancestors, reporting and sandboxing are unavailable.
+const inlineThemeJS = themeJS.replaceAll('</script', '<\\/script');
+const themeHash = `sha256-${createHash('sha256').update(inlineThemeJS).digest('base64')}`;
+const csp = [
+  "default-src 'none'",
+  `script-src 'self' '${themeHash}'`,
+  // Inline style attributes, and the code renderer's shadow-root styles.
+  "style-src 'self' 'unsafe-inline'",
+  // The share preview falls back to the published card when a local build has none.
+  `img-src 'self' ${new URL(registry.siteUrl).origin}`,
+  "font-src 'self'",
+  "connect-src 'self'",
+  "manifest-src 'self'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "object-src 'none'"
+].join('; ');
+
+const sharingSources = { collection: registry, fonts: embeddedFonts, css: `${css}\n${wordmarkStyles(titleBackgroundPath ? await embedImage(titleBackgroundPath) : '', wavePosition)}`, sharingCSS: await read('design-system/sharing.css'), wordmarkBackground };
 const homeCard = sharingCard(sharingSources);
 const topicCards = new Map(topics.map(topic => [topic.id, sharingCard(sharingSources, topic)]));
 const cards = [homeCard, ...topicCards.values()];
+
+// Markdown editions for agents and tools, and the same text as HTML for the full-text feed.
+const topicMarkdowns = new Map(topics.map(topic => [topic.id, topicMarkdown(registry, topic, imageURLs)]));
+const feedParser = new Marked({ gfm: true });
+const feedContent = (markdown: string) => (feedParser.parse(markdown.replace(/^# .*\n+(?:> .*\n+)?/, '')) as string).replace(/<!--[\s\S]*?-->/g, '');
+
 const published: PublishedPage[] = [
   { path: 'index.html', title: registry.title, description: registry.description, kind: 'collection', sharingImage: homeCard },
   { path: 'general-index/index.html', title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, kind: 'index', sharingImage: homeCard },
-  ...topics.map((topic): PublishedPage => ({ path: `topics/${topic.id}/index.html`, title: topic.title, description: topic.description, kind: 'article', category: topic.category, created: topic.created, updated: topic.updated, sharingImage: topicCards.get(topic.id)! })),
+  ...topics.map((topic): PublishedPage => ({ path: `topics/${topic.id}/index.html`, title: topic.title, description: topic.description, kind: 'article', category: topic.category, created: topic.created, updated: topic.updated, sharingImage: topicCards.get(topic.id)!, content: feedContent(topicMarkdowns.get(topic.id)!) })),
   ...sitePages.map((page): PublishedPage => ({ path: `${page.id}/index.html`, title: page.title, description: page.description, kind: 'page', sharingImage: homeCard }))
 ];
+const markdownLink = '<link rel="alternate" type="text/markdown" href="index.md" title="Markdown">';
 const metadataFor = (path: string) => {
   const page = published.find(page => page.path === path);
   if (!page) throw new Error(`Missing publication metadata: ${path}`);
-  return pageMetadata(registry, page) + iconMetadata(publicIcons, path) + feedLink(registry);
+  return pageMetadata(registry, page) + iconMetadata(publicIcons, path) + feedLink(registry) + (page.kind === 'index' ? '' : markdownLink);
 };
-outputs.set('index.html', shell({ headMetadata: metadataFor('index.html'), description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), css: pageCSS, js: `${ambientJS}\n${js}`, themeJS, search, fonts, collection: registry, topics, wordmarkBackground, sitePages: pageLinks }));
-outputs.set('general-index/index.html', shell({ headMetadata: metadataFor('general-index/index.html'), title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, body: indexBody(topics), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../', page: 'index', wordmarkBackground, sitePages: pageLinks }));
+const common = { themeJS, csp, edition, collection: registry, topics, wordmarkBackground, sitePages: pageLinks };
+outputs.set('index.html', shell({ ...common, headMetadata: metadataFor('index.html'), description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), files: files() }));
+outputs.set('general-index/index.html', shell({ ...common, headMetadata: metadataFor('general-index/index.html'), title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, body: indexBody(topics), files: files('index'), prefix: '../', page: 'index' }));
 for (const topic of topics) {
   const fingerprints = `<!-- Markdown sources: ${topic.rendered.map(doc => `${doc.file} sha256:${doc.sha256}`).join('; ')} -->\n`;
-  outputs.set(`topics/${topic.id}/index.html`, shell({ headMetadata: metadataFor(`topics/${topic.id}/index.html`), title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered), registry), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../../', page: topic.id, wordmarkBackground, created: topic.created, updated: topic.updated, sitePages: pageLinks }));
+  outputs.set(`topics/${topic.id}/index.html`, shell({ ...common, headMetadata: metadataFor(`topics/${topic.id}/index.html`), title: topic.title, description: topic.description, body: fingerprints + readerBody(topic, topics, topic.rendered, explorerFor(topic, topic.rendered), registry), files: files(topic.id), prefix: '../../', page: topic.id, created: topic.created, updated: topic.updated }));
 }
 for (const page of sitePages) {
-  outputs.set(`${page.id}/index.html`, shell({ headMetadata: metadataFor(`${page.id}/index.html`), title: page.title, description: page.description, body: pageBody(page, pageLinks, topics, registry, '../'), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: '../', page: page.id, wordmarkBackground, sitePages: pageLinks }));
+  outputs.set(`${page.id}/index.html`, shell({ ...common, headMetadata: metadataFor(`${page.id}/index.html`), title: page.title, description: page.description, body: pageBody(page, pageLinks, topics, registry, '../'), files: files(page.id), prefix: '../', page: page.id }));
 }
 // Not a published page: no canonical URL, sitemap entry or sharing card, and never indexed.
-outputs.set('404.html', shell({ headMetadata: '<meta name="robots" content="noindex">' + iconMetadata(publicIcons, '404.html', missingPrefix) + feedLink(registry), title: missingPage.title, description: missingPage.description, body: pageBody(missingPage, pageLinks, topics, registry, missingPrefix, true), css: pageCSS, js, themeJS, search, fonts, collection: registry, topics, prefix: missingPrefix, page: '404', wordmarkBackground, sitePages: pageLinks }));
+outputs.set('404.html', shell({ ...common, headMetadata: '<meta name="robots" content="noindex">' + iconMetadata(publicIcons, '404.html', missingPrefix) + feedLink(registry), title: missingPage.title, description: missingPage.description, body: pageBody(missingPage, pageLinks, topics, registry, missingPrefix, true), files: files('404'), prefix: missingPrefix, page: '404' }));
 
-// Root-relative links (only on the 404 page) start at the site root; others at the page's folder.
-const localTarget = (path: string, href: string) => href.startsWith('/') ? resolve(root, href.slice(missingPrefix.length)) : resolve(root, dirname(path), href);
-// Validate output before writing: navigation, ids, and offline render dependencies.
+// Each page reaches shared files through its own path to the site root. GitHub Pages serves
+// 404.html at any missing path, so only that page starts from the root itself.
+const rootFor = (path: string) => path === '404.html' ? missingPrefix : '../'.repeat(path.split('/').length - 1);
+for (const [path, html] of outputs) outputs.set(path, html.replaceAll(ROOT, rootFor(path)));
+
+outputs.set('sitemap.xml', sitemap(registry, published));
+outputs.set('feed.xml', rssFeed(registry, published));
+outputs.set('robots.txt', await read('robots.txt'));
+outputs.set('llms.txt', llmsIndex(registry, topics, sitePages, edition));
+outputs.set('index.md', llmsIndex(registry, topics, sitePages, edition));
+outputs.set('llms-full.txt', llmsFull(registry, topics, topicMarkdowns, edition));
+for (const topic of topics) outputs.set(`topics/${topic.id}/index.md`, topicMarkdowns.get(topic.id)!);
+for (const page of sitePages) outputs.set(`${page.id}/index.md`, pageMarkdown(registry, page));
+outputs.set('.well-known/security.txt', securityTxt(registry, edition));
+outputs.set('version.json', `${JSON.stringify({ name: registry.title, version: edition.version, built: edition.built, ...(edition.commit ? { commit: edition.commit } : {}), ...(registry.repositoryUrl ? { source: registry.repositoryUrl } : {}) }, null, 2)}\n`);
+
+// Validate every page before writing anything: local links, anchors, ids, shared files and scripts.
+const exists = (target: string) => outputs.has(target) || assets.files.has(target) || publicIcons.has(target) || publishedSources.has(target);
+const targetOf = (path: string, href: string) => {
+  const file = decodeURIComponent(href.split('#')[0]);
+  const target = file.startsWith('/') ? file.slice(missingPrefix.length) : posix.join(posix.dirname(path), file);
+  return !target || target === '.' || target.endsWith('/') ? posix.join(target, 'index.html') : posix.normalize(target);
+};
 for (const [path, html] of outputs) {
+  if (!path.endsWith('.html')) continue;
   const lightDOM = html.replace(/<template shadowrootmode="open">[\s\S]*?<\/template>/g, '');
   const elementIds = [...lightDOM.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
   if (new Set(elementIds).size !== elementIds.length) throw new Error(`Duplicate element ids in ${path}`);
   if ((html.match(/<h1\b/g) || []).length !== 1) throw new Error(`Expected one page title in ${path}`);
-  // Canonical links identify a page; they do not fetch a rendering dependency.
-  const dependencyHTML = html.replace(/<link rel="canonical" href="https:\/\/[^"<>]+">/g, '')
-    .replace(/<link rel="alternate" type="application\/rss\+xml"[^>]*>/g, '')
-    .replace(/<link rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"[^>]*>/g, (tag, href: string) => {
-      if (href.startsWith('data:')) return tag;
-      const target = relative(root, localTarget(path, href));
-      if (!publicIcons.has(target)) throw new Error(`Unknown local icon in ${path}: ${href}`);
-      return ''; // Only approved local icons are optional non-prose dependencies.
-    });
-  const renderDependencies = [...dependencyHTML.matchAll(/<(?:script|img|iframe|link|video|audio|source)\b[^>]*\b(?:src|href)=["']([^"']+)/gi)];
-  if (renderDependencies.some(([, url]) => !url.startsWith('data:')) || /@import\b/i.test(pageCSS) || /url\((?!data:|['"]?data:)/i.test(pageCSS)) throw new Error(`Non-embedded render dependency in ${path}`);
+  // Only the hashed theme script runs inline; no markup carries event handlers or script URLs.
+  const inlineScripts = [...html.matchAll(/<script(?![^>]*\b(?:src|type="application\/(?:ld\+)?json")=?)[^>]*>([\s\S]*?)<\/script>/g)];
+  if (inlineScripts.length !== 1 || inlineScripts[0][1] !== inlineThemeJS) throw new Error(`Unexpected inline script in ${path}`);
+  if (/<[a-z][^>]*\son[a-z]+\s*=/i.test(lightDOM) || /(?:href|src)\s*=\s*["']\s*javascript:/i.test(html)) throw new Error(`Inline event handler or script URL in ${path}`);
+  // Everything a page loads is a local file from this build: no remote styles, scripts, fonts or images.
+  const dependencies = [
+    ...[...html.matchAll(/<(?:script|img|iframe|video|audio|source|embed)\b[^>]*\bsrc="([^"]+)"/g)].map(match => match[1]),
+    ...[...html.matchAll(/\bsrcset="([^"]+)"/g)].flatMap(match => match[1].split(',').map(candidate => candidate.trim().split(/\s+/)[0])),
+    ...[...html.matchAll(/<link\b[^>]*\brel="(?:stylesheet|icon|apple-touch-icon|preload|modulepreload)"[^>]*\bhref="([^"]+)"/g)].map(match => match[1])
+  ];
+  for (const url of dependencies) {
+    if (/^(?:[a-z]+:|\/\/)/i.test(url)) throw new Error(`Remote or embedded render dependency in ${path}: ${url.slice(0, 80)}`);
+    if (!await exists(targetOf(path, url))) throw new Error(`Missing render dependency in ${path}: ${url}`);
+  }
   for (const [, href] of lightDOM.matchAll(/\bhref="([^"]+)"/g)) {
     if (/^(?:[a-z]+:|\/\/)/i.test(href)) continue;
-    const [file, fragment] = href.split('#');
-    const target = file ? localTarget(path, decodeURIComponent(file)) : resolve(root, path);
-    const targetPath = relative(root, target);
-    if (!outputs.has(targetPath) && !publicIcons.has(targetPath)) await access(target).catch(() => { throw new Error(`Broken local link in ${path}: ${href}`); });
-    if (fragment && outputs.has(targetPath)) {
-      const targetHTML = outputs.get(targetPath)!;
-      if (!targetHTML.includes(`id="${decodeURIComponent(fragment)}"`)) throw new Error(`Broken anchor in ${path}: ${href}`);
+    const target = href.startsWith('#') ? path : targetOf(path, href);
+    if (!await exists(target)) throw new Error(`Broken local link in ${path}: ${href}`);
+    const fragment = href.split('#')[1];
+    if (fragment && outputs.has(target) && !outputs.get(target)!.includes(`id="${decodeURIComponent(fragment)}"`)) throw new Error(`Broken anchor in ${path}: ${href}`);
+  }
+}
+// Stylesheet references resolve beside the stylesheet.
+for (const [, url] of assets.files.get(stylesheet)!.toString('utf8').matchAll(/url\(["']?([^"')]+)["']?\)/g)) {
+  if (/^(?:[a-z]+:|\/\/)/i.test(url) || !assets.files.has(posix.join('assets', url))) throw new Error(`Missing stylesheet dependency: ${url.slice(0, 80)}`);
+}
+if (published.length + 1 !== [...outputs.keys()].filter(path => path.endsWith('.html')).length || !outputs.has('404.html') || published.some(page => !outputs.has(page.path))) throw new Error('Published page inventory must match generated HTML.');
+if (check) {
+  if (existingEdition) {
+    for (const [path, expected] of [...outputs, ...assets.files, ...publicIcons]) {
+      const actual = await readFile(resolve(outputRoot, path)).catch(() => undefined);
+      if (!actual?.equals(Buffer.from(expected))) throw new Error(`_site/${path} is out of date. Run npm run build:site.`);
     }
   }
-}
-if (published.length + 1 !== outputs.size || !outputs.has('404.html') || published.some(page => !outputs.has(page.path))) throw new Error('Published page inventory must match generated HTML.');
-outputs.set('sitemap.xml', sitemap(registry, published));
-outputs.set('feed.xml', rssFeed(registry, published));
-outputs.set('robots.txt', await read('robots.txt'));
-if (check) {
-  for (const [path, data] of publicIcons) {
-    const existing = await readFile(resolve(root, path)).catch(() => undefined);
-    if (!existing?.equals(data)) throw new Error(`${path} is out of date. Run npm run build.`);
-  }
-  for (const [path, content] of outputs) {
-    const existing = await read(path).catch(() => '');
-    if (existing !== content) throw new Error(`${path} is out of date. Run npm run build.`);
-  }
+  console.log(`Checked ${outputs.size} pages and files and ${assets.files.size} shared assets for edition ${edition.version}.`);
+  process.exit(0);
 }
 
-// Validation completes before any output is replaced. The site bundle contains
-// only generated pages and reader-facing topic sources, not build dependencies.
-// Only publication builds rasterize JPEGs. HTML and metadata stay deterministic
-// across platforms; screenshots are build artifacts, not checked-in output.
-const sharingImages = site ? await renderSharingCards(cards) : new Map<string, Buffer>();
-const outputRoot = site ? resolve(root, '_site') : root;
-if (site) {
-  await rm(outputRoot, { recursive: true, force: true });
-  await mkdir(outputRoot, { recursive: true });
-  for (const file of ['README.md', 'AGENTS.md', 'CLAUDE.md', 'design-system/README.md', 'design-system/licenses', 'topics/topics.json']) {
-    await cp(resolve(root, file), resolve(outputRoot, file), { recursive: true });
-  }
-  for (const asset of [titleBackgroundPath, positionPath].filter((path): path is string => Boolean(path))) {
-    const target = resolve(outputRoot, relative(root, asset));
-    await mkdir(dirname(target), { recursive: true });
-    await cp(asset, target);
-  }
-  for (const topic of topics) {
-    const source = resolve(root, 'topics', topic.id);
-    await cp(source, resolve(outputRoot, 'topics', topic.id), {
-      recursive: true,
-      filter: path => {
-        const parts = relative(source, path).split('/');
-        return !parts.some(part => part.startsWith('.') || part === 'node_modules') && relative(source, path) !== 'index.html';
-      }
-    });
-  }
-  await writeFile(resolve(outputRoot, '.nojekyll'), '');
+// Validation completes before any output is replaced. The site bundle contains generated
+// pages, shared assets and reader-facing topic sources, not build dependencies. Only
+// publication builds (--site) rasterize the sharing JPEGs.
+const sharingImages = site ? await renderSharingCards(cards, assets.files) : new Map<string, Buffer>();
+const stage = resolve(root, '_site.build');
+await rm(stage, { recursive: true, force: true });
+await mkdir(resolve(stage, 'topics'), { recursive: true });
+await cp(resolve(root, 'topics/topics.json'), resolve(stage, 'topics/topics.json'));
+await cp(resolve(root, 'design-system/licenses'), resolve(stage, 'design-system/licenses'), { recursive: true });
+if (positionPath) {
+  const target = resolve(stage, relative(root, positionPath));
+  await mkdir(dirname(target), { recursive: true });
+  await cp(positionPath, target);
 }
-for (const [path, data] of sharingImages) {
-  await mkdir(dirname(resolve(outputRoot, path)), { recursive: true });
-  await writeFile(resolve(outputRoot, path), data);
+for (const topic of topics) {
+  const source = resolve(root, 'topics', topic.id);
+  await cp(source, resolve(stage, 'topics', topic.id), {
+    recursive: true,
+    // Artwork is published as shared WebP files; the source PNGs stay in the repository.
+    filter: path => {
+      const parts = relative(source, path).split('/');
+      return !parts.some(part => part.startsWith('.') || part === 'node_modules') && !path.endsWith('.html') && relative(source, path) !== 'assets/illustrations';
+    }
+  });
 }
-for (const [path, data] of publicIcons) {
-  if (!check) await writeFile(resolve(outputRoot, path), data);
-  console.log(`${check ? 'Verified' : 'Built'} ${site ? '_site/' : ''}${path}`);
-}
-for (const [path, html] of outputs) {
-  if (!check) {
-    await mkdir(dirname(resolve(outputRoot, path)), { recursive: true });
-    await writeFile(resolve(outputRoot, path), html);
-  }
-  console.log(`${check ? 'Verified' : 'Built'} ${site ? '_site/' : ''}${path} (${Math.round(Buffer.byteLength(html) / 1024)} KB)`);
-}
+await writeFile(resolve(stage, '.nojekyll'), '');
+const write = async (path: string, data: string | Buffer) => {
+  await mkdir(dirname(resolve(stage, path)), { recursive: true });
+  await writeFile(resolve(stage, path), data);
+};
+for (const [path, data] of [...sharingImages, ...publicIcons, ...assets.files]) await write(path, data);
+for (const [path, content] of outputs) await write(path, content);
+await rm(outputRoot, { recursive: true, force: true });
+await rename(stage, outputRoot);
+const kb = (bytes: number) => `${Math.round(bytes / 1024)} KB`;
+for (const [path, content] of outputs) if (path.endsWith('.html')) console.log(`Built _site/${path} (${kb(Buffer.byteLength(content))})`);
+const assetBytes = [...assets.files.values()].reduce((total, data) => total + data.length, 0);
+console.log(`Built ${assets.files.size} shared assets (${kb(assetBytes)}), ${outputs.size} pages and files, ${sharingImages.size} sharing images. Edition ${edition.version}.`);

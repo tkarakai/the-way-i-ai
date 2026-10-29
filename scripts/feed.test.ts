@@ -5,13 +5,14 @@ import type { Collection } from '../design-system/types.ts';
 import type { PublishedPage } from './discovery.ts';
 
 const collection: Collection = { title: 'Notes & ideas', displayTitle: 'Notes', description: 'A public notebook', siteUrl: 'https://example.com/blog/', author: { name: 'writer', url: 'https://github.com/writer' }, eyebrow: '', subtitle: '', introduction: [], topics: [] };
-const article: PublishedPage = { path: 'topics/example/index.html', title: 'An <idea>', description: 'A & B < C. Literal <b>text</b>.', kind: 'article', category: 'Practice', created: '2026-01-02', updated: '2026-02-03' };
+const article: PublishedPage = { path: 'topics/example/index.html', title: 'An <idea>', description: 'A & B < C. Literal <b>text</b>. The starter\'s "design".', kind: 'article', category: 'Practice', created: '2026-01-02', updated: '2026-02-03' };
 
 test('RSS reuses authored summaries and canonical URLs, with stable permalink GUIDs and escaped text', () => {
   const xml = rssFeed(collection, [article]);
   assert.match(xml, /<rss version="2.0"/);
   assert.match(xml, /<title>An &lt;idea&gt;<\/title>/);
-  assert.match(xml, /<description>A &amp;amp; B &amp;lt; C. Literal &amp;lt;b&amp;gt;text&amp;lt;\/b&amp;gt;.<\/description>/);
+  assert.match(xml, /<description>A &amp;amp; B &amp;lt; C. Literal &amp;lt;b&amp;gt;text&amp;lt;\/b&amp;gt;. The starter&apos;s &quot;design&quot;.<\/description>/, 'Apostrophes and quotes are escaped once, never as &amp;apos;');
+  assert.doesNotMatch(xml, /&amp;apos;|&amp;quot;/);
   assert.match(xml, /<guid isPermaLink="true">https:\/\/example.com\/blog\/topics\/example\/index.html<\/guid>/);
   assert.match(xml, /<dc:creator>writer<\/dc:creator>/);
   assert.doesNotMatch(xml, /<author>/, 'RSS author requires email, not a GitHub name');
@@ -21,6 +22,12 @@ test('RSS reuses authored summaries and canonical URLs, with stable permalink GU
   assert.match(xml, /href="https:\/\/example.com\/blog\/feed.xml" rel="self"/);
   assert.equal(xml, rssFeed(collection, [article]));
   assert.throws(() => rssFeed(collection, [article, article]), /Duplicate feed URL/);
+});
+
+test('full text travels as escaped CDATA content beside the summary', () => {
+  const xml = rssFeed(collection, [{ ...article, content: '<p>Body with ]]> inside</p>' }]);
+  assert.match(xml, /xmlns:content="http:\/\/purl.org\/rss\/1.0\/modules\/content\/"/);
+  assert.match(xml, /<content:encoded><!\[CDATA\[<p>Body with \]\]\]\]><!\[CDATA\[> inside<\/p>\]\]><\/content:encoded>/);
 });
 
 test('undated articles remain in RSS without invented dates, and the channel may be empty', () => {

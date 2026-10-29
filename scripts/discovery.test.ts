@@ -9,11 +9,11 @@ const collection: Collection = {
   siteUrl: 'https://example.com/collection/', author: { name: 'writer', url: 'https://github.com/writer' }
 };
 const article: PublishedPage = { path: 'topics/example/index.html', title: 'An "idea" </script><script>alert(1)</script>', description: 'A & B < C', kind: 'article', category: 'Practice', created: '2026-01-02', updated: '2026-02-03' };
-const structured = (html: string) => JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
+const structured = (html: string) => { const data = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]); return Array.isArray(data) ? data[0] : data; };
 
-test('canonical URLs retain explicit article filenames and work under a repository subpath', () => {
+test('canonical URLs use directory URLs and work under a repository subpath', () => {
   assert.equal(canonicalURL(collection.siteUrl, 'index.html'), 'https://example.com/collection/');
-  assert.equal(canonicalURL(collection.siteUrl, article.path), 'https://example.com/collection/topics/example/index.html');
+  assert.equal(canonicalURL(collection.siteUrl, article.path), 'https://example.com/collection/topics/example/');
   for (const path of ['../index.html', '/index.html', 'https://elsewhere.com/', 'x?tracking=true', 'x#section', 'a\\b']) {
     assert.throws(() => canonicalURL(collection.siteUrl, path));
   }
@@ -43,6 +43,8 @@ test('article metadata reuses authored content, escapes HTML and script boundari
   assert.equal(data.dateModified, article.updated);
   assert.equal(data.author.name, collection.author.name);
   assert.equal(data.author.url, collection.author.url);
+  assert.equal(data.publisher.name, collection.title);
+  assert.equal(data.publisher.logo.url, 'https://example.com/collection/favicon-512.png');
   assert.equal(data.mainEntityOfPage['@id'], data.url);
   const undated = structured(pageMetadata(collection, { ...article, created: undefined, updated: undefined }));
   assert.ok(!('datePublished' in undated));
@@ -88,9 +90,9 @@ test('sitemap is deterministic, escapes XML, rejects duplicates, and omits guess
   assert.equal(xml, sitemap(collection, pages));
   assert.match(xml, /xmlns="http:\/\/www.sitemaps.org\/schemas\/sitemap\/0.9"/);
   assert.match(xml, /<loc>https:\/\/example.com\/collection\/<\/loc><\/url>/);
-  assert.match(xml, /created-only\/index.html<\/loc><lastmod>2026-01-02<\/lastmod>/);
-  assert.match(xml, /no-dates\/index.html<\/loc><\/url>/);
-  assert.match(xml, /a&amp;b\/index.html/);
+  assert.match(xml, /created-only\/<\/loc><lastmod>2026-01-02<\/lastmod>/);
+  assert.match(xml, /no-dates\/<\/loc><\/url>/);
+  assert.match(xml, /a&amp;b\//);
   assert.equal((xml.match(/<url>/g) ?? []).length, pages.length);
   assert.throws(() => sitemap(collection, [article, article]), /Duplicate/);
 });

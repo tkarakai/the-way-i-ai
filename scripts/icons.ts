@@ -11,12 +11,10 @@ export async function loadIcons(root: string): Promise<Map<string, Buffer>> {
 /** `prefix` overrides the relative path to the site root, as for the 404 page served at any depth. */
 export function iconMetadata(files: Map<string, Buffer>, path: string, prefix = '../'.repeat(path.split('/').length - 1)): string {
   const png = (size: number) => {
-    const data = files.get(`favicon-${size}.png`);
-    if (!data) throw new Error(`Missing approved ${size}px favicon`);
-    return `<link rel="icon" type="image/png" sizes="${size}x${size}" href="data:image/png;base64,${data.toString('base64')}">`;
+    if (!files.has(`favicon-${size}.png`)) throw new Error(`Missing approved ${size}px favicon`);
+    return `<link rel="icon" type="image/png" sizes="${size}x${size}" href="${prefix}favicon-${size}.png">`;
   };
-  // Embedded PNGs keep the browser icon available in individual downloaded
-  // HTML files. Apple home-screen icons need a real file URL, not a data URL.
+  // Shared files: browsers fetch the icon once for the whole site.
   return `<link rel="icon" type="image/x-icon" href="${prefix}favicon.ico">`
     + png(32) + png(16)
     + `<link rel="apple-touch-icon" sizes="180x180" href="${prefix}apple-touch-icon.png">`;

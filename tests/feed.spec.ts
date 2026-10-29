@@ -5,7 +5,7 @@ import { topicSource } from '../scripts/markdown-source.ts';
 
 const root = resolve(import.meta.dirname, '..');
 test('published RSS is valid XML with complete, plain-text source summaries and autodiscovery', async ({ page, context }) => {
-  await context.setOffline(true);
+  await context.route(/^https?:/, route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
   const registry = JSON.parse(await readFile(resolve(root, 'topics/topics.json'), 'utf8')) as { topics: string[] };
   const expected = await Promise.all(registry.topics.toReversed().map(async id => {
     const source = topicSource(await readFile(resolve(root, `topics/${id}/README.md`), 'utf8'), `${id}/README.md`);
@@ -26,6 +26,6 @@ test('published RSS is valid XML with complete, plain-text source summaries and 
   expect(parsed.error).toBeUndefined();
   expect(parsed.version).toBe('2.0');
   expect(parsed.items).toEqual(expected);
-  await page.goto(new URL('../_site/index.html', import.meta.url).href);
+  await page.goto(new URL('index.html', 'http://127.0.0.1:4193/').href);
   await expect(page.locator('link[rel="alternate"][type="application/rss+xml"]')).toHaveAttribute('href', 'https://thewayiai.com/feed.xml');
 });

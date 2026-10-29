@@ -13,7 +13,7 @@
     "build:site": "node scripts/build.ts --site",
     "test": "node --test scripts/*.test.ts",
     "test:browser": "npm run build:site && playwright test",
-    "preview": "npm run build:site && node scripts/preview.ts",
+    "dev": "node scripts/dev.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

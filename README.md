@@ -141,12 +141,12 @@ Worktree installation paths changed when the topic moved. Existing shell functio
 ## Previewing an in-progress branch (notes to self)
 
 ```sh
-npm run preview
+npm run dev
 ```
 
-Install Playwright Chromium first with `npx playwright install chromium`. Publication builds automatically render the social sharing images from the current titles, artwork, and shared card design; local builds without sharing-card rasterization and output checks do not require a browser.
+This serves the current checkout at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`; if another worktree is using that port, the server chooses an available one). Saving any file under `topics/`, `pages/`, `design-system/` or `scripts/` rebuilds the site in a few seconds and reloads open pages. A failed build keeps the last good version on screen with the error in a banner. See [Publishing a topic](docs/publishing-a-topic.md#open-the-live-preview).
 
-This builds the current checkout into `_site/` and serves it at the local URL printed in the terminal (normally `http://127.0.0.1:4173/`). If another worktree is using that port, the server chooses an available one. After editing, run `npm run build:site` in another terminal and refresh the browser. This full-site preview uses the publication content and theme.
+`npm run dev` skips the social sharing images to keep rebuilds fast. To see them, run `npm run dev -- --site`, which builds the full publication bundle each time (install Playwright Chromium first with `npx playwright install chromium`).
 
 Every pull request also produces a **site-preview-pr-N** artifact in its **Publish collection** workflow run. Follow the download link in the run summary, unzip the artifact, and serve its folder over HTTP (for example, with `npx serve`). The artifact includes the complete offline site and supporting source files, expires after 14 days, and does not change the public Pages site.
 
@@ -160,7 +160,7 @@ To prepare the publication bundle locally:
 npm run build:site
 ```
 
-This recreates `_site/` from the same sources, including supporting topic files. Use `npm run preview` to inspect it over HTTP. Generated HTML, shared assets, feeds and icons are ignored by Git; the workflow uploads the deployment artifact directly to Pages. Old generated files remain in Git history, which is not rewritten.
+This recreates `_site/` from the same sources, including supporting topic files. Use `npm run dev -- --site` to inspect it over HTTP. Generated HTML, shared assets, feeds and icons are ignored by Git; the workflow uploads the deployment artifact directly to Pages. Old generated files remain in Git history, which is not rewritten.
 
 Pull requests run the same checks and build, without deployment. Pushes to `main` and manual runs of **Publish collection** from `main` deploy after checks pass. Local builds and branch previews do not publish the current branch.
 

@@ -7,11 +7,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 // GitHub Pages serves 404.html at whatever path was requested, so its links and icons start at the site root.
 test('the 404 page works at any depth in both designs, and footers reach every site page', async ({ browser }) => {
-  const server = spawn(process.execPath, [resolve(root, 'scripts/preview.ts')], { cwd: root, env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const server = spawn(process.execPath, [resolve(root, 'scripts/server.ts')], { cwd: root, env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
   try {
     const base = await new Promise<string>((resolveURL, reject) => {
       let output = '';
-      server.stdout.on('data', chunk => { output += chunk; const match = output.match(/Preview: (http:\/\/127\.0\.0\.1:\d+\/)/); if (match) resolveURL(match[1]); });
+      server.stdout.on('data', chunk => { output += chunk; const match = output.match(/Serving: (http:\/\/127\.0\.0\.1:\d+\/)/); if (match) resolveURL(match[1]); });
       server.once('exit', code => reject(new Error(`Preview exited with ${code}`)));
     });
     for (const design of ['atlas', 'folio']) {

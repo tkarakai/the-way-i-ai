@@ -77,9 +77,9 @@ npm run test:browser
 | `npm run build:site` | Generates the full bundle, including sharing JPEGs; needs Chromium. |
 | `npm run check` | Validates sources, links and references. If `_site/version.json` exists, also checks generated files against that recorded edition. It does not write output. |
 | `npm run test:browser` | Builds the publication and background preview, then exercises both designs and their interactions. |
-| `npm run preview` | Builds the full bundle and serves the current checkout locally, normally on port 4173. |
+| `npm run dev` | Serves the current checkout locally, normally on port 4173, rebuilding on source changes and reloading open pages. Skips sharing JPEGs unless run as `npm run dev -- --site`. |
 
-After editing while a preview is open, run `npm run build:site` and refresh. Inspect affected pages at desktop and 320/390px widths in light and dark modes. Check keyboard controls, full text, no-JavaScript content and relevant interactions. Generated output is staged only after source validation succeeds; do not repair a failed build by editing `_site/`.
+While editing, keep `npm run dev` running; it rebuilds and reloads after each save and shows build errors in the page. Use `npm run dev -- --site` to inspect sharing images. Inspect affected pages at desktop and 320/390px widths in light and dark modes. Check keyboard controls, full text, no-JavaScript content and relevant interactions. Generated output is staged only after source validation succeeds; do not repair a failed build by editing `_site/`.
 
 A PR workflow uploads `site-preview-pr-N`, retained for 14 days and linked in the run summary. Download and unzip it, then serve that folder over HTTP, for example with `npx serve`. A PR preview does not deploy the public site.
 

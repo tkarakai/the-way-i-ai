@@ -477,17 +477,17 @@ test('the publication bundle is clean and contains the same standalone pages and
 });
 
 
-test('the local preview serves the generated site, links and images without serving paths outside the bundle', async t => {
+test('the local server serves the generated site, links and images without serving paths outside the bundle', async t => {
   const f = await fixture(t);
   passed(f.build('--site'));
-  const child = spawn(process.execPath, [resolve(f.path, 'scripts/preview.ts')], { cwd: f.path, env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, [resolve(f.path, 'scripts/server.ts')], { cwd: f.path, env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
   try {
     const base = await new Promise<string>((resolveURL, reject) => {
       const timer = setTimeout(() => reject(new Error('Preview did not start')), 10000);
       let output = '';
       child.stdout.on('data', chunk => {
         output += chunk;
-        const match = output.match(/Preview: (http:\/\/127\.0\.0\.1:\d+\/)/);
+        const match = output.match(/Serving: (http:\/\/127\.0\.0\.1:\d+\/)/);
         if (match) { clearTimeout(timer); resolveURL(match[1]); }
       });
       child.once('error', error => { clearTimeout(timer); reject(error); });

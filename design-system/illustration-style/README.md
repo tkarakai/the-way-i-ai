@@ -51,7 +51,7 @@ Clear paper uses sRGB **`#F8F5EE`**, matching the light theme's `--paper`. The s
 2. Choose the destination topic locally. Back up any prior illustration folder you want to keep.
 3. Extract directly into `topics/<topic-id>/assets/illustrations/`.
 4. If the delivered paper drifts from `#F8F5EE`, run `node scripts/prepare-paper.ts <topic-id>` (see below).
-5. Run `npm run build`, or `npm run build:site` and refresh a running preview.
+5. Run `npm run build`, or keep `npm run dev` running, which rebuilds when the files land.
 6. Review desktop/narrow rendering in light and dark themes and run the checks below.
 
 No metadata edits, import script, or generated-page edits are needed. Commit extracted images and manifest; generated output stays ignored. Delivery ZIPs are ignored and must not be committed.

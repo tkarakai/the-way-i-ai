@@ -1,18 +1,40 @@
 import type { RenderedTopic, SearchEntry } from './types.ts';
 
+const entities: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+
+/** Removes tags until none remain, so a removal can never join leftover fragments into a new tag. */
+export function stripTags(html: string, replacement = ''): string {
+  let previous: string;
+  do {
+    previous = html;
+    html = html.replace(/<[^>]*>/g, replacement);
+  } while (html !== previous);
+  return html;
+}
+
+/** Decodes entities in a single pass, so `&amp;lt;` stays the literal text `&lt;`. */
+export function decodeEntities(text: string): string {
+  return text.replace(/&(#x[\da-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (match, entity: string) => {
+    if (entity[0] !== '#') return entities[entity.toLowerCase()] ?? match;
+    return String.fromCodePoint(entity[1].toLowerCase() === 'x' ? parseInt(entity.slice(2), 16) : Number(entity.slice(1)));
+  });
+}
+
 /** Search is generated from the rendered source, including the original code data. */
 export function searchText(html: string): string {
   const code: string[] = [];
-  const prose = html.replace(/<script\b[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi, (_match, json: string) => {
+  let prose = html.replace(/<script\b[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi, (_match, json: string) => {
     const value: unknown = JSON.parse(json);
     if (typeof value === 'string') code.push(value);
     return '';
-  }).replace(/<(template|style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
-    .replace(/<div class="code-toolbar">[\s\S]*?<\/div>/g, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&#(x[\da-f]+|\d+);/gi, (_match, value: string) => String.fromCodePoint(value[0].toLowerCase() === 'x' ? parseInt(value.slice(1), 16) : Number(value)))
-    .replace(/&(amp|lt|gt|quot|apos|#39);/g, (_match, entity: string) => ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'" }[entity]!));
-  return [prose, ...code].join(' ').replace(/\s+/g, ' ').trim();
+  });
+  let previous: string;
+  do {
+    previous = prose;
+    prose = prose.replace(/<(template|style|script)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
+      .replace(/<div class="code-toolbar">[\s\S]*?<\/div>/g, '');
+  } while (prose !== previous);
+  return [decodeEntities(stripTags(prose, ' ')), ...code].join(' ').replace(/\s+/g, ' ').trim();
 }
 
 export function collectionSearch(topics: RenderedTopic[]): SearchEntry[] {

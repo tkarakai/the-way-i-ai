@@ -10,7 +10,7 @@ import { preloadFile } from '@pierre/diffs/ssr';
 import { shell, collectionBody, readerBody, indexBody, pageBody, escape } from '../design-system/layout.ts';
 import { explorerFor } from '../design-system/explorers.ts';
 import { parseWavePosition, wordmarkStyles } from '../design-system/wordmark.ts';
-import { collectionSearch } from '../design-system/search.ts';
+import { collectionSearch, decodeEntities, stripTags } from '../design-system/search.ts';
 import { topicSource, splitFrontMatter } from './markdown-source.ts';
 import { loadIllustrations } from './illustrations.ts';
 import { validatePublication, pageMetadata, sitemap } from './discovery.ts';
@@ -74,7 +74,7 @@ const siteFonts = fontCSS(font => posix.relative('assets', assets.add(font.file,
 const embeddedFonts = fontCSS(font => `data:font/woff2;base64,${font.data.toString('base64')}`);
 
 const slug = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').trim().replace(/\s+/g, '-');
-const plain = (text: string) => text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+const plain = (text: string) => decodeEntities(stripTags(text));
 const safeJSON = (value: unknown) => JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
 registerCodeThemes();
 const codeCache = new Map<string, Promise<string>>();

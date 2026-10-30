@@ -23,16 +23,15 @@ export function decodeEntities(text: string): string {
 /** Search is generated from the rendered source, including the original code data. */
 export function searchText(html: string): string {
   const code: string[] = [];
-  let prose = html.replace(/<script\b[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi, (_match, json: string) => {
+  for (const [, json] of html.matchAll(/<script\b[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)) {
     const value: unknown = JSON.parse(json);
     if (typeof value === 'string') code.push(value);
-    return '';
-  });
+  }
+  let prose = html;
   let previous: string;
   do {
     previous = prose;
-    prose = prose.replace(/<(template|style|script)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
-      .replace(/<div class="code-toolbar">[\s\S]*?<\/div>/g, '');
+    prose = prose.replace(/<(template|style|script)\b[^>]*>[\s\S]*?<\/\1\s*>|<div class="code-toolbar">[\s\S]*?<\/div>/gi, '');
   } while (prose !== previous);
   return [decodeEntities(stripTags(prose, ' ')), ...code].join(' ').replace(/\s+/g, ' ').trim();
 }

@@ -56,6 +56,85 @@
   const dark = () => document.documentElement.dataset.theme === 'dark';
   const point = (x: number, y: number) => `${x.toFixed(1)} ${y.toFixed(1)}`;
 
+  // “code with”, set like “the” at the start of the last line, so the logo reads “the way I code
+  // with AI”: it spans from the left edge of “the” to a word space before the A, as close to the size
+  // of “the” as fits (about 90% of it), on the baseline of “AI”. Each letter is its own box. The d holds a hidden p placed so their bowls
+  // coincide: half a turn of the d about its bowl, then the p, reads as one letter turning over.
+  const codeWith = () => {
+    const box = logo.getBoundingClientRect(), { box: a } = glyphs(initial), { baseline } = glyphs(rest);
+    const style = getComputedStyle(logo), words = 'code with', the = logo.querySelector<HTMLElement>('.title-prefix') ?? parts[0];
+    const measure = (text: string, px: number) => { metrics.font = `${style.fontWeight} ${px}px ${style.fontFamily}`; return metrics.measureText(text); };
+    const line = temp('span', 'logo-cope', [...words].map(char => `<span class="cope-letter"><span class="cope-glyph">${char === ' ' ? '&nbsp;' : char}</span></span>`).join(''));
+    const full = parseFloat(getComputedStyle(the).fontSize);
+    line.style.fontSize = `${full}px`;
+    logo.prepend(line);
+    // Width, letter-spacing and word space all scale with the font size.
+    const px = full * Math.min(1, (a.left - the.getBoundingClientRect().left) / (line.getBoundingClientRect().width + measure(' ', full).width));
+    line.style.fontSize = `${px}px`;
+    const letters = [...line.querySelectorAll<HTMLElement>('.cope-letter')];
+    const d = letters[2].firstElementChild as HTMLElement, p = document.createElement('span');
+    p.className = 'cope-glyph cope-p';
+    p.textContent = 'p';
+    letters[2].append(p);
+    const m = measure('d', px), o = measure('o', px), x = measure('x', px).actualBoundingBoxAscent;
+    const inBox = (px - m.fontBoundingBoxAscent - m.fontBoundingBoxDescent) / 2 + m.fontBoundingBoxAscent;
+    const bowl = o.actualBoundingBoxLeft + o.actualBoundingBoxRight;
+    const bx = -m.actualBoundingBoxLeft + bowl / 2, by = inBox - x / 2, pbx = measure('p', px).actualBoundingBoxRight - bowl / 2;
+    d.style.transformOrigin = `${bx}px ${by}px`;
+    Object.assign(p.style, { left: `${bx - pbx}px`, transformOrigin: `${pbx}px ${by}px` });
+    const space = measure(' ', px).width, width = line.getBoundingClientRect().width;
+    Object.assign(line.style, { left: `${a.left - box.left - space - width}px`, top: `${baseline - box.top - inBox}px` });
+    // Swap the turned d for the p, quickly enough to read as the same letter.
+    const swap = (total: number, at: number) => {
+      d.animate(timeline(total, [{ at: 0, opacity: 1 }, { at, opacity: 1 }, { at: at + 90, opacity: 0 }, { at: total, opacity: 0 }]), { duration: total });
+      p.animate(timeline(total, [{ at: 0, opacity: 0 }, { at, opacity: 0 }, { at: at + 90, opacity: 1 }, { at: total, opacity: 1 }]), { duration: total });
+    };
+    return { line, letters, d, x, middle: by, swap, ink: getComputedStyle(logo).color, accent: getComputedStyle(rest).color };
+  };
+  type Phrase = ReturnType<typeof codeWith>;
+  type Moment = Keyframe & { at: number };
+  // Typed in behind a caret, which blinks while the words rest, and backspaced away from `erase`.
+  const typewriter = ({ line, letters, x, middle }: Phrase, total: number, erase: number) => {
+    const typed = (index: number) => 150 + index * 85, erased = (index: number) => erase + (letters.length - 1 - index) * 55;
+    letters.forEach((letter, index) => letter.animate(timeline(total, [
+      { at: 0, opacity: 0, easing: 'steps(1, end)' }, { at: typed(index), opacity: 1, easing: 'steps(1, end)' }, { at: erased(index), opacity: 0 }, { at: total, opacity: 0 }
+    ]), { duration: total }));
+    const caret = temp('span', 'cope-caret');
+    // A tall, square terminal-style caret: 2.75 x-heights, raised a third of an x-height above
+    // centre on the lowercase letters (10px on a desktop-sized logo).
+    Object.assign(caret.style, { top: `${middle - x * 1.705}px`, height: `${x * 2.75}px`, width: `${x * .2}px`, marginLeft: `${x * .12}px` });
+    line.append(caret);
+    const edge = (index: number) => `${index < 0 ? 0 : letters[index].offsetLeft + letters[index].offsetWidth}px`;
+    const moves: Moment[] = [{ at: 0, left: edge(-1), easing: 'steps(1, end)' }];
+    letters.forEach((_, index) => moves.push({ at: typed(index), left: edge(index), easing: 'steps(1, end)' }));
+    [...letters.keys()].reverse().forEach(index => moves.push({ at: erased(index), left: edge(index - 1), easing: 'steps(1, end)' }));
+    caret.animate(timeline(total, [...moves, { at: total, left: edge(-1) }]), { duration: total });
+    const blink: Moment[] = [{ at: 0, opacity: 0, easing: 'steps(1, end)' }, { at: 120, opacity: 1, easing: 'steps(1, end)' }];
+    const blinking = (from: number, to: number) => { for (let at = from, on = false; at < to; at += 265, on = !on) blink.push({ at, opacity: on ? 1 : 0, easing: 'steps(1, end)' }); };
+    blinking(1000, erase); blink.push({ at: erase, opacity: 1, easing: 'steps(1, end)' }); blinking(erased(0) + 100, total - 100);
+    caret.animate(timeline(total, [...blink, { at: total - 100, opacity: 0, easing: 'steps(1, end)' }, { at: total, opacity: 0 }]), { duration: total });
+  };
+  // From `from`, the d loses its balance, topples over its bowl under gravity, knocks the e aside as
+  // it swings through, and hangs swinging like a pendulum until it settles as a p (2880ms).
+  const topple = ({ letters, d, swap, ink, accent }: Phrase, total: number, from: number) => {
+    const at = (time: number) => from - 1500 + time;
+    const frames = (moments: Moment[]) => timeline(total, moments.map(moment => ({ ...moment, at: moment.at && moment.at < total ? at(moment.at) : moment.at })));
+    d.animate(frames([
+      { at: 0, rotate: '0deg', scale: '1', color: ink }, { at: 1500, rotate: '0deg', scale: '1', color: ink, easing: 'ease-out' },
+      { at: 1800, rotate: '9deg', scale: '1.7', color: accent, easing: 'ease-in-out' }, { at: 1960, rotate: '3deg', scale: '1.7', easing: 'ease-in-out' }, { at: 2200, rotate: '16deg', scale: '1.7', easing: 'cubic-bezier(.55, 0, 1, .45)' },
+      { at: 2620, rotate: '180deg', scale: '1.7', easing: 'ease-out' }, { at: 2880, rotate: '232deg', easing: 'ease-in-out' }, { at: 3200, rotate: '146deg', easing: 'ease-in-out' },
+      { at: 3490, rotate: '204deg', easing: 'ease-in-out' }, { at: 3750, rotate: '165deg', easing: 'ease-in-out' }, { at: 3980, rotate: '189deg', easing: 'ease-in-out' },
+      { at: 4180, rotate: '177deg', scale: '1.7', color: accent, easing: 'ease-in-out' }, { at: 4380, rotate: '180deg', scale: '1', color: ink }, { at: total, rotate: '180deg', scale: '1', color: ink }
+    ]), { duration: total });
+    swap(total, at(4380));
+    // The stem sweeps through the e as it falls.
+    letters[3].firstElementChild!.animate(frames([
+      { at: 0, translate: '0 0', rotate: '0deg' }, { at: 2470, translate: '0 0', rotate: '0deg', easing: 'cubic-bezier(.2, .8, .3, 1)' },
+      { at: 2620, translate: '.22em -.12em', rotate: '24deg', easing: 'cubic-bezier(.4, 0, .6, 1)' }, { at: 2900, translate: '.1em 0', rotate: '-8deg', easing: 'ease-out' },
+      { at: 3150, translate: '0 0', rotate: '0deg' }, { at: total, translate: '0 0', rotate: '0deg' }
+    ]), { duration: total });
+  };
+
   const tricks: Record<string, () => Animation> = {
     // Alien energy: a glow charges letter by letter in irregular pulses, the letters tremble at the
     // peak, flash, and the power drains away.
@@ -182,14 +261,43 @@
       ]), { duration: total }));
       return after(animations[animations.length - 1], () => restores.forEach(restore => restore()));
     },
-    // The shared I crouches, flips once and lands back on its stem.
-    backflip: () => after(stem.animate([
-      { transform: 'none' },
-      { transform: 'translateY(.03em) scaleY(.88)', offset: .18, easing: 'cubic-bezier(.2, .7, .3, 1)' },
-      { transform: 'translateY(-.62em) rotate(-190deg)', offset: .55, easing: 'cubic-bezier(.5, 0, .8, .5)' },
-      { transform: 'translateY(.02em) rotate(-360deg) scaleY(.9)', offset: .84, easing: 'ease-out' },
-      { transform: 'rotate(-360deg)' }
-    ], { duration: 900 }), lift(stem, '50% 60%')),
+    // The shared I does a standing backflip, like a gymnast: it sinks into a crouch leaning forward,
+    // explodes upwards opening its chest, tucks to spin fast at the top of a true parabola (rising
+    // slows, falling speeds up), opens out to slow the spin, lands a touch short, absorbs the impact
+    // with bent knees and stands up tall to stick the landing. The I it lands on feels the impact.
+    backflip: () => {
+      const { box, baseline, ascent: h } = glyphs(stem);
+      const restore = lift(stem, `50% ${baseline - h / 2 - box.top}px`);
+      const total = 1800, height = h * 1.1;
+      // Body shape about its centre: scaleY s (crouch or tuck), width w, skew k (lean; negative leans forward).
+      // On the ground the feet stay planted, so the centre moves to keep them where they were.
+      type Pose = { at: number; s?: number; w?: number; k?: number; r?: number; air?: number; easing?: string; ground?: boolean };
+      const poses: Pose[] = [
+        { at: 0, easing: 'cubic-bezier(.4, 0, .3, 1)' },
+        { at: 380, s: .74, w: 1.08, k: -7, easing: 'linear' },
+        { at: 460, s: .72, w: 1.09, k: -5, easing: 'cubic-bezier(.5, 0, .9, .6)' },
+        { at: 560, s: 1.14, w: .93, k: 6, r: -14, easing: 'linear' },
+        { at: 690, s: .72, w: 1.1, k: 0, r: -70, air: .75, ground: false, easing: 'linear' },
+        { at: 870, s: .68, w: 1.12, r: -190, air: 1, ground: false, easing: 'linear' },
+        { at: 1030, s: .74, w: 1.1, r: -300, air: .7, ground: false, easing: 'linear' },
+        { at: 1130, s: 1.06, w: .96, r: -345, air: .25, ground: false, easing: 'linear' },
+        { at: 1180, s: 1, w: 1, r: -352, easing: 'cubic-bezier(.2, .7, .4, 1)' },
+        { at: 1310, s: .8, w: 1.07, k: -6, r: -357, easing: 'cubic-bezier(.4, 0, .3, 1)' },
+        { at: 1530, s: 1.05, w: .97, r: -360, easing: 'ease-in-out' },
+        { at: 1700, s: 1, w: 1, r: -360 },
+        { at: total, s: 1, w: 1, r: -360 }
+      ];
+      const body = timeline(total, poses.map(({ at, s = 1, w = 1, k = 0, r = 0, easing }) => ({ at, rotate: `${r}deg`, scale: `${w} ${s}`, transform: `skewX(${k}deg)`, easing })));
+      // Height follows a parabola: quadratic ease-out to the top of the jump, ease-in back down.
+      const flight = timeline(total, poses.filter(pose => pose.ground !== false || pose.at === 870).map(({ at, s = 1, k = 0, easing }) => {
+        const feet = at === 870 ? { x: 0, y: -height } : { x: -Math.tan(k * Math.PI / 180) * h / 2, y: h / 2 * (1 - s) };
+        const curve = at === 560 ? 'cubic-bezier(.33, .67, .67, 1)' : at === 870 ? 'cubic-bezier(.33, 0, .67, .33)' : easing;
+        return { at, translate: `${feet.x.toFixed(1)}px ${feet.y.toFixed(1)}px`, easing: curve };
+      }));
+      stem.animate(flight, { duration: total });
+      rest.animate(timeline(total, [{ at: 0, top: '0' }, { at: 1180, top: '0' }, { at: 1240, top: '.035em', easing: 'ease-out' }, { at: 1420, top: '0' }, { at: total, top: '0' }]), { duration: total });
+      return after(stem.animate(body, { duration: total }), restore);
+    },
     // A small hop runs part by part through the wordmark.
     ripple: () => {
       const hops = parts.map((part, index) => part.animate([{ top: '0' }, { top: '-.14em', offset: .4, easing: 'ease-in' }, { top: '0' }], { duration: 380, delay: index * 60, easing: 'ease-out' }));
@@ -519,16 +627,20 @@
       ]), { duration: total });
       return after(flight, () => plane.remove());
     },
-    // The shared I waves hello.
-    wave: () => after(stem.animate([
-      { transform: 'none' }, { transform: 'rotate(9deg)', offset: .18 }, { transform: 'rotate(-7deg)', offset: .38 },
-      { transform: 'rotate(6deg)', offset: .56 }, { transform: 'rotate(-3deg)', offset: .74 }, { transform: 'none' }
-    ], { duration: 1100, easing: 'ease-in-out' }), lift(stem, '50% 92%')),
+    // “code with” is typed in behind a caret, so the logo reads on as one sentence, “the way I code
+    // with AI”; the d topples over into a p like a pendulum (“cope with AI”); then the words are
+    // backspaced away.
+    cope: () => {
+      const total = 6700, kit = codeWith();
+      typewriter(kit, total, 5600);
+      topple(kit, total, 1500);
+      return clock(total, () => kit.line.remove());
+    },
   };
 
   const labels: Record<string, string> = {
-    backflip: 'Backflip', ripple: 'Ripple', swap: 'Swap and correct', wave: 'Wave', flicker: 'Failing light', glow: 'Alien glow',
-    butterfly: 'Butterfly', topple: 'Topple', timeTravel: 'Time travel', magnet: 'Magnet', glitch: 'Glitch broadcast', origami: 'Origami'
+    backflip: 'Backflip', ripple: 'Ripple', swap: 'Swap and correct', flicker: 'Failing light', glow: 'Alien glow',
+    butterfly: 'Butterfly', topple: 'Topple', timeTravel: 'Time travel', magnet: 'Magnet', glitch: 'Glitch broadcast', origami: 'Origami', cope: 'Cope with AI'
   };
   let bag: string[] = [], last = '', playing: Animation | undefined;
   const nextTrick = () => {
@@ -550,14 +662,17 @@
     }
     logo.dataset.trick = name;
     playing = tricks[name]();
+    tune(name);
     playing.finished.catch(() => undefined).finally(() => { playing = undefined; delete logo.dataset.trick; });
   };
   document.addEventListener('logo-trick', event => play((event as CustomEvent<string>).detail, true));
 
   let lastActivity = performance.now(), notBefore = performance.now() + idleBefore;
   const active = () => { lastActivity = performance.now(); };
-  // Secrets. Triple-click the logo to play the next trick. Type “ai” outside a text field to open a
-  // small menu of every trick by name and play exactly the one you choose. Both restart the idle wait.
+  // Secrets. Triple-click the logo to play the next trick. Type “ai” outside a text field, or press
+  // and hold the logo on a touch screen, to open a small remote under the logo: ▶ plays the next trick, ◀ the previous one and ↻ the current one
+  // again, so the pointer can stay in one place. It names each trick and shows its progress, and
+  // stays open until closed (×, Esc, Tab away or a click elsewhere). Both restart the idle wait.
   const force = (name?: string) => {
     const box = logo.getBoundingClientRect(), visible = box.bottom > 0 && box.top < innerHeight;
     if (!visible) logo.scrollIntoView({ block: 'center', behavior: reducedMotion.matches ? 'instant' : 'smooth' });
@@ -565,19 +680,71 @@
     notBefore = performance.now() + gap[0];
   };
   logo.addEventListener('click', event => { if (event.detail === 3) { getSelection()?.removeAllRanges(); force(); } });
-  let picker: HTMLElement | undefined, returnFocus: HTMLElement | null = null;
-  const closePicker = () => { const closing = picker; picker = undefined; closing?.remove(); returnFocus?.focus?.({ preventScroll: true }); };
-  const openPicker = () => {
-    if (picker) { picker.querySelector('button')?.focus(); return; }
+  const names = Object.keys(tricks), icon = (path: string) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`;
+  let picker: HTMLElement | undefined, returnFocus: HTMLElement | null = null, current = -1, shown = -1, frame = 0;
+  const closePicker = () => { const closing = picker; picker = undefined; cancelAnimationFrame(frame); closing?.remove(); returnFocus?.focus?.({ preventScroll: true }); };
+  // The remote's screen: “3 / 12” and the name, sliding in like a channel caption, over a progress line.
+  function tune(name: string) {
+    current = names.indexOf(name);
+    if (!picker || current === shown) return;
+    shown = current;
+    const caption = picker.querySelector<HTMLElement>('.logo-remote-caption')!;
+    caption.innerHTML = `<b>No. ${current + 1} of ${names.length}</b> <span>${labels[name] ?? name}</span>`;
+    caption.animate([{ transform: 'translateY(100%)', opacity: 0, filter: 'blur(3px)' }, { transform: 'none', opacity: 1, filter: 'none' }], { duration: 380, easing: ease });
+  }
+  const progress = () => {
+    const bar = picker?.querySelector<HTMLElement>('.logo-remote-progress');
+    if (!bar) return;
+    const end = Number(playing?.effect?.getComputedTiming().endTime) || 1;
+    bar.style.transform = `scaleX(${playing ? clamp(Number(playing.currentTime) / end) : 0})`;
+    frame = requestAnimationFrame(progress);
+  };
+  // The remote is a paper tag pinned to the screen: bottom right (bottom centre on phones) until the
+  // reader drags it by its body, then wherever they left it, remembered and kept on screen.
+  const spot = 'the-way-i-ai-trick-remote';
+  const saved = () => { try { return JSON.parse(localStorage.getItem(spot) ?? 'null') as { left: number; top: number } | null; } catch { return null; } };
+  const place = (left?: number, top?: number) => {
+    if (!picker) return;
+    const width = picker.offsetWidth, height = picker.offsetHeight, edge = 12, phone = innerWidth <= 760, at = left === undefined ? saved() : { left, top: top! };
+    const x = at ? at.left : phone ? (innerWidth - width) / 2 : innerWidth - width - 28;
+    const y = at ? at.top : innerHeight - height - (phone ? 16 : 28);
+    picker.style.left = `${Math.round(Math.min(Math.max(edge, x), innerWidth - width - edge))}px`;
+    picker.style.top = `${Math.round(Math.min(Math.max(edge, y), innerHeight - height - edge))}px`;
+  };
+  addEventListener('resize', () => place());
+  const drag = (event: PointerEvent) => {
+    if (!picker || event.button !== 0 || (event.target instanceof Element && event.target.closest('button'))) return;
+    // Keeps focus (and so the remote) where it is, and stops text selection while dragging.
+    event.preventDefault();
+    const tag = picker, from = { x: event.clientX, y: event.clientY, left: tag.offsetLeft, top: tag.offsetTop };
+    tag.setPointerCapture(event.pointerId);
+    tag.classList.add('is-dragging');
+    const move = (step: PointerEvent) => place(from.left + step.clientX - from.x, from.top + step.clientY - from.y);
+    const drop = () => {
+      tag.classList.remove('is-dragging');
+      tag.removeEventListener('pointermove', move);
+      try { localStorage.setItem(spot, JSON.stringify({ left: tag.offsetLeft, top: tag.offsetTop })); } catch { /* Private browsing: the spot lasts until reload. */ }
+    };
+    tag.addEventListener('pointermove', move);
+    tag.addEventListener('pointerup', drop, { once: true });
+    tag.addEventListener('pointercancel', drop, { once: true });
+  };
+  const openPicker = (byTouch = false) => {
+    if (picker) { picker.querySelector<HTMLElement>('.logo-remote-next')?.focus(); return; }
     returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     picker = document.createElement('div');
     picker.className = 'logo-picker';
     picker.setAttribute('role', 'dialog');
     picker.setAttribute('aria-label', 'Logo tricks');
-    picker.innerHTML = `<div class="logo-picker-head"><strong>Logo tricks</strong><button type="button" class="logo-picker-close" aria-label="Close">×</button></div><button type="button" class="logo-picker-surprise" data-pick="">Surprise me</button><ol>${Object.keys(tricks).map(name => `<li><button type="button" data-pick="${name}">${labels[name] ?? name}</button></li>`).join('')}</ol>`;
+    picker.innerHTML = `<span class="logo-remote-eyelet" aria-hidden="true"></span><div class="logo-remote-screen" aria-live="polite"><span class="logo-remote-caption"><b>${names.length} logo tricks</b> <span>Press play</span></span><span class="logo-remote-progress"></span></div><button type="button" class="logo-remote-step" data-step="-1" aria-label="Previous trick">${icon('M15.4 6 9.4 12l6 6-1.4 1.4L6.6 12l7.4-7.4z')}</button><button type="button" class="logo-remote-step logo-remote-next" data-step="1" aria-label="Next trick">${icon('M7 5v14l11-7z')}</button><button type="button" class="logo-remote-step" data-step="0" aria-label="Play again">${icon('M12 5a7 7 0 1 1-6.6 4.7l1.9.6A5 5 0 1 0 12 7v3L7.5 6 12 2z')}</button><button type="button" class="logo-remote-close" aria-label="Close">${icon('M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z')}</button>`;
     document.body.append(picker);
-    const buttons = [...picker.querySelectorAll<HTMLButtonElement>('[data-pick]')];
-    buttons[0].focus();
+    place();
+    picker.addEventListener('pointerdown', drag);
+    shown = -1;
+    if (logo.dataset.trick) tune(logo.dataset.trick);
+    progress();
+    // A finger opened it: focus without the keyboard ring.
+    picker.querySelector<HTMLElement>('.logo-remote-next')!.focus({ preventScroll: true, focusVisible: !byTouch } as FocusOptions);
     // WebKit can blur the focused item on mouse-down without focusing the clicked button.
     // Keep focus inside until click handles the choice, otherwise focusout removes it first.
     picker.addEventListener('mousedown', event => {
@@ -585,25 +752,36 @@
     });
     // Not modal: leaving it with Tab or a click closes it.
     picker.addEventListener('focusout', event => { if (picker && !(event.relatedTarget instanceof Node && picker.contains(event.relatedTarget))) { returnFocus = null; closePicker(); } });
+    // Move on at once, so quick repeated clicks step through the tricks rather than repeat one.
+    const step = (by: number) => { current = current < 0 ? (by < 0 ? names.length - 1 : 0) : (current + by + names.length) % names.length; force(names[current]); };
     picker.addEventListener('click', event => {
       const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('button') : null;
       if (!button) return;
-      if (button.matches('.logo-picker-close')) { closePicker(); return; }
-      const name = button.dataset.pick ?? '';
-      closePicker();
-      force(name);
+      if (button.matches('.logo-remote-close')) { closePicker(); return; }
+      step(Number(button.dataset.step));
     });
     picker.addEventListener('keydown', event => {
       if (event.key === 'Escape') { event.preventDefault(); closePicker(); }
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        event.preventDefault();
-        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-        buttons[(index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length].focus();
-      }
+      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); step(event.key === 'ArrowRight' ? 1 : -1); }
     });
   };
   document.addEventListener('pointerdown', event => { if (picker && event.target instanceof Node && !picker.contains(event.target)) closePicker(); });
   let typed = '', typedAt = 0;
+  // Touch screens have no keyboard for “ai”: holding the logo for half a second opens the remote instead.
+  let hold: ReturnType<typeof setTimeout> | undefined, held = false, pressed = { x: 0, y: 0 };
+  logo.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch' || reducedMotion.matches) return;
+    pressed = { x: event.clientX, y: event.clientY };
+    held = false;
+    clearTimeout(hold);
+    hold = setTimeout(() => { held = true; navigator.vibrate?.(12); openPicker(true); }, 500);
+  });
+  logo.addEventListener('pointermove', event => { if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > 10) clearTimeout(hold); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(type => logo.addEventListener(type, () => clearTimeout(hold)));
+  // Lifting the finger after a hold must not count as a tap: that would move focus and close the remote.
+  logo.addEventListener('touchend', event => { if (held) event.preventDefault(); }, { passive: false });
+  // Android follows a long press with a context menu; the hold has used it.
+  logo.addEventListener('contextmenu', event => { if (held) event.preventDefault(); });
   addEventListener('keydown', event => {
     // Typing 'ai' is a single-key shortcut: off with the others, and with animations off there is nothing to pick.
     if (document.documentElement.dataset.shortcuts === 'off' || reducedMotion.matches) return;

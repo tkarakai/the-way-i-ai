@@ -266,7 +266,7 @@ test('[a|b|c] collection copy rotates in order and loops; reduced motion and scr
   await expect(page.locator('.rotator-item.is-current')).toHaveText(still!);
 });
 
-const tricks = ['backflip', 'ripple', 'swap', 'wave', 'flicker', 'glow', 'butterfly', 'topple', 'timeTravel', 'magnet', 'glitch', 'origami'];
+const tricks = ['backflip', 'ripple', 'swap', 'flicker', 'glow', 'butterfly', 'topple', 'timeTravel', 'magnet', 'glitch', 'origami', 'cope'];
 
 test('the home logo drops in, performs rare idle tricks without moving its letters, and the full stop chases each phrase', async ({ page }) => {
   await page.clock.install();
@@ -316,7 +316,7 @@ test('reduced motion: no logo tricks', async ({ page }) => {
   await expect(page.locator('.hero-wordmark .wordmark')).not.toHaveAttribute('data-trick');
 });
 
-test('secret: triple-click plays the next trick; typing “ai” opens a menu that plays exactly the chosen one', async ({ page }) => {
+test('secret: triple-click plays the next trick; typing “ai” opens a remote that steps through every trick', async ({ page }) => {
   await page.clock.install();
   await page.goto(url('index.html'));
   await page.clock.runFor(3000);
@@ -325,56 +325,138 @@ test('secret: triple-click plays the next trick; typing “ai” opens a menu th
   await page.clock.runFor(50);
   await expect(logo).toHaveAttribute('data-trick', new RegExp(`^(${tricks.join('|')})$`));
   await page.keyboard.type('ai');
-  const picker = page.getByRole('dialog', { name: 'Logo tricks' });
-  await expect(picker).toBeVisible();
-  await expect(picker.locator('[data-pick]')).toHaveCount(tricks.length + 1);
-  await expect(picker.getByRole('button', { name: 'Surprise me' })).toBeFocused();
-  // Choosing a trick interrupts the one playing and plays exactly the choice.
-  await picker.getByRole('button', { name: 'Magnet' }).click();
-  await expect(picker).toHaveCount(0);
+  const remote = page.getByRole('dialog', { name: 'Logo tricks' });
+  await expect(remote).toBeVisible();
+  await expect(remote.getByRole('button', { name: 'Next trick' })).toBeFocused();
+  // Opened during a trick, it already names the one playing.
+  await expect(remote.locator('.logo-remote-caption')).toHaveText(new RegExp(`^No\\. \\d+ of ${tricks.length} .+`));
+  await page.evaluate(() => document.querySelector('.hero-wordmark')!.getAnimations({ subtree: true }).filter(animation => animation.effect?.getComputedTiming().endTime !== Infinity).forEach(animation => animation.finish()));
   await page.clock.runFor(100);
-  await expect(logo).toHaveAttribute('data-trick', 'magnet');
+  // ▶ steps forward, ◀ back and ↻ replays, interrupting whatever is playing; the remote stays open.
+  const caption = async () => (await remote.locator('.logo-remote-caption').textContent())!;
+  const [, first] = (await caption()).match(/^No\. (\d+)/)!;
+  await remote.getByRole('button', { name: 'Next trick' }).click();
+  await page.clock.runFor(100);
+  await expect(remote.locator('.logo-remote-caption')).toHaveText(new RegExp(`^No\\. ${Number(first) % tricks.length + 1} of `));
+  const playing = await logo.getAttribute('data-trick');
+  await remote.getByRole('button', { name: 'Play again' }).click();
+  await page.clock.runFor(100);
+  await expect(logo).toHaveAttribute('data-trick', playing!);
+  await remote.getByRole('button', { name: 'Previous trick' }).click();
+  await page.clock.runFor(100);
+  await expect(remote.locator('.logo-remote-caption')).toHaveText(new RegExp(`^No\\. ${first} of `));
+  await expect(remote).toBeVisible();
+  await remote.getByRole('button', { name: 'Close' }).click();
+  await expect(remote).toHaveCount(0);
   await page.keyboard.type('ai');
-  await expect(picker).toBeVisible();
+  await expect(remote).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(picker).toHaveCount(0);
+  await expect(remote).toHaveCount(0);
 });
 
 for (const design of ['atlas', 'folio'] as const) {
-  test(`${design}: every logo menu choice plays with the mouse, and keyboard selection and dismissal work`, async ({ page, context }) => {
+  test(`${design}: the remote plays every trick with the mouse, and the keyboard steps and dismisses it`, async ({ page, context }) => {
     await context.addInitScript(choice => localStorage.setItem('the-way-i-ai-design', choice), design);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(url('index.html'));
     const logo = page.locator('.hero-wordmark .wordmark');
-    const picker = page.getByRole('dialog', { name: 'Logo tricks' });
-    for (const trick of tricks) {
-      await page.locator('body').press('a');
-      await page.keyboard.press('i');
-      await picker.locator(`[data-pick="${trick}"]`).click();
-      await expect(picker).toHaveCount(0);
-      await expect(logo).toHaveAttribute('data-trick', trick);
+    const remote = page.getByRole('dialog', { name: 'Logo tricks' });
+    await page.locator('body').press('a');
+    await page.keyboard.press('i');
+    // With the pointer kept on ▶, every trick plays once, in order.
+    const played = new Set<string>();
+    for (let step = 0; step < tricks.length; step++) {
+      await remote.getByRole('button', { name: 'Next trick' }).click();
+      await expect(remote).toBeVisible();
+      await expect(logo).toHaveAttribute('data-trick', /.+/);
+      played.add((await logo.getAttribute('data-trick'))!);
+      await expect(remote.locator('.logo-remote-caption')).toHaveText(new RegExp(`^No\\. ${step + 1} of ${tricks.length} `));
       expect(await logo.evaluate(node => node.getAnimations({ subtree: true }).some(animation => animation.playState === 'running'))).toBe(true);
       // Finish each performance so every choice starts from rest, on the real browser clock.
       await logo.evaluate(node => node.parentElement!.getAnimations({ subtree: true }).filter(animation => animation.effect?.getComputedTiming().endTime !== Infinity).forEach(animation => animation.finish()));
       await expect(logo).not.toHaveAttribute('data-trick');
     }
-    await page.keyboard.type('ai');
-    await page.keyboard.press('ArrowDown');
-    await expect(picker.locator('[data-pick="glow"]')).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(logo).toHaveAttribute('data-trick', 'glow');
-    await expect(picker).toHaveCount(0);
-    await page.keyboard.type('ai');
-    // Tab away from the final item dismisses the nonmodal menu.
-    await page.keyboard.press('ArrowUp');
+    expect([...played].sort()).toEqual([...tricks].sort());
+    // Arrow keys step while it has focus; Tab away dismisses the nonmodal remote.
+    await page.keyboard.press('ArrowRight');
+    await expect(remote.locator('.logo-remote-caption')).toHaveText(new RegExp(`^No\\. 1 of ${tricks.length} `));
+    await page.keyboard.press('ArrowLeft');
+    await expect(remote.locator('.logo-remote-caption')).toHaveText(new RegExp(`^No\\. ${tricks.length} of ${tricks.length} `));
     await page.keyboard.press('Tab');
-    await expect(picker).toHaveCount(0);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(remote).toHaveCount(0);
     await page.locator('body').press('a');
     await page.keyboard.press('i');
     await page.keyboard.press('Escape');
-    await expect(picker).toHaveCount(0);
+    await expect(remote).toHaveCount(0);
   });
 }
+
+test('the trick remote can be dragged anywhere on screen and reopens where it was left', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(url('index.html'));
+  await page.locator('body').press('a');
+  await page.keyboard.press('i');
+  const remote = page.getByRole('dialog', { name: 'Logo tricks' });
+  // Measure only once its entrance, lift and settle have finished.
+  const settled = async () => { await remote.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished))); return (await remote.boundingBox())!; };
+  // It starts in the bottom right corner, pinned to the screen.
+  const start = await settled();
+  expect(start.x + start.width).toBeGreaterThan(1200);
+  expect(start.y + start.height).toBeGreaterThan(740);
+  // Dragged by its body (not a button), it follows the pointer, and stays open and on screen.
+  await page.mouse.move(start.x + 20, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x - 700, start.y - 500, { steps: 6 });
+  await expect(remote).toHaveClass(/is-dragging/);
+  await page.mouse.up();
+  const moved = await settled();
+  expect(Math.abs(moved.x - (start.x - 720))).toBeLessThan(3);
+  expect(Math.abs(moved.y - (start.y - 500 - start.height / 2))).toBeLessThan(3);
+  await page.mouse.move(moved.x - 2000, moved.y - 2000);
+  await expect(remote).toBeVisible();
+  await expect(remote.getByRole('button', { name: 'Next trick' })).toBeFocused();
+  // Dragging past the edge keeps it on screen.
+  await page.mouse.move(moved.x + 20, moved.y + moved.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(-500, -500, { steps: 4 });
+  await page.mouse.up();
+  const edge = await settled();
+  expect(edge.x).toBe(12);
+  expect(edge.y).toBe(12);
+  await page.keyboard.press('Escape');
+  await page.keyboard.type('ai');
+  await expect(remote).toBeVisible();
+  expect((await settled()).x).toBe(12);
+});
+
+test('touch screens: holding the home logo opens the trick remote; a tap does not', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await context.newPage();
+  await page.goto(url('index.html'));
+  const box = (await page.locator('.hero-wordmark .wordmark').boundingBox())!;
+  const touch = await context.newCDPSession(page);
+  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  const press = async (ms: number) => {
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+    await page.waitForTimeout(ms);
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  const remote = page.getByRole('dialog', { name: 'Logo tricks' });
+  await press(120);
+  await page.waitForTimeout(600);
+  await expect(remote).toHaveCount(0);
+  await press(700);
+  await expect(remote).toBeVisible();
+  await remote.getByRole('button', { name: 'Next trick' }).tap();
+  await expect(remote.locator('.logo-remote-caption')).toHaveText(new RegExp(`^No\\. 1 of ${tricks.length} `));
+  // Phones keep it at the bottom of the screen, centred.
+  const placed = (await remote.boundingBox())!;
+  expect(Math.round(placed.x + placed.width / 2)).toBe(195);
+  expect(placed.y + placed.height).toBeGreaterThan(800);
+  await context.close();
+});
 
 for (const design of ['atlas', 'folio'] as const) {
   test(`${design}: F turns focus mode on and off, and is ignored while typing`, async ({ page, context }) => {

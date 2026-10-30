@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../_site/', import.meta.url);
 const registry = JSON.parse(await readFile(new URL('topics/topics.json', root), 'utf8')) as { topics: string[] };
 const url = (path: string) => new URL(path, 'http://127.0.0.1:4193/').href;
+const escapeRegExp = (text: string) => text.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
 const pages = ['index.html', 'general-index/index.html', ...registry.topics.map(id => `topics/${id}/index.html`)];
 
 for (const width of [1440, 390, 320]) {
@@ -565,7 +566,7 @@ test('home: in List, J/K select topics, the spread follows, and Enter opens the 
   await page.keyboard.press('j');
   const href = (await cards.nth(1).getAttribute('href'))!;
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(new RegExp(href.replace(/\./g, '\\.') + '$'));
+  await expect(page).toHaveURL(new RegExp(escapeRegExp(href) + '$'));
 });
 
 test('home: the spread is one Tab stop; arrows select a topic and Enter opens it', async ({ page }) => {
@@ -578,7 +579,7 @@ test('home: the spread is one Tab stop; arrows select a topic and Enter opens it
   const href = (await spread.getAttribute('data-href'))!;
   expect(href).toBe(`topics/${registry.topics.at(-2)}/index.html`);
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(new RegExp(href.replace(/\./g, '\\.') + '$'));
+  await expect(page).toHaveURL(new RegExp(escapeRegExp(href) + '$'));
 });
 
 for (const design of ['atlas', 'folio'] as const) {

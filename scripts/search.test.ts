@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectionSearch, searchText } from '../design-system/search.ts';
+import { collectionSearch, decodeEntities, searchText, stripTags } from '../design-system/search.ts';
 import type { RenderedTopic } from '../design-system/types.ts';
 
 const codeExample = (code: string) => `<div class="code-example"><div class="code-toolbar"><span>Terminal example</span><button class="small-button js-only" data-copy="example-code-1" aria-label="Copy code example">Copy</button></div><diffs-container><template shadowrootmode="open"><style>irrelevant-token</style><pre>rendered code</pre></template></diffs-container><script type="application/json" id="example-code-1">${JSON.stringify(code).replaceAll('<', '\\u003c')}</script></div>`;
@@ -13,6 +13,16 @@ test('search excludes code toolbar labels while preserving authored prose and or
 test('search uses visible prose and original code, not syntax-highlight CSS or controls', () => {
   const html = '<p>Use A &amp; B with &#x3B1;.</p><diffs-container><template shadowrootmode="open"><style>irrelevant-token</style><pre>rendered code</pre></template></diffs-container><script type="application/json">"if (a < b) run()"</script>';
   assert.equal(searchText(html), 'Use A & B with α. if (a < b) run()');
+});
+
+test('tag removal repeats until no tag remains, so removed fragments cannot form a new tag', () => {
+  assert.doesNotMatch(stripTags('<scr<b>ipt>alert(1)</scr</b>ipt> <<script>script>'), /<[a-z\/]/i);
+  assert.equal(stripTags('a<em>b</em>c', ' '), 'a b c');
+  assert.doesNotMatch(searchText('<p>Safe <scr<script>ipt>alert(1)</script> text</p>'), /</);
+});
+
+test('entities decode once, so escaped entity text stays literal', () => {
+  assert.equal(decodeEntities('&amp;lt;b&amp;gt; &#38;lt; &#x3B1; &quot;&apos;&#39; &copy;'), `&lt;b&gt; &lt; α "'' &copy;`);
 });
 
 test('collection search includes opening prose and every section, with stable relative result links', () => {

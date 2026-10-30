@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { indexBody } from '../design-system/layout.ts';
+import { stripTags } from '../design-system/search.ts';
 import type { RenderedTopic, RenderedDocument } from '../design-system/types.ts';
 
 const headings = ['A Minimal Template', '2. The Second Layer', 'Phase 5 — Reconcile', 'Another idea', 'Baseline'];
@@ -10,7 +11,7 @@ const topic: RenderedTopic = { id: 'example', number: '01', title: 'Example', ca
 
 test('the A–Z index sorts past leading numbers, phases and articles, keeping the authored text', () => {
   const html = indexBody([topic]);
-  const order = [...html.matchAll(/<span class="index-text">(.*?)<\/span><span class="index-leader"/g)].map(match => match[1].replace(/<[^>]+>/g, ''));
+  const order = [...html.matchAll(/<span class="index-text">(.*?)<\/span><span class="index-leader"/g)].map(match => stripTags(match[1]));
   assert.deepEqual(order, ['Another idea', 'Baseline', 'A Minimal Template', 'Phase 5 — Reconcile', '2. The Second Layer']);
   assert.match(html, /<span class="index-skip">A <\/span>Minimal Template/);
   assert.match(html, /<span class="index-skip">2\. The <\/span>Second Layer/);

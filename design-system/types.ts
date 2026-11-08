@@ -16,6 +16,8 @@ export interface Collection {
   ambientIntensity?: number;
   topics: string[];
 }
+/** Public visit-statistics identifiers from the build environment: a GoatCounter site code (CODE in CODE.goatcounter.com) and a Cloudflare Web Analytics site token. */
+export interface Analytics { goatcounter?: string; cloudflare?: string }
 export interface SourceDocument { file: string }
 export interface HeadingReference { document: string; heading: string }
 export type SourceReference = HeadingReference | { document: string; excerpt: string };
@@ -77,6 +79,8 @@ export interface ShellOptions {
   files: { stylesheet: string; scripts: string[]; searchIndex: string };
   /** Runs inline in the head, before first paint; the Content-Security-Policy allows it by hash. */
   themeJS: string; csp: string; edition: Edition;
+  /** Visit-statistics identifiers, when the build environment configures them. */
+  analytics?: Analytics;
   collection: Collection; topics: RenderedTopic[]; prefix?: string; page?: string;
   wordmarkBackground?: boolean; created?: string; updated?: string;
   headMetadata?: string;

@@ -16,6 +16,13 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Public visit-statistics identifiers from repository variables (not secrets: every page carries them).
+      # Builds without them, such as forks and local checkouts, publish without statistics. See docs/operations.md.
+      GOATCOUNTER_CODE: ${{ vars.GOATCOUNTER_CODE }}
+      CLOUDFLARE_WEB_ANALYTICS_TOKEN: ${{ vars.CLOUDFLARE_WEB_ANALYTICS_TOKEN }}
+      # A deployment must collect exactly what pages/privacy.md discloses.
+      ANALYTICS_REQUIRED: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

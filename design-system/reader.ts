@@ -657,6 +657,8 @@
       toastTimer = setTimeout(() => { toast.hidden = true; toast.classList.remove('is-leaving'); }, reducedMotion.matches ? 0 : 200);
     }, 2600);
   };
+  // Shared with scripts that load after this one, such as the visit-statistics toggle.
+  (window as Window & { announce?: typeof announce }).announce = announce;
   document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach(button => {
     button.addEventListener('click', async () => {
       const text = JSON.parse(document.getElementById(button.dataset.copy!)!.textContent!);

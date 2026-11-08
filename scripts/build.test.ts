@@ -24,13 +24,16 @@ async function fixture(t: TestContext) {
   const registry = JSON.parse(await readFile(resolve(path, 'topics/topics.json'), 'utf8')) as { topics: string[] };
   for (const id of registry.topics) await rm(resolve(path, 'topics', id, 'assets/illustrations'), { recursive: true, force: true });
   await symlink(resolve(root, 'node_modules'), resolve(path, 'node_modules'), 'dir');
+  // Fixtures never inherit the maintainer's or CI's visit-statistics settings; tests pass them explicitly.
+  const buildWith = (environment: Record<string, string>, ...args: string[]) => spawnSync(process.execPath, [resolve(path, 'scripts/build.ts'), ...args], { cwd: path, encoding: 'utf8', env: {...process.env, GOATCOUNTER_CODE:'', CLOUDFLARE_WEB_ANALYTICS_TOKEN:'', ANALYTICS_REQUIRED:'', SOURCE_DATE_EPOCH:'1793232000', GITHUB_SHA:'0123456789abcdef0123456789abcdef01234567', ...environment} });
   return {
     path,
     read: (file: string) => readFile(resolve(path, /^(?:index\.html|topics\/.*\/index\.html|(?:general-index|about|privacy|licensing|accessibility)\/index\.html|404\.html|sitemap\.xml|feed\.xml)$/.test(file) ? `_site/${file}` : file), 'utf8'),
     search: async () => { const html = await readFile(resolve(path, '_site/index.html'), 'utf8'); return JSON.parse(await readFile(resolve(path, '_site', html.match(/data-search-index="([^"]+)/)![1]), 'utf8')) as {title:string;text:string;href:string}[]; },
     css: async () => { const html=await readFile(resolve(path,'_site/index.html'),'utf8'); return readFile(resolve(path,'_site',html.match(/rel="stylesheet" href="([^"]+)/)![1]),'utf8'); },
     write: (file: string, text: string) => writeFile(resolve(path, ['sitemap.xml','feed.xml'].includes(file) ? `_site/${file}` : file), text),
-    build: (...args: string[]) => spawnSync(process.execPath, [resolve(path, 'scripts/build.ts'), ...args], { cwd: path, encoding: 'utf8', env: {...process.env, SOURCE_DATE_EPOCH:'1793232000', GITHUB_SHA:'0123456789abcdef0123456789abcdef01234567'} })
+    build: (...args: string[]) => buildWith({}, ...args),
+    buildWith,
   };
 }
 function passed(result: SpawnSyncReturns<string>) { assert.equal(result.status, 0, result.stderr || result.stdout); }
@@ -281,6 +284,64 @@ test('ambient configuration keeps F homepage-only, allows omission, and rejects 
     assert.match(invalid.stderr, /ambientBackground|ambientIntensity/);
     assert.equal(await f.read('index.html'), original);
   }
+});
+
+test('visit statistics ship only when the environment configures them, with their privacy disclosure and CSP endpoints', async t => {
+  const f = await fixture(t);
+  const registry = JSON.parse(await f.read('topics/topics.json'));
+  const disclosure = await f.read('pages/privacy.md');
+  const token = '0123456789abcdef0123456789abcdef';
+  const both = { GOATCOUNTER_CODE: 'example', CLOUDFLARE_WEB_ANALYTICS_TOKEN: token };
+  const policyOf = (html: string) => html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)![1].replaceAll('&#39;', "'");
+  const readerOf = async (html: string) => readFile(resolve(f.path, '_site', html.match(/<script src="(assets\/reader-[^"]+)"/)![1]), 'utf8');
+  await f.write('pages/privacy.md', `${disclosure}\n## Statistics\n\nGoatCounter and Cloudflare Web Analytics count visits.\n`);
+  passed(f.buildWith(both));
+  for (const page of ['index.html', 'topics/worktrees/index.html', 'privacy/index.html', '404.html']) {
+    const html = await f.read(page);
+    assert.ok(html.includes(`<script type="application/json" id="analytics-config">{"site":"https://thewayiai.com/","goatcounter":"example","cloudflare":"${token}"}</script>`), page);
+    const policy = policyOf(html);
+    assert.match(policy, /script-src 'self' 'sha256-[^']+' https:\/\/static\.cloudflareinsights\.com;/);
+    assert.match(policy, /img-src 'self' https:\/\/thewayiai\.com https:\/\/example\.goatcounter\.com\/count;/);
+    assert.match(policy, /connect-src 'self' https:\/\/cloudflareinsights\.com;/);
+    // Providers are reached only from the shared script, never from markup, and Settings gains no control.
+    assert.doesNotMatch(html, /<(?:script|img)\b[^>]*\bsrc="https:/);
+    assert.ok(!html.includes('data-preference="analytics"'), page);
+  }
+  assert.ok((await readerOf(await f.read('index.html'))).includes('analytics-config'));
+  // A check of that bundle needs the same environment, as in the Pages workflow.
+  passed(f.buildWith(both, '--check'));
+
+  const configured = await f.read('index.html');
+  for (const [environment, message] of [
+    [{ GOATCOUNTER_CODE: 'Not A Code' }, /GOATCOUNTER_CODE must be the GoatCounter site code/],
+    [{ CLOUDFLARE_WEB_ANALYTICS_TOKEN: 'abc' }, /CLOUDFLARE_WEB_ANALYTICS_TOKEN must be the 32-character token/],
+    // A deployment must not publish a disclosure for statistics it does not collect.
+    [{ GOATCOUNTER_CODE: 'example', ANALYTICS_REQUIRED: 'true' }, /discloses Cloudflare Web Analytics, but CLOUDFLARE_WEB_ANALYTICS_TOKEN is not set for this deployment/],
+    [{ ANALYTICS_REQUIRED: 'true' }, /discloses GoatCounter, but GOATCOUNTER_CODE is not set/],
+  ] as const) {
+    const invalid = f.buildWith(environment);
+    assert.notEqual(invalid.status, 0);
+    assert.match(invalid.stderr, message);
+    assert.equal(await f.read('index.html'), configured);
+  }
+  await f.write('topics/topics.json', JSON.stringify({ ...registry, analytics: { goatcounter: 'example' } }));
+  const inRegistry = f.build();
+  assert.notEqual(inRegistry.status, 0);
+  assert.match(inRegistry.stderr, /come from the GOATCOUNTER_CODE and CLOUDFLARE_WEB_ANALYTICS_TOKEN environment variables/);
+  await f.write('topics/topics.json', JSON.stringify(registry));
+
+  // Local builds and forks have no variables: the disclosed site still builds, without any statistics.
+  passed(f.build());
+  const html = await f.read('index.html');
+  assert.ok(!html.includes('analytics-config'));
+  assert.ok(!/goatcounter|cloudflareinsights/.test(html));
+  assert.match(policyOf(html), /connect-src 'self';/);
+  assert.ok(!(await readerOf(html)).includes('analytics-config'));
+
+  await f.write('pages/privacy.md', '# Privacy\n\nNo statistics are collected.\n\n## Reading\n\nNothing is counted.\n');
+  const undisclosed = f.buildWith(both);
+  assert.notEqual(undisclosed.status, 0);
+  assert.match(undisclosed.stderr, /GOATCOUNTER_CODE is set, so pages\/privacy\.md must disclose GoatCounter/);
 });
 
 test('wave positioning is optional, validated before output changes, and tied to its image source', async t => {

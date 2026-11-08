@@ -168,40 +168,32 @@ See [GitHub's private-reporting setup and notification prerequisites](https://do
 
 ## GoatCounter and Cloudflare Web Analytics
 
-Each project needs its own GoatCounter and Cloudflare Web Analytics sites and identifiers. Activation requires shared analytics integration support.
+Each project needs its own GoatCounter site and Cloudflare Web Analytics site. The integration is built in; the [operations SOP](operations.md#visit-statistics-goatcounter-and-cloudflare-web-analytics) has the step-by-step procedure for each task below.
 
 ### ANALYTICS-01 — Configure the hosted GoatCounter site
 
-- [ ] Create/access the project's hosted GoatCounter account and register its production site.
+- [ ] Create the project's GoatCounter account and site, exclude maintainer IPs, and record the site code.
 
-1. Create the site for `DOMAIN` in [GoatCounter](https://www.goatcounter.com/).
-2. Record the assigned site/dashboard location and exact HTTPS collection endpoint. Keep administrative credentials private.
-3. Obtain the genuine public client configuration/snippet from the account; follow the [installation guide](https://www.goatcounter.com/help/start).
-4. Configure maintainer-visit exclusions and dashboard access. Keep local tracking disabled.
+Follow [Set up GoatCounter](operations.md#1-set-up-goatcounter). Keep administrative credentials private; the site code is public and becomes the `GOATCOUNTER_CODE` repository variable.
 
 ### ANALYTICS-02 — Configure the Cloudflare Web Analytics site
 
-- [ ] Add the project's hostname and obtain its manual snippet.
+- [ ] Add the project's hostname with the manual snippet setup and record its token.
 
-1. Open **Cloudflare → Web Analytics → Add a site**, enter `DOMAIN`, and copy its assigned public beacon token and current snippet.
-2. Use the documented **site not proxied through Cloudflare** setup. Keep DNS-only GitHub Pages hosting.
-3. Record the dashboard location and public client configuration without account/API credentials. Follow [Cloudflare's setup guide](https://developers.cloudflare.com/web-analytics/get-started/).
+Follow [Set up Cloudflare Web Analytics](operations.md#2-set-up-cloudflare-web-analytics). Keep DNS-only GitHub Pages hosting. Record the dashboard location and the public token (the `CLOUDFLARE_WEB_ANALYTICS_TOKEN` repository variable), never account or API credentials.
 
 ### ANALYTICS-03 — Activate and verify both services for this domain
 
-- [ ] Configure both provider identities, production hostname, CSP and privacy disclosure, then verify live collection.
+- [ ] Set both repository variables with an accurate privacy disclosure, deploy, and verify live collection and the privacy behaviour.
 
-Dependencies: ANALYTICS-01 and ANALYTICS-02, and shared integration support in the inherited source.
+Dependencies: ANALYTICS-01 and ANALYTICS-02.
 
-1. Configure the project's real provider identifiers and exact production hostname in the shared integration. Keep local and PR previews uncounted; do not copy snippets into articles or generated HTML.
-2. Restrict GoatCounter page paths to canonical paths without search queries/fragments and inspect referrer handling. See its [JavaScript API](https://www.goatcounter.com/help/js).
-3. Verify CSP allows only the intended script/collection endpoints alongside existing restrictions: GoatCounter uses `https://gc.zgo.at` and the assigned site's `/count` endpoint; Cloudflare uses `https://static.cloudflareinsights.com/beacon.min.js` and, for this non-proxied setup, `https://cloudflareinsights.com/cdn-cgi/rum`. Verify the actual snippets against [GoatCounter CSP guidance](https://www.goatcounter.com/help/csp) and [Cloudflare collection details](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/).
-4. Inspect outgoing payloads with harmless query/referrer markers. Cloudflare's documented absence of query-string logging does not prove its beacon never transmits them. Verify transmission/retention before acceptance; record an unresolved privacy mismatch and leave activation unchecked rather than changing reader URLs to conceal it. See [Cloudflare's FAQ](https://developers.cloudflare.com/web-analytics/faq/).
-5. Publish accurate `pages/privacy.md` disclosure of both services, their purposes, third-party requests, query/referrer handling and relevant retention. Publish disclosure changes together with analytics activation.
-6. Run local validation. Verify collection occurs as intended on production, no local/preview collection, no duplicate counts for design/theme switches, no CSP violations, and usable reading with either provider blocked.
-7. Deploy through REL-01, verify the live privacy text and inspect both dashboards for the intended visit/performance data. Allow processing time; Cloudflare beacons can arrive when a page is hidden/leaving.
+1. [Turn it on](operations.md#3-turn-it-on): set both repository variables and make `pages/privacy.md` disclose exactly those providers. The build refuses a mismatch, and a `main` deployment fails if the privacy page names a provider without its variable.
+2. Deploy through REL-01, or rerun the Pages workflow on `main`.
+3. [Confirm it works after deployment](operations.md#4-confirm-it-works-after-deployment): one GoatCounter count per page view with canonical paths and query-free referrers; no Cloudflare beacon on query-bearing loads; no counts from local builds, previews, design/theme switches or browsers switched off with `/nocount`; no CSP violations; reading unaffected with either provider blocked; data visible in both dashboards.
+4. Inspect what Cloudflare's beacon actually sends after the find box adds `?q=` to the address. Its documented absence of query-string logging does not prove the beacon never transmits them. Record an unresolved privacy mismatch and leave this task unchecked rather than changing reader URLs to conceal it.
 
-**Done when:** both live integrations, their privacy disclosures and collection checks pass. Loading a script alone is insufficient.
+**Done when:** both live integrations, their privacy disclosure and the collection checks pass. Loading a script alone is insufficient.
 
 ## Search visibility
 

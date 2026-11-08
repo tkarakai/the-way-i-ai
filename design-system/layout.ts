@@ -1,4 +1,4 @@
-import type { Collection, Edition, RenderedTopic, RenderedDocument, RenderedPage, PageLink, ShellOptions } from './types.ts';
+import type { Analytics, Collection, Edition, RenderedTopic, RenderedDocument, RenderedPage, PageLink, ShellOptions } from './types.ts';
 export const escape = (value: unknown) => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
 const safeJSON = (value: unknown) => JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
 
@@ -49,6 +49,14 @@ function copyright(collection: Collection, topics: RenderedTopic[], sitePages: P
   const span = years[0] === years.at(-1) ? years[0] : `${years[0]}–${years.at(-1)}`;
   const notice = `© ${span} ${escape(collection.author.name)}`;
   return `<span class="copyright">${sitePages.some(item => item.id === 'licensing') ? `<a href="${prefix}licensing/index.html">${notice}</a>` : notice}</span>`;
+}
+/**
+ * Visit statistics (design-system/analytics.ts) read their public provider identifiers from this JSON and decide in the
+ * browser whether to count: the same bundle is deployed, previewed and downloaded, and only the published host counts.
+ */
+function analyticsConfig(collection: Collection, analytics?: Analytics) {
+  if (!analytics) return '';
+  return `<script type="application/json" id="analytics-config">${safeJSON({ site: collection.siteUrl, ...analytics })}</script>`;
 }
 /** Keys this page understands, opened with “?”, grouped as Move, Open, Go and Change. Rows for one design carry its class. */
 function shortcutsDialog(page: string, isTopic: boolean) {
@@ -115,7 +123,7 @@ function editionStamp(edition: Edition, prefix: string) {
 function themeToggle() {
   return `<button type="button" class="icon-button theme-toggle js-only" aria-label="Switch color theme">${(['light', 'dark'] as const).map(choice => `<span class="theme-target theme-${choice}">${icons[choice]}</span>`).join('')}</button>`;
 }
-export function shell({ title, description, body, files, themeJS, csp, edition, collection, topics, prefix = '', page = 'collection', wordmarkBackground = false, created, updated, headMetadata = '', sitePages = [] }: ShellOptions) {
+export function shell({ title, description, body, files, themeJS, csp, edition, collection, topics, prefix = '', page = 'collection', wordmarkBackground = false, created, updated, headMetadata = '', sitePages = [], analytics }: ShellOptions) {
   const articleMetadata = `${created ? `<meta property="article:published_time" content="${escape(created)}">` : ''}${updated ? `<meta property="article:modified_time" content="${escape(updated)}">` : ''}`;
   // Focus mode belongs to topic pages, the only pages with navigation columns to set aside.
   const isTopic = topics.some(topic => topic.id === page);
@@ -134,7 +142,7 @@ ${body}
 <dialog class="search-dialog" aria-labelledby="search-title"><div class="dialog-head"><h2 id="search-title">Search all topics</h2><button type="button" class="icon-button" data-close-search aria-label="Close (Esc)" title="Close (Esc)">${icons.close}</button></div><label class="sr-only" for="collection-search">Search all topics</label><input id="collection-search" type="search" data-search-index="${prefix}${files.searchIndex}" data-search-root="${prefix}" placeholder="Titles, chapters and full text…" autocomplete="off"><p class="search-result-status" role="status"></p><div class="search-results"></div></dialog>
 ${shortcutsDialog(page, isTopic)}
 ${shareDialog(isTopic)}
-<div class="toast" aria-hidden="true" hidden></div><div class="sr-only" role="status" data-announcer></div>${files.scripts.map(script => `<script src="${prefix}${script}"></script>`).join('')}</body></html>\n`;
+<div class="toast" aria-hidden="true" hidden></div><div class="sr-only" role="status" data-announcer></div>${analyticsConfig(collection, analytics)}${files.scripts.map(script => `<script src="${prefix}${script}"></script>`).join('')}</body></html>\n`;
 }
 
 /**

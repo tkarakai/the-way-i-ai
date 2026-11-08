@@ -13,7 +13,7 @@ import { parseWavePosition, wordmarkStyles } from '../design-system/wordmark.ts'
 import { collectionSearch, decodeEntities, stripTags } from '../design-system/search.ts';
 import { topicSource, splitFrontMatter } from './markdown-source.ts';
 import { loadIllustrations } from './illustrations.ts';
-import { validatePublication, pageMetadata, sitemap } from './discovery.ts';
+import { validatePublication, analyticsFromEnvironment, analyticsSources, ANALYTICS_VARIABLES, pageMetadata, sitemap } from './discovery.ts';
 import type { PublishedPage } from './discovery.ts';
 import { loadIcons, iconMetadata } from './icons.ts';
 import { sharingCard, renderSharingCards } from './sharing.ts';
@@ -48,6 +48,10 @@ const [registry, css, js, themeJS] = await Promise.all([
 validatePublication(registry);
 if (registry.ambientBackground !== undefined && registry.ambientBackground !== 'F') throw new Error('Unsupported ambientBackground: expected F.');
 if (registry.ambientIntensity !== undefined && (!Number.isFinite(registry.ambientIntensity) || registry.ambientIntensity < 0 || registry.ambientIntensity > 1)) throw new Error('ambientIntensity must be a number between 0 and 1.');
+// Visit statistics ship only when the build environment configures them (repository variables in CI);
+// the script itself decides whether the current host counts.
+const analytics = analyticsFromEnvironment(process.env);
+const analyticsJS = analytics ? await compile('design-system/analytics.ts') : '';
 const ambientJS = registry.ambientBackground === 'F'
   ? (await Promise.all(['design-system/murmuration.ts', 'design-system/ambient.ts'].map(compile))).join('\n')
   : '';
@@ -302,6 +306,15 @@ async function renderPage(id: string, prefix: string): Promise<RenderedPage> {
   return { id, title, description: plain(parser.parseInline(paragraph.text) as string).replace(/\s+/g, ' ').trim(), html, headings, markdown };
 }
 const sitePages = await Promise.all(sitePageIds.map(id => renderPage(id, '../')));
+// Visit statistics and their disclosure publish together: the privacy page must name each configured provider. A
+// deployment (ANALYTICS_REQUIRED=true) must also configure every provider the privacy page names.
+const privacyPage = sitePages.find(page => page.id === 'privacy');
+for (const [key, name] of [['goatcounter', 'GoatCounter'], ['cloudflare', 'Cloudflare Web Analytics']] as const) {
+  const configured = Boolean(analytics?.[key]);
+  const disclosed = Boolean(privacyPage?.markdown.includes(name));
+  if (configured && !disclosed) throw new Error(`${ANALYTICS_VARIABLES[key]} is set, so pages/privacy.md must disclose ${name}.`);
+  if (!configured && disclosed && process.env.ANALYTICS_REQUIRED === 'true') throw new Error(`pages/privacy.md discloses ${name}, but ${ANALYTICS_VARIABLES[key]} is not set for this deployment.`);
+}
 const pageLinks: PageLink[] = sitePages.map(({ id, title, description }) => ({ id, title, description }));
 const missingPage = await renderPage('404', missingPrefix);
 
@@ -320,24 +333,27 @@ const titleBackground = titleBackgroundPath ? posix.relative('assets', (await as
 const wordmarkBackground = Boolean(titleBackground);
 const stylesheet = assets.add('site.css', `${siteFonts}\n${css}\n${wordmarkStyles(titleBackground, wavePosition)}`);
 const searchIndex = assets.add('search.json', JSON.stringify(collectionSearch(topics)));
-const readerScript = assets.add('reader.js', js);
+const readerScript = assets.add('reader.js', analyticsJS ? `${js}\n${analyticsJS}` : js);
 const scripts = (page: string) => [...(page === 'collection' && ambientJS ? [assets.add('ambient.js', ambientJS)] : []), readerScript];
 const files = (page = 'collection') => ({ stylesheet, scripts: scripts(page), searchIndex });
 
-// The theme script runs inline before first paint; every other script is a shared file.
+// The theme script runs inline before first paint; every other script is a shared file. Configured visit statistics
+// add only their providers' endpoints (see design-system/analytics.ts).
 // The policy is a meta tag because GitHub Pages cannot send headers, which also means
 // frame-ancestors, reporting and sandboxing are unavailable.
 const inlineThemeJS = themeJS.replaceAll('</script', '<\\/script');
 const themeHash = `sha256-${createHash('sha256').update(inlineThemeJS).digest('base64')}`;
+const analyticsCSP = analyticsSources(analytics);
+const withSources = (directive: string, sources: string[]) => [directive, ...sources].join(' ');
 const csp = [
   "default-src 'none'",
-  `script-src 'self' '${themeHash}'`,
+  withSources(`script-src 'self' '${themeHash}'`, analyticsCSP.script),
   // Inline style attributes, and the code renderer's shadow-root styles.
   "style-src 'self' 'unsafe-inline'",
   // The share preview falls back to the published card when a local build has none.
-  `img-src 'self' ${new URL(registry.siteUrl).origin}`,
+  withSources(`img-src 'self' ${new URL(registry.siteUrl).origin}`, analyticsCSP.img),
   "font-src 'self'",
-  "connect-src 'self'",
+  withSources("connect-src 'self'", analyticsCSP.connect),
   "manifest-src 'self'",
   "base-uri 'none'",
   "form-action 'none'",
@@ -366,7 +382,7 @@ const metadataFor = (path: string) => {
   if (!page) throw new Error(`Missing publication metadata: ${path}`);
   return pageMetadata(registry, page) + iconMetadata(publicIcons, path) + feedLink(registry) + (page.kind === 'index' ? '' : markdownLink);
 };
-const common = { themeJS, csp, edition, collection: registry, topics, wordmarkBackground, sitePages: pageLinks };
+const common = { themeJS, csp, edition, collection: registry, topics, wordmarkBackground, sitePages: pageLinks, analytics };
 outputs.set('index.html', shell({ ...common, headMetadata: metadataFor('index.html'), description: registry.description, body: collectionBody(topics, registry, wordmarkBackground), files: files() }));
 outputs.set('general-index/index.html', shell({ ...common, headMetadata: metadataFor('general-index/index.html'), title: 'A–Z index', description: `Every chapter and subsection in ${registry.title}, A to Z.`, body: indexBody(topics), files: files('index'), prefix: '../', page: 'index' }));
 for (const topic of topics) {

@@ -1,4 +1,4 @@
-import type { Collection } from '../design-system/types.ts';
+import type { Analytics, Collection } from '../design-system/types.ts';
 
 const xml = (text: string) => text.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[char]!));
 const safeJSON = (value: unknown) => JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
@@ -31,6 +31,38 @@ export function validatePublication(collection: Collection): void {
     const repository = new URL(collection.repositoryUrl);
     if (repository.protocol !== 'https:' || repository.username || repository.password) throw new Error('repositoryUrl must be an HTTPS URL.');
   }
+  // Deployment settings stay out of the content registry, so clones and forks never inherit them.
+  if ('analytics' in collection) throw new Error('Visit-statistics identifiers come from the GOATCOUNTER_CODE and CLOUDFLARE_WEB_ANALYTICS_TOKEN environment variables (repository variables in CI), not topics/topics.json.');
+}
+
+/** Environment variables that hold the public visit-statistics identifiers; in CI they come from repository variables. */
+export const ANALYTICS_VARIABLES = { goatcounter: 'GOATCOUNTER_CODE', cloudflare: 'CLOUDFLARE_WEB_ANALYTICS_TOKEN' } as const;
+
+/**
+ * Reads visit-statistics identifiers from the build environment. Unset or empty variables leave a provider out; with
+ * neither, the site is built without visit statistics. Malformed values fail, since they would silently count nothing.
+ */
+export function analyticsFromEnvironment(environment: Record<string, string | undefined>): Analytics | undefined {
+  const goatcounter = environment[ANALYTICS_VARIABLES.goatcounter]?.trim() || undefined;
+  const cloudflare = environment[ANALYTICS_VARIABLES.cloudflare]?.trim() || undefined;
+  if (goatcounter !== undefined && !/^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$/.test(goatcounter)) {
+    throw new Error(`${ANALYTICS_VARIABLES.goatcounter} must be the GoatCounter site code: CODE from https://CODE.goatcounter.com, in lowercase letters, digits and dashes.`);
+  }
+  if (cloudflare !== undefined && !/^[0-9a-f]{32}$/.test(cloudflare)) {
+    throw new Error(`${ANALYTICS_VARIABLES.cloudflare} must be the 32-character token from the Cloudflare Web Analytics snippet (data-cf-beacon).`);
+  }
+  return goatcounter || cloudflare ? { ...(goatcounter ? { goatcounter } : {}), ...(cloudflare ? { cloudflare } : {}) } : undefined;
+}
+
+/** Endpoints the browser may reach for each configured provider, for the page's Content Security Policy. */
+export function analyticsSources(analytics: Analytics | undefined) {
+  return {
+    // GoatCounter counts a page view through its documented pixel, so no provider script runs.
+    img: analytics?.goatcounter ? [`https://${analytics.goatcounter}.goatcounter.com/count`] : [],
+    // Hosts rather than paths: Cloudflare does not version-pin its beacon, and its URL may redirect.
+    script: analytics?.cloudflare ? ['https://static.cloudflareinsights.com'] : [],
+    connect: analytics?.cloudflare ? ['https://cloudflareinsights.com'] : []
+  };
 }
 
 export function canonicalURL(siteUrl: string, path: string): string {

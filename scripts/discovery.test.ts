@@ -6,7 +6,7 @@ import type { Collection } from '../design-system/types.ts';
 
 const collection: Collection = {
   title: 'A & B', displayTitle: 'A & B', description: 'Notes <and> ideas', eyebrow: '', subtitle: '', introduction: [], topics: [],
-  siteUrl: 'https://example.com/collection/', author: { name: 'writer', url: 'https://github.com/writer' }
+  siteUrl: 'https://example.com/collection/', author: { name: 'writer', url: 'https://writer.example/', sameAs: ['https://github.com/writer'] }
 };
 const article: PublishedPage = { path: 'topics/example/index.html', title: 'An "idea" </script><script>alert(1)</script>', description: 'A & B < C', kind: 'article', category: 'Practice', created: '2026-01-02', updated: '2026-02-03' };
 const structured = (html: string) => { const data = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]); return Array.isArray(data) ? data[0] : data; };
@@ -26,6 +26,10 @@ test('publication settings require an HTTPS base and identifiable author', () =>
   }
   assert.throws(() => validatePublication({ ...collection, author: { name: '', url: collection.author.url } }));
   assert.throws(() => validatePublication({ ...collection, author: { name: 'writer', url: 'javascript:alert(1)' } }));
+  assert.doesNotThrow(() => validatePublication({ ...collection, author: { name: 'writer', url: collection.author.url } }), 'sameAs is optional');
+  for (const sameAs of [['http://github.com/writer'], ['not a url'], 'https://github.com/writer']) {
+    assert.throws(() => validatePublication({ ...collection, author: { ...collection.author, sameAs: sameAs as string[] } }));
+  }
 });
 
 test('article metadata reuses authored content, escapes HTML and script boundaries, and preserves dates', () => {
@@ -43,6 +47,8 @@ test('article metadata reuses authored content, escapes HTML and script boundari
   assert.equal(data.dateModified, article.updated);
   assert.equal(data.author.name, collection.author.name);
   assert.equal(data.author.url, collection.author.url);
+  assert.deepEqual(data.author.sameAs, ['https://github.com/writer'], 'Other profiles identify the same author');
+  assert.match(html, /<link rel="author" href="https:\/\/writer\.example\/">/);
   assert.equal(data.publisher.name, collection.title);
   assert.equal(data.publisher.logo.url, 'https://example.com/collection/favicon-512.png');
   assert.equal(data.mainEntityOfPage['@id'], data.url);

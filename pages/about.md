@@ -10,7 +10,7 @@ If you are another human: welcome. There goes that theory.
 
 ## Who’s behind this?
 
-I’m [tkarakai](https://github.com/tkarakai), a software engineer and architect tinkering with agentic development. I love the process of learning, trying things, and gradually getting more productive—even when learning something new involves briefly becoming less productive first.
+I’m tkarakai ([karak.ai](https://karak.ai)), a software engineer and architect tinkering with agentic development. I love the process of learning, trying things, and gradually getting more productive—even when learning something new involves briefly becoming less productive first.
 
 This collection is a record of that process, not a claim that I’ve figured it all out. It’s called *The Way I AI*, not *The Way Everyone Should AI*.
 

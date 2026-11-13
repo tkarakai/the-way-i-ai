@@ -599,6 +599,7 @@ test('site pages render from pages/ with footer links, and the 404 page links fr
   assert.match(about, /<a href="\.\.\/index\.html">Home<\/a>/, 'Links to the published site stay relative');
   assert.match(about, /<a href="\.\.\/about\/index\.html" aria-current="page">About<\/a><a href="\.\.\/privacy\/index\.html">Privacy<\/a><a href="\.\.\/licensing\/index\.html">Licensing<\/a>/);
   assert.match(about, /<a href="\.\.\/licensing\/index\.html">© \d{4}(?:–\d{4})? tkarakai<\/a>/, 'Copyright years come from authored dates');
+  assert.match(about, /<span class="byline">by <a href="https:\/\/karak\.ai\/" rel="author me">karak\.ai<\/a><\/span>/, 'The footer names the author’s site by its host');
   assert.doesNotMatch(about, /class="icon-button focus-toggle/);
   assert.match(await f.read('index.html'), /<a href="privacy\/index\.html">Privacy<\/a>/);
   const missing = await f.read('404.html');

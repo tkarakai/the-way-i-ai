@@ -6,7 +6,8 @@ export interface Collection {
   titleBackgroundPosition?: string;
   repositoryUrl?: string;
   siteUrl: string;
-  author: { name: string; url: string };
+  /** `url` is the author's own site; `sameAs` lists other profiles of the same person for search engines. */
+  author: { name: string; url: string; sameAs?: string[] };
   description: string;
   eyebrow: string;
   subtitle: string;

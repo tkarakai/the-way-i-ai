@@ -12,7 +12,7 @@ The generated site is optimized for static hosting, with shared local styles, sc
 
 | Source | Owns |
 | --- | --- |
-| `topics/topics.json` | Collection copy, canonical publication base (`siteUrl`), author identity (`author.name` and `author.url`), and canonical topic order; IDs correspond to folders. The homepage displays this order in reverse. In `introduction`, `[first|second|third]` renders rotating phrases in a secondary highlight colour, in order and looping (the first phrase is the static fallback; screen readers get the full list once). |
+| `topics/topics.json` | Collection copy, canonical publication base (`siteUrl`), author identity (`author.name`, the public handle; `author.url`, the author's own site, shown in the footer as “by karak.ai” with `rel="author me"` and used as the SEO author URL; optional `author.sameAs`, other HTTPS profiles of the same person for JSON-LD). Never add the author's legal name; the author's site owns that, and canonical topic order; IDs correspond to folders. The homepage displays this order in reverse. In `introduction`, `[first|second|third]` renders rotating phrases in a secondary highlight colour, in order and looping (the first phrase is the static fallback; screen readers get the full list once). |
 | `topics/assets/` | Authored collection visuals, including the optional title background. |
 | `topics/<id>/README.md` | YAML front matter owns topic metadata, optional document order, cover, and explorer bindings. Its single `#` heading owns the topic title. The body owns the argument and named excerpts. |
 | Other topic Markdown | Companion documents or supporting notes. Listed documents are rendered in full, in reading order. |

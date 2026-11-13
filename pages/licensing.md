@@ -4,7 +4,7 @@
 
 Unless otherwise noted, my original articles are licensed under [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/).
 
-You can share, translate, and adapt them for noncommercial purposes. Credit [tkarakai](https://github.com/tkarakai) and The Way I AI, link to the original article and the license, and indicate any changes. Please don’t imply that I endorse your version or your project.
+You can share, translate, and adapt them for noncommercial purposes. Credit [tkarakai](https://karak.ai) and The Way I AI, link to the original article and the license, and indicate any changes. Please don’t imply that I endorse your version or your project.
 
 For commercial use, ask for my explicit permission first. If you’re unsure whether your intended use counts as commercial, ask rather than guess.
 

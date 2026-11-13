@@ -27,6 +27,10 @@ export function validatePublication(collection: Collection): void {
   }
   const author = new URL(collection.author.url);
   if (author.protocol !== 'https:' || author.username || author.password) throw new Error('author.url must be an HTTPS profile URL.');
+  const sameAs = collection.author.sameAs;
+  if (sameAs !== undefined && (!Array.isArray(sameAs) || sameAs.some(profile => typeof profile !== 'string' || !URL.canParse(profile) || new URL(profile).protocol !== 'https:'))) {
+    throw new Error('author.sameAs must be a list of HTTPS profile URLs.');
+  }
   if (collection.repositoryUrl) {
     const repository = new URL(collection.repositoryUrl);
     if (repository.protocol !== 'https:' || repository.username || repository.password) throw new Error('repositoryUrl must be an HTTPS URL.');
@@ -79,7 +83,7 @@ export function canonicalURL(siteUrl: string, path: string): string {
 export function pageMetadata(collection: Collection, page: PublishedPage): string {
   const url = canonicalURL(collection.siteUrl, page.path);
   const home = canonicalURL(collection.siteUrl, 'index.html');
-  const author = { '@type': 'Person', name: collection.author.name, url: collection.author.url };
+  const author = { '@type': 'Person', name: collection.author.name, url: collection.author.url, ...(collection.author.sameAs?.length ? { sameAs: collection.author.sameAs } : {}) };
   const publisher = { '@type': 'Organization', name: collection.title, url: home,
     logo: { '@type': 'ImageObject', url: canonicalURL(collection.siteUrl, 'favicon-512.png'), width: 512, height: 512 } };
   const image = page.sharingImage ? { '@type': 'ImageObject', url: canonicalURL(collection.siteUrl, page.sharingImage.path), width: page.sharingImage.width, height: page.sharingImage.height, caption: page.sharingImage.alt } : undefined;
@@ -106,7 +110,7 @@ export function pageMetadata(collection: Collection, page: PublishedPage): strin
     itemListElement: [{ name: collection.title, item: home }, { name: page.title, item: url }].map((entry, index) => ({ '@type': 'ListItem', position: index + 1, ...entry }))
   };
   const meta = (name: string, content: string, attribute = 'property') => `<meta ${attribute}="${xml(name)}" content="${xml(content)}">`;
-  return `<link rel="canonical" href="${xml(url)}">`
+  return `<link rel="canonical" href="${xml(url)}"><link rel="author" href="${xml(collection.author.url)}">`
     + meta('og:type', page.kind === 'article' ? 'article' : 'website')
     + meta('og:url', url) + meta('og:title', page.title) + meta('og:description', page.description) + meta('og:site_name', collection.title)
     + meta('twitter:card', image ? 'summary_large_image' : 'summary', 'name')
